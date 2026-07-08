@@ -104,7 +104,7 @@ system_instruction = """
 
 # ใช้ model gemini-1.5-flash เพื่อความเสถียรที่สุด (รุ่น 3.1 อาจทำให้ระบบขัดข้อง)
 model = genai.GenerativeModel(
-    'gemini-1.5-flash',
+    'gemini-3.1-flash-lite',
     system_instruction=system_instruction
 )
 
