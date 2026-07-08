@@ -102,7 +102,7 @@ system_instruction = """
 
 # ใช้ model gemini-1.5-flash พร้อมกับส่ง System Instruction เข้าไป
 model = genai.GenerativeModel(
-    'gemini-2.5-flash',
+    'gemini-3.1-flash-lite',
     system_instruction=system_instruction
 )
 
