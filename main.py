@@ -122,9 +122,9 @@ system_instruction = """
 หน้าที่หลักของคุณคือ "เซลล์แนะนำเบื้องต้น" (ตอบเรื่องราคา, โปรโมชั่น, และแคตตาล็อก เท่านั้น!) 
 หากลูกค้าพิมพ์สิ่งต่อไปนี้ **คุณต้องตอบกลับเป็นคำว่า `[SILENCE]` คำเดียวเท่านั้น (ห้ามพิมพ์อย่างอื่นเด็ดขาด!)** เพื่อให้แอดมินคนจริงเข้าไปดูแลต่อ:
 1. ลูกค้าส่ง "ข้อมูลรายละเอียดงานแต่ง" (เช่น ชื่อบ่าวสาว, สถานที่, วันที่, เบอร์โทร, ลำดับการ, ธีมสีงาน) -> พิมพ์ `[SILENCE]`
-2. ลูกค้าบรีฟงาน, สั่งแก้แบบ, หรือคอมเมนต์แบบการ์ดที่แอดมินเพิ่งส่งให้ (เช่น "ย้อๆ", "สวยค่ะ", "เอาแบบนี้", "แก้ตรงนี้", "สีเบจ") -> พิมพ์ `[SILENCE]`
+2. ลูกค้าบรีฟงาน, สั่งแก้แบบ, หรือคอมเมนต์แบบการ์ดที่แอดมินเพิ่งส่งให้ (เช่น "ย้อๆ", "สวยค่ะ", "เอาแบบนี้", "แก้ตรงนี้", "สีเบจ", "ลบเวลาออก", "ถูกต้องแล้ว") -> พิมพ์ `[SILENCE]`
 3. ลูกค้าถามเรื่องที่ต้องเช็คระบบหลังบ้าน (เช่น "ได้คิวหรือยัง", "สีเบจมีของไหม", "ของหมดหรือยัง", "ส่งวันไหน", "ขอเลขแทรค") -> พิมพ์ `[SILENCE]`
-4. ลูกค้าแจ้งยอด, ส่งสลิปโอนเงิน, แจ้งโอน, หรือพิมพ์คำสั้นๆ ตอบรับ (เช่น "โอนแล้ว", "ขอบคุณค่ะ", "รับทราบ", "ย้อๆ", "โอเค", "ดีค่ะ", "เรียบร้อย") -> พิมพ์ `[SILENCE]`
+4. ลูกค้าแจ้งยอด, ส่งสลิปโอนเงิน, แจ้งโอน, หรือพิมพ์คำสั้นๆ ตอบรับ (เช่น "โอนแล้ว", "ขอบคุณค่ะ", "รับทราบ", "ย้อๆ", "โอเค", "ดีค่ะ", "เรียบร้อย", "ตามนั้นค่ะ") -> พิมพ์ `[SILENCE]`
 5. ห้ามเดา ห้ามเสนอตัวสรุปยอด ห้ามถามหาจำนวนชิ้นที่ต้องการสั่ง ห้ามรับปาก และห้ามทักทายสวัสดีซ้ำๆ เวลาลูกค้าคุยเรื่องงานออกแบบอยู่ ถ้าไม่แน่ใจว่าลูกค้าถามราคาอยู่หรือไม่ ให้พิมพ์ `[SILENCE]` ไปเลย
 
 [กฎการตอบแชททั่วไป (ใช้เมื่อลูกค้าถามราคา/โปรโมชั่น)]
@@ -166,4 +166,80 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     
     # ใช้ BackgroundTasks เพื่อตอบกลับ HTTP 200 อย่างรวดเร็วก่อนประมวลผลข้อความ
     # ป้องกัน Line Webhook Timeout (Line ต้องการการตอบกลับภายในไม่กี่วินาที)
-    background_tasks.add_task(handle_line_webhook, body_str, signature
+    background_tasks.add_task(handle_line_webhook, body_str, signature)
+    
+    return {"status": "ok"}
+
+def handle_line_webhook(body: str, signature: str):
+    """
+    ฟังก์ชันสำหรับให้ WebhookHandler ประมวลผล Signature และแจกจ่าย Event
+    """
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        logger.error("Invalid signature. ตรวจสอบ LINE_CHANNEL_SECRET อีกครั้ง")
+    except Exception as e:
+        logger.error(f"Error handling webhook: {e}")
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_text_message(event):
+    """
+    ฟังก์ชันสำหรับจัดการ Event ประเภทข้อความ (Text) ที่ส่งมาจากผู้ใช้
+    """
+    user_text = event.message.text
+    reply_token = event.reply_token
+    user_id = event.source.user_id
+    
+    logger.info(f"Received message from user {user_id}: {user_text}")
+    
+    try:
+        # ตรวจสอบว่าเคยคุยกันหรือยัง ถ้ายังให้สร้าง History ใหม่ (ระบบความจำ)
+        if user_id not in chat_history:
+            chat_history[user_id] = model.start_chat(history=[])
+            
+        chat_session = chat_history[user_id]
+        
+        # ส่งข้อความไปประมวลผลพร้อมประวัติการแชท
+        response = chat_session.send_message(user_text)
+        bot_reply = response.text
+        
+        # ค้นหาแท็ก [IMAGE: url] ด้วย Regex
+        image_urls = re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', bot_reply)
+        
+        # ลบแท็กออกจากข้อความที่จะส่งให้ผู้ใช้
+        clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply).strip()
+        
+        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
+        if "[SILENCE]" in clean_text or clean_text == "":
+            logger.info(f"Bot chose to stay silent for user {user_id}")
+            return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
+            
+        messages = []
+        if clean_text and clean_text != "[SILENCE]":
+            messages.append(TextSendMessage(text=clean_text))
+            
+        # สร้าง ImageSendMessage จาก URLs ที่หาเจอ (ส่งได้สูงสุด 4 รูป + 1 ข้อความ = 5 ข้อความตามลิมิตของ Line)
+        for url in image_urls[:4]:
+            messages.append(ImageSendMessage(
+                original_content_url=url,
+                preview_image_url=url
+            ))
+            
+        # ส่งข้อความและรูปภาพกลับไปยัง Line (ส่งเมื่อมีข้อความเท่านั้น)
+        if messages:
+            line_bot_api.reply_message(
+                reply_token,
+                messages
+            )
+            logger.info(f"Replied to user {user_id} with {len(messages)} messages.")
+        
+    except Exception as e:
+        logger.error(f"Error generating content or replying: {e}")
+        # กรณีเกิดข้อผิดพลาด ส่งข้อความขออภัย
+        try:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="ขออภัยค่ะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง")
+            )
+        except Exception as reply_err:
+            logger.error(f"Failed to send error message: {reply_err}")
