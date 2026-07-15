@@ -3,10 +3,12 @@ import sys
 import logging
 import re
 import time
+import io
+import PIL.Image
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage, ImageMessage
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -47,9 +49,8 @@ system_instruction = """
 2. **ส่งบรีฟงาน/ข้อมูลส่วนตัว:** เช่น ส่งรูปภาพ, แจ้งที่อยู่, แจ้งเบอร์โทร, ชื่อบ่าวสาว -> พิมพ์ `[SILENCE]`
 3. **ติดตามสถานะงาน:** เช่น "ได้คิวหรือยัง", "ส่งวันไหน", "ขอเลขพัสดุ", "ของหมดหรือยัง" -> พิมพ์ `[SILENCE]`
 4. **เกี่ยวกับการโอนเงิน:** เช่น "โอนแล้ว", "ขอเลขบัญชีหน่อย", ส่งสลิป, แจ้งยอดโอน, ตกลงสั่งซื้อ, "รับค่ะ/ครับ", "ขอบคุณค่ะ" -> พิมพ์ `[SILENCE]`
--> **จำไว้ให้ดี: ทันทีที่ลูกค้าเลยขั้นตอนการถามราคาเริ่มต้นไปแล้ว ห้ามเดาคำตอบ หรือเสนอตัวตอบเองเด็ดขาด ให้เงียบและส่งไม้ต่อให้แอดมินทันที!**
 5. **ลูกค้าตอบรับสั้นๆ หรือคำที่ไม่ได้ต้องการคำตอบ:** เช่น "จ้า", "จ้าา", "ค่ะ", "ครับ", "ok", "โอเค", "รับทราบ", "ขอบคุณ" -> พิมพ์ `[SILENCE]`
-6. **ถามคำถามที่คุณไม่มีข้อมูล หรือไม่รู้คำตอบ:** ห้ามเดาคำตอบ หรือห้ามพิมพ์ข้อความต้อนรับใหม่ -> พิมพ์ `[SILENCE]`
+6. **ถามคำถามที่คุณไม่มีข้อมูล หรือไม่รู้คำตอบ:** ห้ามเดาคำตอบ หรือห้ามพิมพ์ข้อความต้อนรับใหม่ (ยกเว้นเรื่องพอร์ตโฟลิโอ) -> พิมพ์ `[SILENCE]`
 -> **จำไว้ให้ดี: ทันทีที่ลูกค้าพิมพ์คำสั้นๆ ถามนอกเหนือจากข้อมูลที่คุณมี หรือเลยขั้นตอนการถามราคาเริ่มต้นไปแล้ว ห้ามเดาคำตอบ หรือเสนอตัวตอบเองเด็ดขาด ให้เงียบและส่งไม้ต่อให้แอดมินทันที!**
 
 
@@ -127,7 +128,8 @@ system_instruction = """
 3. 🎬 รีวิวงานจริงใน TikTok: https://www.tiktok.com/@_one_19
 
 [กฎการตอบแชททั่วไปสำหรับแขกใหม่]
-- กล่าวทักทายลูกค้าอย่างอบอุ่น (เฉพาะครั้งแรก)
+- **การทักทายครั้งแรก (บังคับ):** กล่าวทักทายลูกค้าอย่างอบอุ่น และ **ต้องแจ้งให้ลูกค้าทราบอย่างชัดเจนด้วยว่าข้อความนี้เป็นการตอบจากแชทบอท AI** ที่มาช่วยดูแลเบื้องต้น (เช่น "สวัสดีค่ะ ยินดีต้อนรับสู่ ONESTUDIO นะคะ แอดมินบอท AI ยินดีให้บริการเบื้องต้นค่า...")
+- **การถามถึงพอร์ต / พอร์ตโฟลิโอ (Portfolio):** หากลูกค้าถามเกี่ยวกับการทำพอร์ตโฟลิโอ ให้ตอบไปเลยว่า "ทางร้านมีรับทำพอร์ตโฟลิโอด้วยนะคะ รายละเอียดและราคาเดี๋ยวรอแอดมินคนจริงมาแจ้งให้ทราบอีกทีนะคะ รอสักครู่ค่า 💕" (โดยห้ามส่งคำว่า [SILENCE] ออกมาเด็ดขาด)
 - ตอบคำถามเรื่องราคาสั้นๆ กระชับ ตรงประเด็น (ไม่เกิน 3-4 บรรทัด)
 - **การคำนวณราคา:** หากลูกค้าสอบถามราคาโดยระบุจำนวนชิ้นมาด้วย ให้คุณ "คำนวณยอดรวมสุทธิ" ให้ลูกค้าดูอย่างชัดเจนเสมอทุกครั้งที่ตอบ (อิงตามเรทราคาแต่ละจำนวน) ตัวอย่างเช่น: "จำนวน 50 ชิ้น ชิ้นละ 7 บาท (50 x 7) รวมเป็น 350 บาทค่ะ"
 - กรณีลูกค้าสั่งจำนวนน้อยกว่าขั้นต่ำ: ให้ตอบอย่างน่ารักว่า "ต้องขออภัยด้วยน้า สำหรับของชำร่วยทางเรารับผลิตขั้นต่ำที่ 50 ชิ้นค่ะ หากสนใจสั่งทำที่ 50 ชิ้น แจ้งทางเราได้เลยนะคะ 💕"
@@ -244,3 +246,62 @@ def handle_text_message(event):
             )
         except Exception as reply_err:
             logger.error(f"Failed to send error message: {reply_err}")
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image_message(event):
+    """
+    ฟังก์ชันสำหรับจัดการ Event ประเภทรูปภาพ ที่ส่งมาจากผู้ใช้
+    """
+    reply_token = event.reply_token
+    user_id = event.source.user_id
+    message_id = event.message.id
+    
+    logger.info(f"Received image message from user {user_id}")
+    
+    try:
+        # ตรวจสอบว่าเคยคุยกันหรือยัง ถ้ายังให้สร้าง History ใหม่ (ระบบความจำ)
+        if user_id not in chat_history:
+            chat_history[user_id] = model.start_chat(history=[])
+            
+        chat_session = chat_history[user_id]
+        
+        # ดึงข้อมูลรูปภาพจาก Line Server
+        message_content = line_bot_api.get_message_content(message_id)
+        image_bytes = b""
+        for chunk in message_content.iter_content():
+            image_bytes += chunk
+            
+        # เปิดรูปภาพด้วย Pillow เพื่อส่งให้ Gemini
+        image = PIL.Image.open(io.BytesIO(image_bytes))
+        
+        # ส่งรูปภาพให้ Gemini พร้อมคำสั่งกำกับ
+        prompt = "ลูกค้าส่งรูปภาพมาให้ กรุณาวิเคราะห์ว่าเป็นสินค้าอะไรในการ์ดแต่งงานหรือของชำร่วยร้านเรา และตอบลูกค้าอย่างสุภาพ อิงตามกฎและราคาที่ตั้งไว้ (ถ้าไม่ใช่สินค้าในร้าน หรือเป็นบรีฟงานส่วนตัว ให้พิมพ์ [SILENCE])"
+        response = chat_session.send_message([prompt, image])
+        
+        bot_reply = response.text.strip()
+        
+        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
+        if "[SILENCE]" in bot_reply or bot_reply == "":
+            logger.info(f"Bot chose to stay silent for image from user {user_id}")
+            return
+            
+        # หน่วงเวลา 3.5 วินาที
+        logger.info("Delaying response for 3.5 seconds...")
+        time.sleep(3.5)
+            
+        # ส่งข้อความกลับไปยัง Line
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text=bot_reply)
+        )
+        logger.info(f"Replied to user {user_id} regarding their image.")
+        
+    except Exception as e:
+        logger.error(f"Error processing image or replying: {e}")
+        try:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="ขออภัยค่ะ ระบบประมวลผลรูปภาพขัดข้องชั่วคราว")
+            )
+        except Exception as reply_err:
+            pass
