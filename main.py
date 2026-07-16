@@ -135,7 +135,22 @@ system_instruction = """
 - ระยะเวลาผลิต: หลังจากคอนเฟิร์มแบบ จะใช้เวลาผลิตและจัดเตรียมประมาณ 7-15 วันค่ะ 
 - การจัดส่ง: ทางร้านมีส่วนลดค่าจัดส่งพิเศษทั่วประเทศ เมื่อมียอดสั่งซื้อเกิน 3,000 บาท
 - ขอดูแคตตาล็อกราคาการ์ด: (https://drive.google.com/file/d/1LwOI8PZ8CAngJP9q-ZIPBkpCb7NvDYjp/view?usp=drive_link)
-- ขอดูราคาของชำร่วยทั้งหมด: (https://drive.google.com/drive/folders/1wsZlZ5VpojgyQdB818GXY6jVF5bCQbc5?usp=drive_link)
+- ขอดูราคาของชำร่วยทั้งหมด: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg
+https://i.postimg.cc/MZ9PF7yn/Banner-02.jpg
+https://i.postimg.cc/8kZK0RhJ/Banner-03.jpg
+https://i.postimg.cc/ZYw7M8rv/Banner-04.jpg
+https://i.postimg.cc/qB1b5s8t/Banner-05.jpg
+https://i.postimg.cc/J4t6Vsqc/Banner-06.jpg
+https://i.postimg.cc/Fs1W5YZP/Banner-07.jpg
+https://i.postimg.cc/ZK07tWcw/Banner-08.jpg
+https://i.postimg.cc/xTqxDXR4/Banner-09.jpg
+https://i.postimg.cc/sD16dMcq/Banner-10.jpg
+https://i.postimg.cc/RV8PMvs2/Banner-11.jpg
+https://i.postimg.cc/9FSxWcg3/Banner-12.jpg
+https://i.postimg.cc/zXMdJq21/Banner-13.jpg
+https://i.postimg.cc/sD8nV3HC/Banner-14.jpg
+https://i.postimg.cc/023t89XQ/Banner-15.jpg
+https://i.postimg.cc/nc5dHnSL/Banner-16.jpg
 
 [🌟 กฎใหม่: กรณีลูกค้าขอดูแบบเพิ่มเติม / ขอดูผลงานที่ผ่านมา]
 ถ้าลูกค้าเพิ่งทักมาสอบถามเพื่อขอดูแบบเพิ่มเติม (และยังไม่ได้เข้าสู่โหมดคุยรายละเอียดงาน) ให้แนบ 3 ลิงก์นี้ให้ลูกค้าพิจารณา:
