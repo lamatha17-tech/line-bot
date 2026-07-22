@@ -311,25 +311,40 @@ def handle_text_message(event):
         messages = []
         if clean_text and clean_text != "[SILENCE]":
             messages.append(TextSendMessage(text=clean_text))
-            
-        # สร้าง ImageSendMessage จาก URLs ที่หาเจอ (ส่งได้สูงสุด 4 รูป + 1 ข้อความ = 5 ข้อความตามลิมิตของ Line)
-        for url in image_urls[:4]:
+
+        # คำนวณจำนวนรูปที่ reply_message รับได้ (LINE จำกัด 5 messages รวม text)
+        first_batch_limit = 4 if clean_text else 5
+        first_batch_urls = image_urls[:first_batch_limit]
+        remaining_urls = image_urls[first_batch_limit:]
+
+        for url in first_batch_urls:
             messages.append(ImageSendMessage(
                 original_content_url=url,
                 preview_image_url=url
             ))
-            
+
         # หน่วงเวลา 3.5 วินาที เพื่อให้เหมือนคนกำลังพิมพ์ และให้เวลาแอดมินเบรก
         logger.info("Delaying response for 3.5 seconds...")
         time.sleep(3.5)
-            
-        # ส่งข้อความและรูปภาพกลับไปยัง Line (ส่งเมื่อมีข้อความเท่านั้น)
+
+        # ส่ง batch แรกด้วย reply_message (ต้องใช้ reply_token)
         if messages:
             line_bot_api.reply_message(
                 reply_token,
                 messages
             )
             logger.info(f"Replied to user {user_id} with {len(messages)} messages.")
+
+        # ส่งรูปที่เหลือด้วย push_message แบ่ง batch ละ 5 รูป
+        for i in range(0, len(remaining_urls), 5):
+            batch = remaining_urls[i:i+5]
+            push_msgs = [
+                ImageSendMessage(original_content_url=url, preview_image_url=url)
+                for url in batch
+            ]
+            time.sleep(0.8)  # หน่วงเล็กน้อยระหว่าง batch ป้องกัน rate limit
+            line_bot_api.push_message(user_id, push_msgs)
+            logger.info(f"Pushed batch {i//5 + 1}: {len(push_msgs)} images to user {user_id}.")
         
     except Exception as e:
         logger.error(f"Error generating content or replying: {e}")
