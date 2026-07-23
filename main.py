@@ -5,6 +5,8 @@ import re
 import time
 import io
 import PIL.Image
+import sqlite3
+import json
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -211,15 +213,80 @@ model = genai.GenerativeModel(
     system_instruction=system_instruction
 )
 
-# เก็บประวัติการแชท (Memory) เพื่อไม่ให้บอทตอบซ้ำไปซ้ำมา
-chat_history = {}
+# ---------------------------------------------------------
+# ระบบความจำถาวรด้วย SQLite (Persistent Memory)
+# ---------------------------------------------------------
+DB_FILE = "chat_history.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            role TEXT,
+            text TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+# สร้างฐานข้อมูลเมื่อเปิดเซิร์ฟเวอร์
+init_db()
+
+def save_message(user_id, role, text):
+    """ บันทึกข้อความลงฐานข้อมูล """
+    if not text: return
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO history (user_id, role, text) VALUES (?, ?, ?)', (user_id, role, text))
+    conn.commit()
+    conn.close()
+
+def load_chat_history(user_id):
+    """ ดึงประวัติเก่าจากฐานข้อมูลมาสร้างเป็น History Object ของ Gemini """
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    # ดึงประวัติแชทล่าสุด 20 ข้อความ (เพื่อไม่ให้ context ยาวเกินไป)
+    cursor.execute('''
+        SELECT role, text FROM (
+            SELECT role, text, timestamp FROM history WHERE user_id = ? ORDER BY timestamp DESC LIMIT 20
+        ) ORDER BY timestamp ASC
+    ''', (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    history = []
+    for role, text in rows:
+        history.append({
+            "role": role,
+            "parts": [text]
+        })
+    return history
+
+# ---------------------------------------------------------
+
+# เก็บ Session ไว้ใน Memory เพื่อความรวดเร็ว (ถ้าหายจะดึงจาก DB แทน)
+chat_sessions = {}
+
+def get_chat_session(user_id):
+    """ ดึง Chat Session ถ้าไม่มีใน Memory ให้โหลดจาก SQLite """
+    if user_id not in chat_sessions:
+        # โหลดประวัติจากฐานข้อมูล
+        history = load_chat_history(user_id)
+        # สร้าง Session ใหม่พร้อมประวัติเก่า
+        chat_sessions[user_id] = model.start_chat(history=history)
+        logger.info(f"Loaded {len(history)} past messages for user {user_id}")
+    return chat_sessions[user_id]
 
 # สร้าง FastAPI App
 app = FastAPI(title="Line OA Gemini Agent")
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from Line OA Gemini Agent!"}
+    return {"message": "Hello from Line OA Gemini Agent! Memory is active."}
 
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
@@ -234,7 +301,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     body_str = body.decode("utf-8")
     
     # ใช้ BackgroundTasks เพื่อตอบกลับ HTTP 200 อย่างรวดเร็วก่อนประมวลผลข้อความ
-    # ป้องกัน Line Webhook Timeout (Line ต้องการการตอบกลับภายในไม่กี่วินาที)
     background_tasks.add_task(handle_line_webhook, body_str, signature)
     
     return {"status": "ok"}
@@ -262,15 +328,18 @@ def handle_text_message(event):
     logger.info(f"Received message from user {user_id}: {user_text}")
     
     try:
-        # ตรวจสอบว่าเคยคุยกันหรือยัง ถ้ายังให้สร้าง History ใหม่ (ระบบความจำ)
-        if user_id not in chat_history:
-            chat_history[user_id] = model.start_chat(history=[])
-            
-        chat_session = chat_history[user_id]
+        # ดึง Session (ดึงจากความจำหรือสร้างใหม่จาก DB)
+        chat_session = get_chat_session(user_id)
         
-        # ส่งข้อความไปประมวลผลพร้อมประวัติการแชท
+        # บันทึกสิ่งที่ user พิมพ์ลง DB
+        save_message(user_id, "user", user_text)
+        
+        # ส่งข้อความไปประมวลผล
         response = chat_session.send_message(user_text)
         bot_reply = response.text
+        
+        # บันทึกสิ่งที่บอทตอบกลับลง DB
+        save_message(user_id, "model", bot_reply)
         
         # ค้นหาแท็ก [IMAGE: url] ด้วย Regex
         image_urls = re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', bot_reply)
@@ -344,11 +413,8 @@ def handle_image_message(event):
     logger.info(f"Received image message from user {user_id}")
     
     try:
-        # ตรวจสอบว่าเคยคุยกันหรือยัง ถ้ายังให้สร้าง History ใหม่ (ระบบความจำ)
-        if user_id not in chat_history:
-            chat_history[user_id] = model.start_chat(history=[])
-            
-        chat_session = chat_history[user_id]
+        # ดึง Session
+        chat_session = get_chat_session(user_id)
         
         # ดึงข้อมูลรูปภาพจาก Line Server
         message_content = line_bot_api.get_message_content(message_id)
@@ -359,11 +425,17 @@ def handle_image_message(event):
         # เปิดรูปภาพด้วย Pillow เพื่อส่งให้ Gemini
         image = PIL.Image.open(io.BytesIO(image_bytes))
         
+        # บันทึกเป็น text ว่า "User sent an image" ลง DB แทนการเก็บไฟล์รูป
+        save_message(user_id, "user", "[User sent an image]")
+        
         # ส่งรูปภาพให้ Gemini พร้อมคำสั่งกำกับ
         prompt = "ลูกค้าส่งรูปภาพมาให้ กรุณาวิเคราะห์ว่าเป็นสินค้าอะไรในการ์ดแต่งงานหรือของชำร่วยร้านเรา และตอบลูกค้าอย่างสุภาพ อิงตามกฎและราคาที่ตั้งไว้ (ถ้าไม่ใช่สินค้าในร้าน หรือเป็นบรีฟงานส่วนตัว ให้พิมพ์ [SILENCE])"
         response = chat_session.send_message([prompt, image])
         
         bot_reply = response.text.strip()
+        
+        # บันทึกการตอบกลับลง DB
+        save_message(user_id, "model", bot_reply)
         
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
         if "[SILENCE]" in bot_reply or bot_reply == "":
