@@ -358,7 +358,10 @@ def handle_text_message(event):
         image_urls = re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', bot_reply)
         
         # ลบแท็กออกจากข้อความที่จะส่งให้ผู้ใช้
-        clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply).strip()
+        clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply)
+        # ลบ whitespace บนบรรทัดว่างๆ และยุบรวม \n ที่ติดกันเกิน 2 ตัวให้เหลือแค่ 2 ตัว (เว้นพารากราฟเดียว)
+        clean_text = re.sub(r'^[ \t]+$', '', clean_text, flags=re.MULTILINE)
+        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text).strip()
         
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
         if "[SILENCE]" in clean_text or clean_text == "":
