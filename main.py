@@ -5,13 +5,15 @@ import re
 import time
 import io
 import PIL.Image
-import sqlite3
 import json
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage, ImageMessage
 import google.generativeai as genai
+import firebase_admin
+from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
 
 # โหลดค่าตัวแปรสภาพแวดล้อมจากไฟล์ .env
@@ -36,6 +38,72 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 # ตั้งค่า Google Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
+
+# ---------------------------------------------------------
+# ระบบความจำถาวรด้วย Firebase Firestore (Persistent Memory)
+# ---------------------------------------------------------
+FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS")
+db = None
+
+if FIREBASE_CREDENTIALS:
+    try:
+        # โหลดค่า JSON จาก Environment Variable
+        cred_dict = json.loads(FIREBASE_CREDENTIALS)
+        cred = credentials.Certificate(cred_dict)
+        # ตรวจสอบว่ามีแอปถูกสร้างไว้หรือยัง
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        logger.info("เชื่อมต่อ Firebase Firestore สำเร็จ!")
+    except Exception as e:
+        logger.error(f"เกิดข้อผิดพลาดในการเชื่อมต่อ Firebase: {e}")
+else:
+    logger.warning("ไม่มีตัวแปร FIREBASE_CREDENTIALS ใน .env (บอทจะไม่มีความจำข้ามเครื่อง/รีสตาร์ท)")
+
+def save_message(user_id, role, text):
+    """ บันทึกข้อความลง Firestore """
+    if not text or not db: return
+    try:
+        # บันทึกลงในคอลเลกชัน chat_history -> user_id -> messages -> (auto-id)
+        doc_ref = db.collection('chat_history').document(user_id).collection('messages').document()
+        doc_ref.set({
+            'role': role,
+            'text': text,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+    except Exception as e:
+        logger.error(f"Error saving to Firebase: {e}")
+
+def load_chat_history(user_id):
+    """ ดึงประวัติเก่าจาก Firestore มาสร้างเป็น History Object ของ Gemini """
+    if not db: return []
+    try:
+        # ดึงประวัติแชทล่าสุด 20 ข้อความ จัดเรียงตามเวลา
+        messages_ref = db.collection('chat_history').document(user_id).collection('messages')
+        query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(20)
+        results = query.stream()
+        
+        # Firestore คืนค่าจากใหม่สุดไปเก่าสุด เราต้องกลับด้านให้เรียงจากเก่าไปใหม่
+        rows = []
+        for doc in results:
+            data = doc.to_dict()
+            rows.append((data.get('role'), data.get('text')))
+            
+        rows.reverse()
+        
+        history = []
+        for role, text in rows:
+            if role and text:
+                history.append({
+                    "role": role,
+                    "parts": [text]
+                })
+        return history
+    except Exception as e:
+        logger.error(f"Error loading from Firebase: {e}")
+        return []
+
+# ---------------------------------------------------------
 
 system_instruction = """
 คุณคือ "เจ้าของร้าน (CEO)" ของร้านการ์ดแต่งงานและของชำร่วย (ONESTUDIO) ที่ลงมาดูแลลูกค้าด้วยตัวเอง
@@ -213,66 +281,11 @@ model = genai.GenerativeModel(
     system_instruction=system_instruction
 )
 
-# ---------------------------------------------------------
-# ระบบความจำถาวรด้วย SQLite (Persistent Memory)
-# ---------------------------------------------------------
-DB_FILE = "chat_history.db"
-
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            role TEXT,
-            text TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-# สร้างฐานข้อมูลเมื่อเปิดเซิร์ฟเวอร์
-init_db()
-
-def save_message(user_id, role, text):
-    """ บันทึกข้อความลงฐานข้อมูล """
-    if not text: return
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO history (user_id, role, text) VALUES (?, ?, ?)', (user_id, role, text))
-    conn.commit()
-    conn.close()
-
-def load_chat_history(user_id):
-    """ ดึงประวัติเก่าจากฐานข้อมูลมาสร้างเป็น History Object ของ Gemini """
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    # ดึงประวัติแชทล่าสุด 20 ข้อความ (เพื่อไม่ให้ context ยาวเกินไป)
-    cursor.execute('''
-        SELECT role, text FROM (
-            SELECT role, text, timestamp FROM history WHERE user_id = ? ORDER BY timestamp DESC LIMIT 20
-        ) ORDER BY timestamp ASC
-    ''', (user_id,))
-    rows = cursor.fetchall()
-    conn.close()
-    
-    history = []
-    for role, text in rows:
-        history.append({
-            "role": role,
-            "parts": [text]
-        })
-    return history
-
-# ---------------------------------------------------------
-
 # เก็บ Session ไว้ใน Memory เพื่อความรวดเร็ว (ถ้าหายจะดึงจาก DB แทน)
 chat_sessions = {}
 
 def get_chat_session(user_id):
-    """ ดึง Chat Session ถ้าไม่มีใน Memory ให้โหลดจาก SQLite """
+    """ ดึง Chat Session ถ้าไม่มีใน Memory ให้โหลดจาก Firebase Firestore """
     if user_id not in chat_sessions:
         # โหลดประวัติจากฐานข้อมูล
         history = load_chat_history(user_id)
@@ -286,7 +299,7 @@ app = FastAPI(title="Line OA Gemini Agent")
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from Line OA Gemini Agent! Memory is active."}
+    return {"message": "Hello from Line OA Gemini Agent! Firebase Memory is active."}
 
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
@@ -425,7 +438,7 @@ def handle_image_message(event):
         # เปิดรูปภาพด้วย Pillow เพื่อส่งให้ Gemini
         image = PIL.Image.open(io.BytesIO(image_bytes))
         
-        # บันทึกเป็น text ว่า "User sent an image" ลง DB แทนการเก็บไฟล์รูป
+        # เราจะไม่บันทึกรูปภาพลงฐานข้อมูลเพื่อประหยัดพื้นที่ แต่บันทึกเป็น text ว่า "User sent an image" ก็ได้
         save_message(user_id, "user", "[User sent an image]")
         
         # ส่งรูปภาพให้ Gemini พร้อมคำสั่งกำกับ
