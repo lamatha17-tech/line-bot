@@ -49,6 +49,9 @@ if FIREBASE_CREDENTIALS:
     try:
         # โหลดค่า JSON จาก Environment Variable
         cred_dict = json.loads(FIREBASE_CREDENTIALS)
+        # แก้ปัญหา escape character ใน private_key เมื่อเซ็ตผ่าน dashboard
+        if "private_key" in cred_dict and "\\n" in cred_dict["private_key"]:
+            cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
         cred = credentials.Certificate(cred_dict)
         # ตรวจสอบว่ามีแอปถูกสร้างไว้หรือยัง
         if not firebase_admin._apps:
@@ -94,10 +97,17 @@ def load_chat_history(user_id):
         history = []
         for role, text in rows:
             if role and text:
-                history.append({
-                    "role": role,
-                    "parts": [text]
-                })
+                # ป้องกันประวัติซ้ำบทบาทติดกัน (เช่น user ส่งข้อความสองครั้งติดกัน)
+                if history and history[-1]["role"] == role:
+                    history[-1]["parts"].append(text)
+                else:
+                    history.append({
+                        "role": role,
+                        "parts": [text]
+                    })
+        # Gemini API กำหนดให้ประวัติต้องเริ่มต้นด้วย role: user เสมอ
+        while history and history[0]["role"] != "user":
+            history.pop(0)
         return history
     except Exception as e:
         logger.error(f"Error loading from Firebase: {e}")
@@ -280,9 +290,9 @@ system_instruction = """
 - ระบบจะแปลง `[IMAGE: url]` ให้เป็นรูปภาพจริงๆ ใน LINE โดยอัตโนมัติ
 """
 
-# ใช้ model Gemini รุ่น 3.1 ตามที่คุณต้องการ
+# ใช้ model Gemini 2.5 Flash เสถียร รวดเร็ว และไม่ติด Error 503 High Demand
 model = genai.GenerativeModel(
-    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash',
     system_instruction=system_instruction
 )
 
@@ -307,9 +317,10 @@ def read_root():
     return {"message": "Hello from Line OA Gemini Agent! Firebase Memory is active."}
 
 @app.post("/webhook")
-async def webhook(request: Request, background_tasks: BackgroundTasks):
+async def webhook(request: Request):
     """
     Endpoint สำหรับรับ Webhook จาก Line
+    (ประมวลผลทันทีเพื่อรองรับทั้ง Serverless อย่าง Vercel และ Standalone Server)
     """
     # ตรวจสอบ Signature จาก Header
     signature = request.headers.get("x-line-signature", "")
@@ -318,9 +329,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     body = await request.body()
     body_str = body.decode("utf-8")
     
-    # ใช้ BackgroundTasks เพื่อตอบกลับ HTTP 200 อย่างรวดเร็วก่อนประมวลผลข้อความ
-    background_tasks.add_task(handle_line_webhook, body_str, signature)
-    
+    handle_line_webhook(body_str, signature)
     return {"status": "ok"}
 
 def handle_line_webhook(body: str, signature: str):
@@ -388,11 +397,7 @@ def handle_text_message(event):
                 preview_image_url=url
             ))
 
-        # หน่วงเวลา 3.5 วินาที เพื่อให้เหมือนคนกำลังพิมพ์ และให้เวลาแอดมินเบรก
-        logger.info("Delaying response for 3.5 seconds...")
-        time.sleep(3.5)
-
-        # ส่ง batch แรกด้วย reply_message (ต้องใช้ reply_token)
+        # ส่ง batch แรกด้วย reply_message (ต้องใช้ reply_token) - ส่งฟรี ไม่กินโควตา
         if messages:
             line_bot_api.reply_message(
                 reply_token,
@@ -400,16 +405,19 @@ def handle_text_message(event):
             )
             logger.info(f"Replied to user {user_id} with {len(messages)} messages.")
 
-        # ส่งรูปที่เหลือด้วย push_message แบ่ง batch ละ 5 รูป
-        for i in range(0, len(remaining_urls), 5):
-            batch = remaining_urls[i:i+5]
-            push_msgs = [
-                ImageSendMessage(original_content_url=url, preview_image_url=url)
-                for url in batch
-            ]
-            time.sleep(0.8)  # หน่วงเล็กน้อยระหว่าง batch ป้องกัน rate limit
-            line_bot_api.push_message(user_id, push_msgs)
-            logger.info(f"Pushed batch {i//5 + 1}: {len(push_msgs)} images to user {user_id}.")
+        # ส่งรูปที่เหลือด้วย push_message แบ่ง batch ละ 5 รูป (ดัก try-except เพื่อไม่ให้ crash ถ้าโควตารายเดือนเต็ม)
+        if remaining_urls:
+            try:
+                for i in range(0, len(remaining_urls), 5):
+                    batch = remaining_urls[i:i+5]
+                    push_msgs = [
+                        ImageSendMessage(original_content_url=url, preview_image_url=url)
+                        for url in batch
+                    ]
+                    line_bot_api.push_message(user_id, push_msgs)
+                    logger.info(f"Pushed batch {i//5 + 1}: {len(push_msgs)} images to user {user_id}.")
+            except Exception as push_err:
+                logger.warning(f"LINE push_message limit reached or failed: {push_err}")
         
     except Exception as e:
         logger.error(f"Error generating content or replying: {e}")
@@ -420,7 +428,7 @@ def handle_text_message(event):
                 TextSendMessage(text="ขออภัยค่ะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง")
             )
         except Exception as reply_err:
-            logger.error(f"Failed to send error message: {reply_err}")
+            logger.warning(f"Failed to send error fallback: {reply_err}")
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
@@ -462,10 +470,6 @@ def handle_image_message(event):
         if "[SILENCE]" in bot_reply or bot_reply == "":
             logger.info(f"Bot chose to stay silent for image from user {user_id}")
             return
-            
-        # หน่วงเวลา 3.5 วินาที
-        logger.info("Delaying response for 3.5 seconds...")
-        time.sleep(3.5)
             
         # ส่งข้อความกลับไปยัง Line
         line_bot_api.reply_message(
