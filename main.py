@@ -290,10 +290,16 @@ system_instruction = """
 - ระบบจะแปลง `[IMAGE: url]` ให้เป็นรูปภาพจริงๆ ใน LINE โดยอัตโนมัติ
 """
 
-# ใช้ model Gemini 2.5 Flash เสถียร รวดเร็ว และไม่ติด Error 503 High Demand
+# ใช้ model Gemini 2.5 Flash พร้อม temperature ต่ำ เพื่อตอบแม่นยำ ไม่มั่ว ไม่เดาราคาเอง
+generation_config = {
+    "temperature": 0.2,
+    "top_p": 0.8,
+}
+
 model = genai.GenerativeModel(
     'gemini-2.5-flash',
-    system_instruction=system_instruction
+    system_instruction=system_instruction,
+    generation_config=generation_config
 )
 
 # เก็บ Session ไว้ใน Memory เพื่อความรวดเร็ว (ถ้าหายจะดึงจาก DB แทน)
@@ -347,12 +353,69 @@ def handle_line_webhook(body: str, signature: str):
 def handle_text_message(event):
     """
     ฟังก์ชันสำหรับจัดการ Event ประเภทข้อความ (Text) ที่ส่งมาจากผู้ใช้
+    รองรับการรวมข้อความที่พิมพ์ส่งรัวๆ เข้ามาด้วยกัน (Debounce Buffer)
     """
     user_text = event.message.text
     reply_token = event.reply_token
     user_id = event.source.user_id
+    message_id = event.message.id
     
     logger.info(f"Received message from user {user_id}: {user_text}")
+    
+    # -------------------------------------------------------------
+    # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)
+    # -------------------------------------------------------------
+    if db:
+        now = time.time()
+        action_id = f"{now}_{message_id}"
+        buffer_ref = db.collection('message_buffers').document(user_id)
+        
+        try:
+            # เก็บข้อความเข้า Array แบบ Atomic เพื่อไม่ให้ข้อความตกหล่น
+            buffer_ref.set({
+                "latest_action_id": action_id,
+                "latest_reply_token": reply_token,
+                "messages": firestore.ArrayUnion([{"id": message_id, "text": user_text, "t": now}]),
+                "updated_at": now
+            }, merge=True)
+        except Exception as buffer_err:
+            logger.error(f"Error buffering message: {buffer_err}")
+            action_id = None
+        
+        if action_id:
+            # รอ 2.0 วินาที เพื่อดูว่าลูกค้ากำลังพิมพ์ข้อความถัดไปเข้ามาติดๆ กันหรือไม่
+            time.sleep(2.0)
+            
+            try:
+                doc = buffer_ref.get()
+                if not doc.exists:
+                    return
+                data = doc.to_dict() or {}
+                # หากมีข้อความใหม่กว่าเข้ามา action_id ล่าสุดจะไม่ตรงกับรอบนี้ -> ให้รอบใหม่เป็นคนตอบ
+                if data.get("latest_action_id") != action_id:
+                    logger.info(f"Skipping reply for older message ({action_id}) as newer messages arrived.")
+                    return
+                
+                # หากรอบนี้คือข้อความสุดท้าย ให้ดึงข้อความทั้งหมดที่สะสมไว้มาตอบพร้อมกัน
+                raw_msgs = data.get("messages", [])
+                sorted_msgs = sorted(raw_msgs, key=lambda x: x.get("t", 0) if isinstance(x, dict) else 0)
+                all_texts = [m.get("text", "") for m in sorted_msgs if isinstance(m, dict) and m.get("text")]
+                if not all_texts:
+                    all_texts = [user_text]
+                
+                # รวบเป็นข้อความเดียวคั่นด้วยขึ้นบรรทัดใหม่
+                user_text = "\n".join(all_texts)
+                reply_token = data.get("latest_reply_token", reply_token)
+                
+                # ลบ buffer ออกเพื่อพร้อมรับบทสนทนาใหม่ในครั้งต่อไป
+                try:
+                    buffer_ref.delete()
+                except Exception:
+                    pass
+                    
+                logger.info(f"Aggregated {len(all_texts)} messages for user {user_id}: {user_text}")
+            except Exception as e:
+                logger.error(f"Error checking message buffer: {e}")
     
     try:
         # ดึง Session (ดึงจากความจำหรือสร้างใหม่จาก DB)
