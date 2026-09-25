@@ -446,6 +446,7 @@ def handle_text_message(event):
         
         # บันทึกสิ่งที่ user พิมพ์ และสิ่งที่บอทตอบ ลง DB พร้อมกันเมื่อประมวลผลสำเร็จเท่านั้น
         save_message(user_id, "user", user_text)
+        time.sleep(0.01)
         save_message(user_id, "model", bot_reply)
         
         # ค้นหาแท็ก [IMAGE: url] ด้วย Regex
@@ -458,12 +459,16 @@ def handle_text_message(event):
         clean_text = re.sub(r'\n{3,}', '\n\n', clean_text).strip()
         
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
-        if "[SILENCE]" in clean_text or clean_text == "":
+        if "[SILENCE]" in bot_reply:
             logger.info(f"Bot chose to stay silent for user {user_id}")
             return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
             
+        if not clean_text and not image_urls:
+            logger.info(f"No content to send for user {user_id}")
+            return
+            
         messages = []
-        if clean_text and clean_text != "[SILENCE]":
+        if clean_text:
             messages.append(TextSendMessage(text=clean_text))
 
         # คำนวณจำนวนรูปที่ reply_message รับได้ (LINE จำกัด 5 messages รวม text)
