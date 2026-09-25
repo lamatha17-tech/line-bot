@@ -108,6 +108,9 @@ def load_chat_history(user_id):
         # Gemini API กำหนดให้ประวัติต้องเริ่มต้นด้วย role: user เสมอ
         while history and history[0]["role"] != "user":
             history.pop(0)
+        # และประวัติที่ส่งให้ start_chat ต้องลงท้ายด้วย role: model เสมอ (ป้องกัน error 400 เรื่อง multiturn alternate)
+        while history and history[-1]["role"] != "model":
+            history.pop()
         return history
     except Exception as e:
         logger.error(f"Error loading from Firebase: {e}")
@@ -429,14 +432,20 @@ def handle_text_message(event):
         # ดึง Session (ดึงจากความจำหรือสร้างใหม่จาก DB)
         chat_session = get_chat_session(user_id)
         
-        # บันทึกสิ่งที่ user พิมพ์ลง DB
-        save_message(user_id, "user", user_text)
-        
         # ส่งข้อความไปประมวลผล
         response = chat_session.send_message(user_text)
-        bot_reply = response.text
         
-        # บันทึกสิ่งที่บอทตอบกลับลง DB
+        # ดึงข้อความตอบกลับอย่างปลอดภัย (ป้องกัน Exception หาก Gemini ส่งค่าว่างหรือโดน Safety Block)
+        bot_reply = ""
+        try:
+            if response and response.text:
+                bot_reply = response.text
+        except Exception as text_err:
+            logger.warning(f"Could not extract response text: {text_err}")
+            return # เงียบสนิท
+        
+        # บันทึกสิ่งที่ user พิมพ์ และสิ่งที่บอทตอบ ลง DB พร้อมกันเมื่อประมวลผลสำเร็จเท่านั้น
+        save_message(user_id, "user", user_text)
         save_message(user_id, "model", bot_reply)
         
         # ค้นหาแท็ก [IMAGE: url] ด้วย Regex
@@ -492,14 +501,8 @@ def handle_text_message(event):
         
     except Exception as e:
         logger.error(f"Error generating content or replying: {e}")
-        # กรณีเกิดข้อผิดพลาด ส่งข้อความขออภัย
-        try:
-            line_bot_api.reply_message(
-                reply_token,
-                TextSendMessage(text="ขออภัยค่ะ ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง")
-            )
-        except Exception as reply_err:
-            logger.warning(f"Failed to send error fallback: {reply_err}")
+        # ถ้าระบบขัดข้อง ให้เงียบสนิท ไม่ส่งข้อความใดๆ ให้ลูกค้ารำคาญหรือสับสนเด็ดขาด
+        return
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
@@ -551,10 +554,5 @@ def handle_image_message(event):
         
     except Exception as e:
         logger.error(f"Error processing image or replying: {e}")
-        try:
-            line_bot_api.reply_message(
-                reply_token,
-                TextSendMessage(text="ขออภัยค่ะ ระบบประมวลผลรูปภาพขัดข้องชั่วคราว")
-            )
-        except Exception as reply_err:
-            pass
+        # ถ้าระบบขัดข้อง ให้เงียบสนิท ไม่ส่งข้อความใดๆ ให้ลูกค้า
+        return
