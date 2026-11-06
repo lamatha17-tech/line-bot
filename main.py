@@ -398,11 +398,52 @@ DEFAULT_ORDER_CATALOG = [
 ]
 
 
-def parse_and_build_order_summary(raw_text: str):
-    """สกัดคำสั่ง #order พร้อมดึงต้นทุนล่าสุดจาก Firestore และบันทึกยอดสะสมอัตโนมัติ"""
-    cust_match = re.search(r'(?:#order\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
-    customer = cust_match.group(1) if cust_match else "คุณลูกค้า"
+def get_line_display_name(user_id: str) -> str:
+    """ดึงชื่อจริง (Display Name) ของลูกค้าจาก LINE Profile API อัตโนมัติ"""
+    if not user_id:
+        return ""
+    try:
+        profile = line_bot_api.get_profile(user_id)
+        if profile and getattr(profile, "display_name", None):
+            return profile.display_name.strip()
+    except Exception as e:
+        logger.warning(f"Could not fetch LINE profile for {user_id}: {e}")
+    return ""
 
+
+def record_recent_line_customer(user_id: str, last_text: str = "") -> str:
+    """ดึงชื่อ LINE จริงของลูกค้าที่ทักเข้ามาและบันทึกลง Firestore เพื่อให้หน้าเว็บและ #order ดึงไปใช้ทันที"""
+    display_name = get_line_display_name(user_id)
+    if not display_name:
+        return ""
+    if db:
+        try:
+            doc_ref = db.collection("onestudio_admin").document("calculator_state")
+            doc = doc_ref.get()
+            state = doc.to_dict() if doc.exists else {}
+            recent = state.get("recentCustomers", [])
+            if not isinstance(recent, list):
+                recent = []
+            # ลบรายการซ้ำของ user_id เดิมออกแล้วดันชื่อล่าสุดขึ้นบนสุด
+            recent = [c for c in recent if isinstance(c, dict) and c.get("userId") != user_id]
+            recent.insert(0, {
+                "userId": user_id,
+                "displayName": display_name,
+                "lastText": (last_text or "")[:60],
+                "updatedAt": int(time.time()),
+            })
+            doc_ref.set({
+                "latestLineCustomer": display_name,
+                "recentCustomers": recent[:15],
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            }, merge=True)
+        except Exception as e:
+            logger.warning(f"Failed to record recent LINE customer: {e}")
+    return display_name
+
+
+def parse_and_build_order_summary(raw_text: str, user_id: str = None):
+    """สกัดคำสั่ง #order พร้อมดึงชื่อจริงจาก LINE Profile, ต้นทุนล่าสุดจาก Firestore และบันทึกยอดสะสมอัตโนมัติ"""
     discount_match = re.search(r'ลด\s*(\d+)', raw_text)
     free_ship = "ส่งฟรี" in raw_text
     ship_charge_match = re.search(r'ค่าส่ง\s*(\d+)', raw_text)
@@ -411,7 +452,7 @@ def parse_and_build_order_summary(raw_text: str):
     ship_charge = 0 if free_ship else (int(ship_charge_match.group(1)) if ship_charge_match else 0)
     ship_cost = int(ship_cost_match.group(1)) if ship_cost_match else (100 if free_ship else ship_charge)
 
-    # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ใน Firestore (ถ้ามี)
+    # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ และชื่อลูกค้า LINE ล่าสุดจาก Firestore (ถ้ามี)
     custom_mat_map = {}
     saved_state = {}
     if db:
@@ -424,6 +465,17 @@ def parse_and_build_order_summary(raw_text: str):
                         custom_mat_map[int(item["id"])] = float(item["mat"])
         except Exception as e:
             logger.warning(f"Failed to load custom catalog from Firestore: {e}")
+
+    # ดึงชื่อลูกค้า: ถ้าระบุ "คุณ..." ในคำสั่งให้ใช้ชื่อนั้น แต่ถ้าไม่ระบุ ให้ดึงชื่อจริงจาก LINE ที่สั่งทันที!
+    cust_match = re.search(r'(?:#order\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
+    if cust_match:
+        customer = cust_match.group(1)
+    else:
+        line_name = get_line_display_name(user_id) or saved_state.get("latestLineCustomer") or ""
+        if line_name:
+            customer = line_name if line_name.startswith("คุณ") else f"คุณ{line_name}"
+        else:
+            customer = "คุณลูกค้า (LINE)"
 
     working = re.sub(r'(ค่าส่ง\s*\d+|ส่งจริง\s*\d+|ลด\s*\d+|ยอด\s*\d+)', '', raw_text.lower())
 
@@ -545,7 +597,7 @@ def serve_calculator_app():
 
 @app.get("/api/calculator-state")
 def get_calculator_state():
-    """โหลดข้อมูลต้นทุนสินค้า ยอดสะสม และเป้าหมายรายเดือนจาก Firebase Firestore"""
+    """โหลดข้อมูลต้นทุนสินค้า ยอดสะสม เป้าหมายรายเดือน และรายชื่อลูกค้าจาก LINE OA ล่าสุด"""
     if not db:
         return JSONResponse({"ok": False, "reason": "no_db"})
     try:
@@ -557,8 +609,10 @@ def get_calculator_state():
                 "catalog": data.get("catalog", []),
                 "orderHistory": data.get("orderHistory", []),
                 "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
+                "latestLineCustomer": data.get("latestLineCustomer", ""),
+                "recentCustomers": data.get("recentCustomers", []),
             })
-        return JSONResponse({"ok": True, "catalog": [], "orderHistory": [], "monthlyTargets": None})
+        return JSONResponse({"ok": True, "catalog": [], "orderHistory": [], "monthlyTargets": None, "latestLineCustomer": "", "recentCustomers": []})
     except Exception as e:
         logger.error(f"Error loading calculator state: {e}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -650,7 +704,7 @@ def handle_text_message(event):
     # -------------------------------------------------------------
     if user_text.strip().lower().startswith("#order"):
         try:
-            parsed_order = parse_and_build_order_summary(user_text.strip())
+            parsed_order = parse_and_build_order_summary(user_text.strip(), user_id=user_id)
             if parsed_order:
                 customer_bill, admin_summary = parsed_order
                 line_bot_api.reply_message(
@@ -665,6 +719,9 @@ def handle_text_message(event):
         except Exception as ord_err:
             logger.error(f"Error processing #order command: {ord_err}")
             return
+
+    # บันทึกชื่อจริงจาก LINE Profile ของลูกค้าที่ทักแชทเข้ามาล่าสุด
+    record_recent_line_customer(user_id, user_text)
 
     # -------------------------------------------------------------
     # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)

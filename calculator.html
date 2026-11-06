@@ -76,30 +76,41 @@
     <!-- ========================================== -->
     <div id="tab-linechat" class="space-y-4">
 
-      <!-- คำแนะนำวิธีใช้งานจริง 3 ขั้นตอน -->
-      <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-emerald-200 space-y-2">
+      <!-- คำแนะนำวิธีใช้งานจริง + ดึงชื่อจริงจาก LINE ที่สั่งอัตโนมัติ -->
+      <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-emerald-200 space-y-2.5">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-            <span class="bg-[#06C755] text-white px-2 py-0.5 rounded-full text-xs">วิธีใช้งานจริง</span>
-            พิมพ์ #order พร้อมระบุค่าส่งได้เลย
+            <span class="bg-[#06C755] text-white px-2 py-0.5 rounded-full text-xs">ดึงชื่อจาก LINE อัตโนมัติ</span>
+            ไม่ต้องพิมพ์ชื่อลูกค้าใน #order ก็ได้!
           </span>
-          <span class="text-xs text-slate-400">กดปุ่มตัวอย่างด้านล่าง 👇</span>
+          <button onclick="loadStateFromCloud(true)" class="text-xs text-emerald-700 hover:underline font-semibold flex items-center gap-1">
+            🔄 ดึงชื่อ LINE ล่าสุด
+          </button>
         </div>
-        <p class="text-xs text-slate-500">พิมพ์ต่อท้ายได้ทั้ง <b>"ค่าส่ง 100"</b> (เก็บลูกค้า), <b>"ส่งจริง 120"</b>
-          (ร้านจ่ายขนส่ง) หรือ <b>"ส่งฟรี"</b></p>
 
-        <!-- ปุ่มกดทดลองคำสั่ง #order ตัวอย่าง -->
-        <div class="pt-1 flex gap-1.5 overflow-x-auto pb-1">
+        <!-- แถบแสดงชื่อจริงจาก LINE ของลูกค้าที่เพิ่งทักแชทสั่งซื้อ -->
+        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5 space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-emerald-900 font-medium">🟢 ชื่อจริงจาก LINE ที่สั่งล่าสุด:</span>
+            <span id="active-line-customer-badge" class="font-bold text-[#06C755] bg-white px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs">คุณแพรว (LINE)</span>
+          </div>
+          <div id="recent-line-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5"></div>
+        </div>
+
+        <p class="text-xs text-slate-500">พิมพ์แค่ <b>#order รายการสินค้า จำนวน ค่าส่ง...</b> ระบบจะดึงชื่อจริงจาก LINE ของลูกค้าที่สั่งมาใส่บิลให้อัตโนมัติ</p>
+
+        <!-- ปุ่มกดทดลองคำสั่ง #order ตัวอย่าง (ไม่ต้องพิมพ์ชื่อลูกค้า ดึงจาก LINE อัตโนมัติ) -->
+        <div class="pt-0.5 flex gap-1.5 overflow-x-auto pb-1">
           <button
-            onclick="runPresetOrder('#order คุณแพรว การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120')"
+            onclick="runPresetOrder('#order การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120')"
             class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
-            🚚 ตัวอย่าง 1: เก็บค่าส่ง 80฿ (จ่ายขนส่งจริง 120฿)
+            🚚 ตัวอย่าง 1: ดึงชื่อ LINE อัตโนมัติ + ค่าส่ง 80฿
           </button>
-          <button onclick="runPresetOrder('#order คุณมิน การ์ด 5x7 หน้าหลัง 500, ดินสอไม้ 500 ส่งฟรี ส่งจริง 150')"
+          <button onclick="runPresetOrder('#order การ์ด 5x7 หน้าหลัง 500, ดินสอไม้ 500 ส่งฟรี ส่งจริง 150')"
             class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
-            🎁 ตัวอย่าง 2: ส่งฟรีให้ลูกค้า (ร้านออกค่าส่ง 150฿)
+            🎁 ตัวอย่าง 2: ดึงชื่อ LINE อัตโนมัติ + ส่งฟรี
           </button>
-          <button onclick="runPresetOrder('#order คุณเมย์ การ์ด 4x6 หน้าเดียว 200, ช้อนทอง 200 ค่าส่ง 100 ลด 50')"
+          <button onclick="runPresetOrder('#order การ์ด 4x6 หน้าเดียว 200, ช้อนทอง 200 ค่าส่ง 100 ลด 50')"
             class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
             ⚡ ตัวอย่าง 3: ค่าส่ง 100฿ + ส่วนลด 50฿
           </button>
@@ -136,9 +147,9 @@
         <!-- ช่องพิมพ์ข้อความแชท LINE -->
         <div class="bg-white p-2.5 border-t border-slate-200 flex items-center gap-2">
           <input type="text" id="chat-command-input"
-            value="#order คุณแพรว การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120"
+            value="#order การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120"
             onkeydown="if(event.key==='Enter') sendChatOrderCommand()"
-            placeholder="พิมพ์ #order ชื่อลูกค้า สินค้า จำนวน ค่าส่ง..."
+            placeholder="พิมพ์ #order สินค้า จำนวน ค่าส่ง... (ดึงชื่อ LINE อัตโนมัติ)"
             class="flex-1 bg-slate-100 px-3 py-2 rounded-full text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755]">
           <button onclick="sendChatOrderCommand()"
             class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2 rounded-full text-xs shadow-xs transition shrink-0">
@@ -724,6 +735,12 @@
     let catalog = JSON.parse(JSON.stringify(defaultCatalog));
     let orderHistory = [];
     let monthlyTargets = { wage: 15000, house: 15000, vehicle: 10000 };
+    let activeLineCustomerName = "คุณแพรว (LINE)";
+    let recentLineCustomers = [
+      { displayName: "แพรว 🌸", lastText: "สนใจสั่งการ์ด 4x6 ค่ะ" },
+      { displayName: "Minny 💕", lastText: "รับดินสอไม้ 500 ชิ้นค่ะ" },
+      { displayName: "เมย์ พัชรพร", lastText: "ขอเลขบัญชีมัดจำค่ะ" }
+    ];
 
     try {
       const savedV3 = localStorage.getItem("onestudio_cost_catalog_v3");
@@ -799,9 +816,37 @@
       }, 600);
     }
 
-    async function loadStateFromCloud() {
+    function selectLineCustomer(rawName) {
+      if (!rawName) return;
+      activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
+      const badgeEl = document.getElementById("active-line-customer-badge");
+      if (badgeEl) badgeEl.innerText = activeLineCustomerName;
+      const custInput = document.getElementById("input-customer");
+      if (custInput) custInput.value = activeLineCustomerName;
+      renderRecentLineCustomers();
+      calculate();
+      showToast(`🟢 ดึงชื่อลูกค้าจาก LINE: ${activeLineCustomerName}`);
+    }
+
+    function renderRecentLineCustomers() {
+      const badgeEl = document.getElementById("active-line-customer-badge");
+      if (badgeEl) badgeEl.innerText = activeLineCustomerName;
+      const listEl = document.getElementById("recent-line-customers-list");
+      if (!listEl) return;
+      listEl.innerHTML = recentLineCustomers.map(c => {
+        const formatted = (c.displayName || "").startsWith("คุณ") ? c.displayName : `คุณ${c.displayName}`;
+        const isActive = formatted === activeLineCustomerName;
+        const safeArg = (c.displayName || "").replace(/'/g, "\\'");
+        return `<button onclick="selectLineCustomer('${safeArg}')" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border ${isActive ? 'bg-[#06C755] text-white border-[#06C755]' : 'bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100'}">👤 ${c.displayName}</button>`;
+      }).join("");
+    }
+
+    async function loadStateFromCloud(showNotification = false) {
       try {
-        if (!location.protocol.startsWith("http")) return;
+        if (!location.protocol.startsWith("http")) {
+          if (showNotification) showToast("🟢 ดึงชื่อจาก LINE ล่าสุด: " + activeLineCustomerName);
+          return;
+        }
         const res = await fetch("/api/calculator-state");
         if (!res.ok) return;
         const data = await res.json();
@@ -829,10 +874,21 @@
             if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
             if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
           }
+          if (Array.isArray(data.recentCustomers) && data.recentCustomers.length > 0) {
+            recentLineCustomers = data.recentCustomers;
+          }
+          if (data.latestLineCustomer) {
+            const rawName = data.latestLineCustomer;
+            activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
+            const custInput = document.getElementById("input-customer");
+            if (custInput) custInput.value = activeLineCustomerName;
+          }
+          renderRecentLineCustomers();
           renderCatalog();
           renderOrderItems();
           calculate();
           renderAccumulatedDashboard();
+          if (showNotification) showToast(`🟢 ดึงชื่อจริงจาก LINE ล่าสุด: ${activeLineCustomerName}`);
         }
       } catch (e) {}
     }
@@ -911,9 +967,9 @@
       `;
       chatBox.appendChild(userBubble);
 
-      // 2) ประมวลผลคำสั่ง #order
+      // 2) ประมวลผลคำสั่ง #order (หากไม่ได้พิมพ์ชื่อลูกค้า ระบบจะดึงชื่อจริงจาก LINE ที่สั่งให้อัตโนมัติ!)
       const custMatch = rawText.match(/(?:#order\s*)?(คุณ[^\s,]+(?:\s*&\s*คุณ[^\s,]+)?)/i);
-      const customerName = custMatch ? custMatch[1] : "คุณลูกค้า (LINE OA)";
+      const customerName = custMatch ? custMatch[1] : (activeLineCustomerName || document.getElementById("input-customer")?.value || "คุณลูกค้า (LINE)");
       document.getElementById("input-customer").value = customerName;
 
       // สกัดส่วนลด, ยอดรวม, ค่าส่งเก็บลูกค้า, ค่าส่งจ่ายจริง
@@ -1617,6 +1673,7 @@ ${itemsText}━━━━━━━━━━━━━━
     if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
     if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
     if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
+    renderRecentLineCustomers();
     renderCatalog();
     renderOrderItems();
     calculate();
