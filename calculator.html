@@ -735,8 +735,8 @@
       { id: 202, category: "ของชำร่วย", name: "2. เข็มกลัดดอกกุหลาบ", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"] },
       { id: 203, category: "ของชำร่วย", name: "3. เข็มกลัดดอกเดซี่", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกเดซี่", "ดอกเดซี่", "เดซี่"] },
       { id: 204, category: "ของชำร่วย", name: "4. เข็มกลัดดอกไม้ (แพ็คเกจตัดเสียบ)", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกไม้", "เข็มกลัด"] },
-      { id: 205, category: "ของชำร่วย", name: "5.1 น้ำหอมขวดจิ๋ว (แพ็คเกจตัดเสียบ)", priceInfo: "6฿", mat: 5.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"] },
-      { id: 206, category: "ของชำร่วย", name: "5.2 น้ำหอมขวดจิ๋ว (แพ็คเกจพับปิด)", priceInfo: "6 - 8฿", mat: 5.5, tiers: { 100: 8.0, 300: 7.0, 500: 6.0 }, keywords: ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"] },
+      { id: 205, category: "ของชำร่วย", name: "5.1 น้ำหอมขวดจิ๋ว (แพ็คเกจตัดเสียบ)", priceInfo: "เริ่ม 8฿", mat: 5.0, tiers: { 100: 8.0, 300: 8.0, 500: 8.0 }, keywords: ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ", "น้ำหอมขวดจิ๋ว", "น้ำหอม"] },
+      { id: 206, category: "ของชำร่วย", name: "5.2 น้ำหอมขวดจิ๋ว (แพ็คเกจพับปิด)", priceInfo: "เริ่ม 8฿", mat: 5.5, tiers: { 100: 8.0, 300: 8.0, 500: 8.0 }, keywords: ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋วพับปิด"] },
       { id: 207, category: "ของชำร่วย", name: "6. สมุดโน้ต 3x4 นิ้ว", priceInfo: "6฿", mat: 3.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["สมุดโน้ต 3x4", "สมุด 3x4", "สมุดโน้ต", "สมุด"] },
       { id: 208, category: "ของชำร่วย", name: "7. พวงกุญแจ PU ถัก", priceInfo: "6 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.5, 500: 6.0 }, keywords: ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก", "พวงกุญแจ"] },
       { id: 209, category: "ของชำร่วย", name: "8. กระจกวิเศษทรงกลม (ตัดเสียบ/ติด Tag)", priceInfo: "5.8 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.0, 500: 5.8 }, keywords: ["กระจกวิเศษ", "กระจก"] },
@@ -1228,10 +1228,10 @@
         if (segLower.includes("ในรถ") || segLower.includes("รถยนต์") || (explicitUnit !== null && explicitUnit >= 20)) {
           return byId[224] || catalog[0];
         }
-        if (segLower.includes("ตัดเสียบ") || (explicitUnit !== null && explicitUnit <= 6 && !segLower.includes("พับ"))) {
-          return byId[205] || catalog[0];
+        if (segLower.includes("พับปิด") || segLower.includes("พับ")) {
+          return byId[206] || catalog[0];
         }
-        return byId[206] || catalog[0];
+        return byId[205] || catalog[0];
       }
 
       if (segLower.includes("ยางมัดผม") || segLower.includes("ถุงแก้ว") || segLower.includes("ถุงตาข่าย")) {
