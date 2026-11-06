@@ -384,8 +384,8 @@ DEFAULT_ORDER_CATALOG = [
     {"id": 204, "cat": "souvenir", "name": "เข็มกลัดดอกไม้ (ตัดเสียบ)", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกไม้", "เข็มกลัด"]},
     {"id": 205, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (ตัดเสียบ)", "mat": 5.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"]},
     {"id": 206, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (พับปิด)", "mat": 5.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"]},
-    {"id": 207, "cat": "souvenir", "name": "สมุดโน้ต 3x4 นิ้ว", "mat": 3.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["สมุดโน้ต 3x4", "สมุด 3x4"]},
-    {"id": 208, "cat": "souvenir", "name": "พวงกุญแจ PU ถัก", "mat": 3.0, "tiers": {100: 7.0, 300: 6.5, 500: 6.0}, "kw": ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"]},
+    {"id": 207, "cat": "souvenir", "name": "สมุดโน้ต 3x4 นิ้ว", "mat": 3.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["สมุดโน้ต 3x4", "สมุด 3x4", "สมุดโน้ต", "สมุด"]},
+    {"id": 208, "cat": "souvenir", "name": "พวงกุญแจ PU ถัก", "mat": 3.0, "tiers": {100: 7.0, 300: 6.5, 500: 6.0}, "kw": ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก", "พวงกุญแจ"]},
     {"id": 209, "cat": "souvenir", "name": "กระจกวิเศษทรงกลม", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 5.8}, "kw": ["กระจกวิเศษ", "กระจก"]},
     {"id": 210, "cat": "souvenir", "name": "ปากกาลูกลื่น", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 6.0}, "kw": ["ปากกาลูกลื่น", "ปากกา"]},
     {"id": 211, "cat": "souvenir", "name": "พิมเสน", "mat": 5.0, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["พิมเสน"]},
@@ -449,19 +449,107 @@ def record_recent_line_customer(user_id: str, last_text: str = "") -> str:
     return display_name
 
 
-def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
-    """สกัดรายการสินค้าและจำนวนชิ้นจากข้อความสั่งซื้อ (#oder / #order หรือข้อความแชทของลูกค้า)"""
-    working = re.sub(r'(ค่าส่ง\s*\d+|ส่งจริง\s*\d+|ลด\s*\d+|ยอด\s*\d+)', '', raw_text.lower())
-    detected = []
+def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None):
+    """จับคู่สินค้าจากข้อความแต่ละบรรทัด พร้อมแยกแยะรุ่นย่อยจากเรทราคาต่อชิ้นที่แอดมินพิมพ์ (เช่น 100*7฿ vs 100*8฿)"""
+    by_id = {p["id"]: p for p in DEFAULT_ORDER_CATALOG}
+
+    # กฎแยกแยะชื่อย่อที่แอดมินใช้บ่อยโดยดูจากคำสำคัญและราคาขายต่อชิ้น (*ราคา฿)
+    if "พวงกุญแจ" in seg_lower or "กุญแจ" in seg_lower:
+        if "หนัง" in seg_lower or "แบน" in seg_lower or "โบว์" in seg_lower or (explicit_unit is not None and explicit_unit >= 8):
+            return by_id[212]
+        return by_id[208]
+
+    if "น้ำหอม" in seg_lower:
+        if "ในรถ" in seg_lower or "รถยนต์" in seg_lower or (explicit_unit is not None and explicit_unit >= 20):
+            return by_id[224]
+        if "ตัดเสียบ" in seg_lower or (explicit_unit is not None and explicit_unit <= 6 and "พับ" not in seg_lower):
+            return by_id[205]
+        return by_id[206]
+
+    if "ยางมัดผม" in seg_lower or "ถุงแก้ว" in seg_lower or "ถุงตาข่าย" in seg_lower:
+        if "ถุงแก้ว" in seg_lower or "ถุงตาข่าย" in seg_lower or (explicit_unit is not None and explicit_unit >= 13):
+            return by_id[215]
+        return by_id[214]
+
+    if "สมุด" in seg_lower:
+        if "a5" in seg_lower or (explicit_unit is not None and explicit_unit >= 13):
+            return by_id[222]
+        return by_id[207]
+
+    if "ช้อน" in seg_lower:
+        if "ทอง" in seg_lower or (explicit_unit is not None and explicit_unit >= 16):
+            return by_id[221]
+        return by_id[220]
+
     sorted_cat = sorted(DEFAULT_ORDER_CATALOG, key=lambda x: len(x["kw"][0]), reverse=True)
     for prod in sorted_cat:
         for kw in prod["kw"]:
-            idx = working.find(kw.lower())
-            if idx != -1:
-                after = working[idx + len(kw): idx + len(kw) + 35]
-                num_m = re.search(r'(\d{2,5})', after)
-                qty = int(num_m.group(1)) if num_m else 100
-                unit_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
+            if kw.lower() in seg_lower:
+                return prod
+    return None
+
+
+def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
+    """สกัดรายการสินค้าทั้งรูปแบบหลายบรรทัด (เช่น 1. ยางมัดผม 100*10฿=฿1,000.00) และรูปแบบบรรทัดเดียว"""
+    detected = []
+    lines = raw_text.splitlines()
+
+    for raw_line in lines:
+        line_str = raw_line.strip()
+        if not line_str:
+            continue
+        # ข้ามบรรทัดหัวคำสั่งหรือบรรทัดสรุปยอดท้ายบิล
+        if re.match(r'^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด)', line_str, flags=re.IGNORECASE):
+            continue
+        # ลบคำว่า #order / #oder ที่อยู่ต้นบรรทัด (กรณีพิมพ์บรรทัดเดียวกัน)
+        line_str = re.sub(r'^#\s*(?:order|oder|ออเดอร์|บิล)\s*', '', line_str, flags=re.IGNORECASE).strip()
+        if not line_str:
+            continue
+
+        # แยกด้วยเครื่องหมายจุลภาค เฉพาะจุลภาคที่ไม่ได้อยู่ในตัวเลขหลักพัน (เช่น 1,000)
+        segments = re.split(r',(?!\d)', line_str)
+        for seg in segments:
+            seg_clean = seg.strip()
+            if not seg_clean:
+                continue
+            # ตัดคำเกี่ยวกับค่าส่ง/ส่วนลดท้ายบรรทัดออกก่อนวิเคราะห์สินค้า
+            seg_clean = re.sub(r'(ค่าส่ง\s*฿?\s*[\d,]+(?:\.\d+)?|ส่งจริง\s*฿?\s*[\d,]+(?:\.\d+)?|(?:ส่วนลด|ลด)\s*฿?\s*[\d,]+(?:\.\d+)?|ยอด(?:รวม|โอน)[^\n]*)', '', seg_clean, flags=re.IGNORECASE).strip()
+            # ตัดเลขข้อนำหน้า เช่น "1. ", "2) ", "- "
+            seg_clean = re.sub(r'^\s*(?:\d+(?:\.\d+)?\s*[\.\)\-]|\-|•)\s*', '', seg_clean).strip()
+            if not seg_clean:
+                continue
+
+            qty = None
+            explicit_unit = None
+            explicit_total = None
+
+            # ตรวจจับรูปแบบ "100*10฿=฿1,000.00" หรือ "150 x 7 = 1,050"
+            mul_m = re.search(
+                r'(\d[\d,]*)\s*(?:ชิ้น|ใบ|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?',
+                seg_clean,
+                flags=re.IGNORECASE,
+            )
+            if mul_m:
+                qty = int(mul_m.group(1).replace(',', ''))
+                explicit_unit = float(mul_m.group(2))
+                if mul_m.group(3):
+                    explicit_total = float(mul_m.group(3).replace(',', ''))
+            else:
+                # ตัดชื่อขนาดเช่น 4x6, 5x7, 3x4, 30ml, a5 ออกก่อนหาตัวเลขจำนวนชิ้น
+                for_num = re.sub(r'(4x6|5x7|3x4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)', ' ', seg_clean, flags=re.IGNORECASE)
+                num_m = re.search(r'(\d[\d,]*)', for_num)
+                if num_m:
+                    val = int(num_m.group(1).replace(',', ''))
+                    if val >= 10:
+                        qty = val
+
+            prod = match_catalog_product_smart(seg_clean.lower(), explicit_unit)
+            if prod:
+                if qty is None:
+                    qty = 100
+                default_tier_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
+                unit_sell = explicit_unit if explicit_unit is not None else default_tier_sell
+                line_total = round(explicit_total if explicit_total is not None else (qty * unit_sell), 1)
                 mat_cost = custom_mat_map.get(prod["id"], prod["mat"])
                 detected.append({
                     "id": prod["id"],
@@ -469,23 +557,23 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
                     "cat": prod["cat"],
                     "qty": qty,
                     "unit_sell": unit_sell,
-                    "line_total": round(qty * unit_sell, 1),
+                    "line_total": line_total,
                     "line_mat": round(qty * mat_cost, 1),
                 })
-                working = working.replace(kw.lower(), "___", 1)
-                break
+
     return detected
 
 
 def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     """สกัดคำสั่ง #oder / #order พร้อมดึงชื่อจริงของลูกค้าจาก LINE OA, คำนวณกำไร 4 กองทุน และซิงค์เข้าหน้าแอปทันที"""
-    discount_match = re.search(r'ลด\s*(\d+)', raw_text)
+    discount_match = re.search(r'(?:ส่วนลด|ลด)\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
     free_ship = "ส่งฟรี" in raw_text
-    ship_charge_match = re.search(r'ค่าส่ง\s*(\d+)', raw_text)
-    ship_cost_match = re.search(r'ส่งจริง\s*(\d+)', raw_text)
+    ship_charge_match = re.search(r'ค่าส่ง\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
+    ship_cost_match = re.search(r'ส่งจริง\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
+    transfer_match = re.search(r'ยอดโอน(?:สุทธิ)?\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
 
-    ship_charge = 0 if free_ship else (int(ship_charge_match.group(1)) if ship_charge_match else 0)
-    ship_cost = int(ship_cost_match.group(1)) if ship_cost_match else (100 if free_ship else ship_charge)
+    ship_charge = 0 if free_ship else (int(float(ship_charge_match.group(1).replace(',', ''))) if ship_charge_match else 0)
+    ship_cost = int(float(ship_cost_match.group(1).replace(',', ''))) if ship_cost_match else (100 if free_ship else ship_charge)
 
     # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ และชื่อลูกค้า LINE ล่าสุดจาก Firestore (ถ้ามี)
     custom_mat_map = {}
@@ -552,7 +640,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         return None
 
     subtotal = sum(i["line_total"] for i in detected)
-    discount = int(discount_match.group(1)) if discount_match else 0
+    discount = int(float(discount_match.group(1).replace(',', ''))) if discount_match else 0
+    if transfer_match and not discount_match:
+        explicit_net = int(float(transfer_match.group(1).replace(',', '')))
+        if 0 < explicit_net < (subtotal + ship_charge):
+            discount = int((subtotal + ship_charge) - explicit_net)
 
     net_rev = max(0, subtotal + ship_charge - discount)
     deposit = round(net_rev / 2)

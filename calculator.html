@@ -130,17 +130,27 @@
           </div>
         </div>
 
-        <!-- ช่องพิมพ์ข้อความแชท LINE -->
-        <div class="bg-white p-2.5 border-t border-slate-200 flex items-center gap-2">
-          <input type="text" id="chat-command-input"
-            value=""
-            onkeydown="if(event.key==='Enter') sendChatOrderCommand()"
-            placeholder="พิมพ์ #order สินค้า จำนวน ค่าส่ง... (ดึงชื่อ LINE จริงอัตโนมัติ)"
-            class="flex-1 bg-slate-100 px-3 py-2 rounded-full text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755]">
-          <button onclick="sendChatOrderCommand()"
-            class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2 rounded-full text-xs shadow-xs transition shrink-0">
-            ออกบิล
-          </button>
+        <!-- ช่องพิมพ์/วางข้อความสรุปยอดหลายบรรทัด -->
+        <div class="bg-white p-2.5 border-t border-slate-200 space-y-2">
+          <div class="flex items-center justify-between gap-1.5">
+            <button onclick="pasteAndCalculateOrder()"
+              class="flex-1 py-1.5 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1">
+              📋 วางข้อความสรุปยอด (Paste) แล้วคำนวณทันที
+            </button>
+            <button onclick="fillSampleFormatOrder()"
+              class="shrink-0 py-1.5 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition">
+              🧪 ทดลองรูปแบบของคุณ
+            </button>
+          </div>
+          <div class="flex items-end gap-2">
+            <textarea id="chat-command-input" rows="3"
+              placeholder="พิมพ์ #order ไว้บรรทัดบนสุด แล้ววางรายการสรุปยอดด้านล่าง เช่น&#10;#order&#10;1. ยางมัดผม 100*10฿=฿1,000.00&#10;2. กระจก 150*7฿=฿1,050.00&#10;ค่าส่ง 130฿ ยอดโอน 4,680฿"
+              class="flex-1 bg-slate-100 px-3 py-2 rounded-2xl text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755] resize-none"></textarea>
+            <button onclick="sendChatOrderCommand()"
+              class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-3 rounded-2xl text-xs shadow-xs transition shrink-0">
+              คำนวณ<br>ออกบิล
+            </button>
+          </div>
         </div>
       </div>
 
@@ -727,8 +737,8 @@
       { id: 204, category: "ของชำร่วย", name: "4. เข็มกลัดดอกไม้ (แพ็คเกจตัดเสียบ)", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกไม้", "เข็มกลัด"] },
       { id: 205, category: "ของชำร่วย", name: "5.1 น้ำหอมขวดจิ๋ว (แพ็คเกจตัดเสียบ)", priceInfo: "6฿", mat: 5.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"] },
       { id: 206, category: "ของชำร่วย", name: "5.2 น้ำหอมขวดจิ๋ว (แพ็คเกจพับปิด)", priceInfo: "6 - 8฿", mat: 5.5, tiers: { 100: 8.0, 300: 7.0, 500: 6.0 }, keywords: ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"] },
-      { id: 207, category: "ของชำร่วย", name: "6. สมุดโน้ต 3x4 นิ้ว", priceInfo: "6฿", mat: 3.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["สมุดโน้ต 3x4", "สมุด 3x4"] },
-      { id: 208, category: "ของชำร่วย", name: "7. พวงกุญแจ PU ถัก", priceInfo: "6 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.5, 500: 6.0 }, keywords: ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"] },
+      { id: 207, category: "ของชำร่วย", name: "6. สมุดโน้ต 3x4 นิ้ว", priceInfo: "6฿", mat: 3.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["สมุดโน้ต 3x4", "สมุด 3x4", "สมุดโน้ต", "สมุด"] },
+      { id: 208, category: "ของชำร่วย", name: "7. พวงกุญแจ PU ถัก", priceInfo: "6 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.5, 500: 6.0 }, keywords: ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก", "พวงกุญแจ"] },
       { id: 209, category: "ของชำร่วย", name: "8. กระจกวิเศษทรงกลม (ตัดเสียบ/ติด Tag)", priceInfo: "5.8 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.0, 500: 5.8 }, keywords: ["กระจกวิเศษ", "กระจก"] },
       { id: 210, category: "ของชำร่วย", name: "9. ปากกาลูกลื่น (ดำ/น้ำเงิน/แดง)", priceInfo: "6 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.0, 500: 6.0 }, keywords: ["ปากกาลูกลื่น", "ปากกา"] },
       { id: 211, category: "ของชำร่วย", name: "10. พิมเสน", priceInfo: "6 - 8฿", mat: 5.0, tiers: { 100: 8.0, 300: 7.0, 500: 6.0 }, keywords: ["พิมเสน"] },
@@ -794,7 +804,10 @@
       { id: Date.now(), prodId: 101, qty: 0 }
     ];
 
-    function getSellingUnitPrice(prod, qty) {
+    function getSellingUnitPrice(prod, qty, customUnitSell = null) {
+      if (customUnitSell !== null && customUnitSell !== undefined && !isNaN(parseFloat(customUnitSell))) {
+        return parseFloat(customUnitSell);
+      }
       if (!prod || !prod.tiers) return 0;
       if (qty >= 500 && prod.tiers[500] !== undefined) return prod.tiers[500];
       if (qty >= 300 && prod.tiers[300] !== undefined) return prod.tiers[300];
@@ -947,7 +960,8 @@
         orderItems = lo.items.map((it, idx) => ({
           id: Date.now() + idx,
           prodId: parseInt(it.prodId) || 101,
-          qty: parseInt(it.qty) || 100
+          qty: parseInt(it.qty) || 100,
+          customUnitSell: it.unitSell !== undefined ? parseFloat(it.unitSell) : null
         }));
       }
 
@@ -1157,10 +1171,158 @@
       if (tab === 'bill' || tab === 'calculator') calculate();
     }
 
-    // 3. ระบบห้องแชท LINE พิมพ์ #oder / #order (พร้อมสกัดค่าส่งเก็บลูกค้า & ค่าส่งจ่ายจริง)
+    // 3. ระบบห้องแชท LINE พิมพ์ #oder / #order (รองรับทั้งแบบหลายบรรทัด 1. ยางมัดผม 100*10฿=฿1,000.00 และแบบบรรทัดเดียว)
     function runPresetOrder(cmdText) {
       document.getElementById("chat-command-input").value = cmdText;
       sendChatOrderCommand();
+    }
+
+    async function pasteAndCalculateOrder() {
+      const inputEl = document.getElementById("chat-command-input");
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const clipText = (await navigator.clipboard.readText()).trim();
+          if (clipText) {
+            inputEl.value = clipText.startsWith("#") ? clipText : `#order\n${clipText}`;
+            sendChatOrderCommand();
+            return;
+          }
+        }
+      } catch (e) {}
+      if (inputEl.value.trim()) {
+        sendChatOrderCommand();
+      } else {
+        showToast("📋 กดค้างที่ช่องข้อความแล้วกด 'วาง (Paste)' ได้เลยค่ะ");
+        inputEl.focus();
+      }
+    }
+
+    function fillSampleFormatOrder() {
+      const sampleText = `#order
+1. ยางมัดผม 100*10฿=฿1,000.00
+2. กระจก 150*7฿=฿1,050.00
+3. กระเป๋าผ้า 100*10฿=฿1,000.00
+4. พวงกุญแจ 100*7฿=฿700.00
+5. น้ำหอม 100*8฿=฿800.00
+
+ค่าส่ง 130฿
+ยอดรวม 1,000+1,050+1,000+700+800+130=4,680
+
+ยอดโอน 4,680฿`;
+      document.getElementById("chat-command-input").value = sampleText;
+      sendChatOrderCommand();
+    }
+
+    function matchCatalogProductSmartJS(segLower, explicitUnit = null) {
+      const byId = {};
+      catalog.forEach(p => { byId[p.id] = p; });
+
+      if (segLower.includes("พวงกุญแจ") || segLower.includes("กุญแจ")) {
+        if (segLower.includes("หนัง") || segLower.includes("แบน") || segLower.includes("โบว์") || (explicitUnit !== null && explicitUnit >= 8)) {
+          return byId[212] || catalog[0];
+        }
+        return byId[208] || catalog[0];
+      }
+
+      if (segLower.includes("น้ำหอม")) {
+        if (segLower.includes("ในรถ") || segLower.includes("รถยนต์") || (explicitUnit !== null && explicitUnit >= 20)) {
+          return byId[224] || catalog[0];
+        }
+        if (segLower.includes("ตัดเสียบ") || (explicitUnit !== null && explicitUnit <= 6 && !segLower.includes("พับ"))) {
+          return byId[205] || catalog[0];
+        }
+        return byId[206] || catalog[0];
+      }
+
+      if (segLower.includes("ยางมัดผม") || segLower.includes("ถุงแก้ว") || segLower.includes("ถุงตาข่าย")) {
+        if (segLower.includes("ถุงแก้ว") || segLower.includes("ถุงตาข่าย") || (explicitUnit !== null && explicitUnit >= 13)) {
+          return byId[215] || catalog[0];
+        }
+        return byId[214] || catalog[0];
+      }
+
+      if (segLower.includes("สมุด")) {
+        if (segLower.includes("a5") || (explicitUnit !== null && explicitUnit >= 13)) {
+          return byId[222] || catalog[0];
+        }
+        return byId[207] || catalog[0];
+      }
+
+      if (segLower.includes("ช้อน")) {
+        if (segLower.includes("ทอง") || (explicitUnit !== null && explicitUnit >= 16)) {
+          return byId[221] || catalog[0];
+        }
+        return byId[220] || catalog[0];
+      }
+
+      const sortedCatalog = [...catalog].sort((a, b) => {
+        const lenA = (a.keywords?.[0] || a.name).length;
+        const lenB = (b.keywords?.[0] || b.name).length;
+        return lenB - lenA;
+      });
+
+      for (const prod of sortedCatalog) {
+        const kws = prod.keywords || [prod.name.toLowerCase()];
+        for (const kw of kws) {
+          if (segLower.includes(kw.toLowerCase())) {
+            return prod;
+          }
+        }
+      }
+      return null;
+    }
+
+    function extractOrderItemsFromTextJS(rawText) {
+      const detectedItems = [];
+      const lines = rawText.split(/\r?\n/);
+
+      for (const rawLine of lines) {
+        let lineStr = rawLine.trim();
+        if (!lineStr) continue;
+        if (/^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด)/i.test(lineStr)) {
+          continue;
+        }
+        lineStr = lineStr.replace(/^#\s*(?:order|oder|ออเดอร์|บิล)\s*/i, "").trim();
+        if (!lineStr) continue;
+
+        const segments = lineStr.split(/,(?!\d)/);
+        for (const seg of segments) {
+          let segClean = seg.trim();
+          if (!segClean) continue;
+          segClean = segClean
+            .replace(/(ค่าส่ง\s*฿?\s*[\d,]+(?:\.\d+)?|ส่งจริง\s*฿?\s*[\d,]+(?:\.\d+)?|(?:ส่วนลด|ลด)\s*฿?\s*[\d,]+(?:\.\d+)?|ยอด(?:รวม|โอน)[^\n]*)/gi, "")
+            .replace(/^\s*(?:\d+(?:\.\d+)?\s*[\.\)\-]|\-|•)\s*/, "")
+            .trim();
+          if (!segClean) continue;
+
+          let qty = null;
+          let explicitUnit = null;
+
+          const mulMatch = segClean.match(/(\d[\d,]*)\s*(?:ชิ้น|ใบ|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?/i);
+          if (mulMatch) {
+            qty = parseInt(mulMatch[1].replace(/,/g, ""));
+            explicitUnit = parseFloat(mulMatch[2]);
+          } else {
+            const forNum = segClean.replace(/(4x6|5x7|3x4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)/gi, " ");
+            const numMatch = forNum.match(/(\d[\d,]*)/);
+            if (numMatch) {
+              const val = parseInt(numMatch[1].replace(/,/g, ""));
+              if (val >= 10) qty = val;
+            }
+          }
+
+          const prod = matchCatalogProductSmartJS(segClean.toLowerCase(), explicitUnit);
+          if (prod) {
+            detectedItems.push({
+              id: Date.now() + Math.random(),
+              prodId: prod.id,
+              qty: qty || 100,
+              customUnitSell: explicitUnit
+            });
+          }
+        }
+      }
+      return detectedItems;
     }
 
     function sendChatOrderCommand() {
@@ -1175,78 +1337,54 @@
       const customerName = custMatch ? custMatch[1] : (activeLineCustomerName || document.getElementById("input-customer")?.value || "คุณลูกค้า (LINE)");
       document.getElementById("input-customer").value = customerName;
 
-      // สกัดส่วนลด, ยอดรวม, ค่าส่งเก็บลูกค้า, ค่าส่งจ่ายจริง
-      const discountMatch = rawText.match(/ลด\s*(\d+)/);
-      const manualRevMatch = rawText.match(/ยอด\s*(\d+)/);
+      // สกัดส่วนลด, ยอดโอน, ค่าส่งเก็บลูกค้า, ค่าส่งจ่ายจริง (รองรับตัวเลขมีลูกน้ำ เช่น 4,680.00)
+      const discountMatch = rawText.match(/(?:ส่วนลด|ลด)\s*฿?\s*([\d,]+(?:\.\d+)?)/);
+      const transferMatch = rawText.match(/ยอดโอน(?:สุทธิ)?\s*฿?\s*([\d,]+(?:\.\d+)?)/);
       const freeShipMatch = rawText.match(/ส่งฟรี/);
-      const shipChargeMatch = rawText.match(/ค่าส่ง\s*(\d+)/);
-      const shipCostMatch = rawText.match(/ส่งจริง\s*(\d+)/);
+      const shipChargeMatch = rawText.match(/ค่าส่ง\s*฿?\s*([\d,]+(?:\.\d+)?)/);
+      const shipCostMatch = rawText.match(/ส่งจริง\s*฿?\s*([\d,]+(?:\.\d+)?)/);
 
       let shipCharge = 0;
       let shipCost = 0;
       if (freeShipMatch) {
         shipCharge = 0;
-        shipCost = shipCostMatch ? parseInt(shipCostMatch[1]) : 100;
+        shipCost = shipCostMatch ? parseInt(parseFloat(shipCostMatch[1].replace(/,/g, ""))) : 100;
       } else if (shipChargeMatch) {
-        shipCharge = parseInt(shipChargeMatch[1]);
-        shipCost = shipCostMatch ? parseInt(shipCostMatch[1]) : shipCharge;
+        shipCharge = parseInt(parseFloat(shipChargeMatch[1].replace(/,/g, "")));
+        shipCost = shipCostMatch ? parseInt(parseFloat(shipCostMatch[1].replace(/,/g, ""))) : shipCharge;
       } else if (shipCostMatch) {
-        shipCost = parseInt(shipCostMatch[1]);
+        shipCost = parseInt(parseFloat(shipCostMatch[1].replace(/,/g, "")));
       }
 
       document.getElementById("input-ship-charge").value = shipCharge;
       document.getElementById("input-ship-cost").value = shipCost;
 
-      // ลบคำเกี่ยวกับค่าส่งและส่วนลดออกก่อนค้นหาจำนวนสินค้า เพื่อไม่ให้ตัวเลขค่าส่งไปปนกับจำนวนชิ้น
-      let workingText = rawText.toLowerCase()
-        .replace(/ค่าส่ง\s*\d+/g, "")
-        .replace(/ส่งจริง\s*\d+/g, "")
-        .replace(/ลด\s*\d+/g, "")
-        .replace(/ยอด\s*\d+/g, "");
-
-      const detectedItems = [];
-      const sortedCatalog = [...catalog].sort((a, b) => {
-        const lenA = (a.keywords?.[0] || a.name).length;
-        const lenB = (b.keywords?.[0] || b.name).length;
-        return lenB - lenA;
-      });
-
-      sortedCatalog.forEach(prod => {
-        const kws = prod.keywords || [prod.name.toLowerCase()];
-        for (const kw of kws) {
-          const idx = workingText.indexOf(kw.toLowerCase());
-          if (idx !== -1) {
-            const afterSlice = workingText.slice(idx + kw.length, idx + kw.length + 35);
-            const numMatch = afterSlice.match(/(\d{2,5})/);
-            const qty = numMatch ? parseInt(numMatch[1]) : 100;
-            detectedItems.push({ id: Date.now() + Math.random(), prodId: prod.id, qty });
-            workingText = workingText.replace(kw.toLowerCase(), "___");
-            break;
-          }
-        }
-      });
+      const detectedItems = extractOrderItemsFromTextJS(rawText);
 
       if (detectedItems.length > 0) {
         orderItems = detectedItems;
         const ordNo = "ORD-" + Math.floor(100000 + Math.random() * 900000);
         lastSyncedOrdNo = ordNo;
         document.getElementById("input-order-no").value = ordNo;
+        document.getElementById("auto-price-toggle").checked = true;
 
-        if (manualRevMatch) {
-          document.getElementById("auto-price-toggle").checked = false;
-          document.getElementById("input-revenue").value = parseInt(manualRevMatch[1]);
-        } else {
-          document.getElementById("auto-price-toggle").checked = true;
-        }
+        let computedSubtotal = 0;
+        orderItems.forEach(it => {
+          const p = catalog.find(c => c.id === it.prodId);
+          computedSubtotal += it.qty * getSellingUnitPrice(p, it.qty, it.customUnitSell);
+        });
 
-        if (discountMatch) {
-          document.getElementById("input-discount").value = parseInt(discountMatch[1]);
-        } else {
-          document.getElementById("input-discount").value = 0;
+        let finalDiscount = discountMatch ? parseInt(parseFloat(discountMatch[1].replace(/,/g, ""))) : 0;
+        if (!discountMatch && transferMatch) {
+          const explicitTransfer = parseInt(parseFloat(transferMatch[1].replace(/,/g, "")));
+          if (explicitTransfer > 0 && explicitTransfer < (computedSubtotal + shipCharge)) {
+            finalDiscount = (computedSubtotal + shipCharge) - explicitTransfer;
+          }
         }
+        document.getElementById("input-discount").value = finalDiscount;
 
         renderOrderItems();
-        const summary = calculate(discountMatch ? parseInt(discountMatch[1]) : null);
+        const summary = calculate(finalDiscount);
 
         latestOrderPayload = {
           ordNo,
@@ -1265,12 +1403,13 @@
           vehicle: summary.vehicle,
           items: orderItems.map(it => {
             const p = catalog.find(c => c.id === it.prodId);
+            const uSell = getSellingUnitPrice(p, it.qty, it.customUnitSell);
             return {
               prodId: it.prodId,
               name: p ? p.name : "",
               qty: it.qty,
-              unitSell: getSellingUnitPrice(p, it.qty),
-              lineTotal: it.qty * getSellingUnitPrice(p, it.qty)
+              unitSell: uSell,
+              lineTotal: it.qty * uSell
             };
           }),
           updatedAt: Math.floor(Date.now() / 1000)
@@ -1302,7 +1441,7 @@
         const userBubble = document.createElement("div");
         userBubble.className = "flex justify-end";
         userBubble.innerHTML = `
-          <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium">
+          <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium whitespace-pre-line">
             ${rawText}
           </div>
         `;
@@ -1313,7 +1452,7 @@
         errBubble.innerHTML = `
           <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
           <div class="bg-white text-rose-600 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[85%]">
-            ไม่พบชื่อสินค้าในคำสั่ง ลองพิมพ์เช่น "#oder 4x6 หน้าหลัง 300, น้ำผึ้ง 300 ค่าส่ง 80" นะคะ
+            ไม่พบชื่อสินค้าในคำสั่ง ลองพิมพ์เช่น "#order 1. ยางมัดผม 100*10฿=฿1,000.00" นะคะ
           </div>
         `;
         chatBox.appendChild(errBubble);
@@ -1498,7 +1637,7 @@
 
       orderItems.forEach((item, index) => {
         const prod = catalog.find(p => p.id === item.prodId) || catalog[0];
-        const unitSell = getSellingUnitPrice(prod, item.qty);
+        const unitSell = getSellingUnitPrice(prod, item.qty, item.customUnitSell);
         const row = document.createElement("div");
         row.className = "p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2.5";
 
@@ -1563,6 +1702,7 @@
 
     function updateOrderItemProd(index, val) {
       orderItems[index].prodId = parseInt(val);
+      orderItems[index].customUnitSell = null;
       renderOrderItems();
       calculate();
     }
@@ -1571,7 +1711,7 @@
       const qty = Math.max(0, parseInt(val) || 0);
       orderItems[index].qty = qty;
       const prod = catalog.find(p => p.id === orderItems[index].prodId) || catalog[0];
-      const unitSell = getSellingUnitPrice(prod, qty);
+      const unitSell = getSellingUnitPrice(prod, qty, orderItems[index].customUnitSell);
       const matEl = document.getElementById(`item-mat-${index}`);
       const rateEl = document.getElementById(`item-sell-rate-${index}`);
       if (matEl) matEl.innerText = `ทุนรวม ฿${((prod ? prod.mat : 0) * qty).toLocaleString()}`;
@@ -1598,7 +1738,7 @@
       orderItems.forEach(item => {
         const prod = catalog.find(p => p.id === item.prodId);
         if (prod) {
-          const unitSell = getSellingUnitPrice(prod, item.qty);
+          const unitSell = getSellingUnitPrice(prod, item.qty, item.customUnitSell);
           const lineTotal = item.qty * unitSell;
           totalQty += item.qty;
           totalMaterial += item.qty * prod.mat;
@@ -1792,7 +1932,7 @@
       orderItems.forEach((item, idx) => {
         const prod = catalog.find(p => p.id === item.prodId);
         if (prod) {
-          const unitSell = getSellingUnitPrice(prod, item.qty);
+          const unitSell = getSellingUnitPrice(prod, item.qty, item.customUnitSell);
           const lineTotal = item.qty * unitSell;
           itemsText += `${idx + 1}. ${prod.name}\n   จำนวน ${item.qty.toLocaleString()} ชิ้น × ${unitSell}฿ = ${lineTotal.toLocaleString()} บาท\n`;
         }
