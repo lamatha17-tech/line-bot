@@ -375,26 +375,26 @@ DEFAULT_ORDER_CATALOG = [
     {"id": 202, "cat": "souvenir", "name": "เข็มกลัดดอกกุหลาบ", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"]},
     {"id": 203, "cat": "souvenir", "name": "เข็มกลัดดอกเดซี่", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกเดซี่", "ดอกเดซี่", "เดซี่"]},
     {"id": 204, "cat": "souvenir", "name": "เข็มกลัดดอกไม้ (ตัดเสียบ)", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกไม้", "เข็มกลัด"]},
-    {"id": 205, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (ตัดเสียบ)", "mat": 3.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"]},
-    {"id": 206, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (พับปิด)", "mat": 3.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"]},
-    {"id": 207, "cat": "souvenir", "name": "สมุดโน้ต 3x4 นิ้ว", "mat": 2.8, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["สมุดโน้ต 3x4", "สมุด 3x4"]},
-    {"id": 208, "cat": "souvenir", "name": "พวงกุญแจ PU ถัก", "mat": 3.2, "tiers": {100: 7.0, 300: 6.5, 500: 6.0}, "kw": ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"]},
+    {"id": 205, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (ตัดเสียบ)", "mat": 5.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"]},
+    {"id": 206, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (พับปิด)", "mat": 5.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"]},
+    {"id": 207, "cat": "souvenir", "name": "สมุดโน้ต 3x4 นิ้ว", "mat": 3.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["สมุดโน้ต 3x4", "สมุด 3x4"]},
+    {"id": 208, "cat": "souvenir", "name": "พวงกุญแจ PU ถัก", "mat": 3.0, "tiers": {100: 7.0, 300: 6.5, 500: 6.0}, "kw": ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"]},
     {"id": 209, "cat": "souvenir", "name": "กระจกวิเศษทรงกลม", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 5.8}, "kw": ["กระจกวิเศษ", "กระจก"]},
     {"id": 210, "cat": "souvenir", "name": "ปากกาลูกลื่น", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 6.0}, "kw": ["ปากกาลูกลื่น", "ปากกา"]},
-    {"id": 211, "cat": "souvenir", "name": "พิมเสน", "mat": 3.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["พิมเสน"]},
-    {"id": 212, "cat": "souvenir", "name": "พวงกุญแจหนังแบบแบน", "mat": 4.5, "tiers": {100: 9.0, 300: 8.5, 500: 8.0}, "kw": ["พวงกุญแจหนัง", "กุญแจหนัง"]},
-    {"id": 213, "cat": "souvenir", "name": "ผ้าขนหนู (ติด Tag)", "mat": 4.5, "tiers": {100: 10.0, 300: 8.0, 500: 7.0}, "kw": ["ผ้าขนหนู"]},
-    {"id": 214, "cat": "souvenir", "name": "ยางมัดผม (แพ็คเกจปกติ)", "mat": 4.2, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["ยางมัดผมปกติ", "ยางมัดผม"]},
-    {"id": 215, "cat": "souvenir", "name": "ยางมัดผม (พร้อมถุงแก้ว)", "mat": 6.5, "tiers": {100: 15.0, 300: 14.0, 500: 13.0}, "kw": ["ยางมัดผมถุงแก้ว", "ถุงแก้ว", "ยางมัดผมถุงตาข่าย", "ถุงตาข่าย"]},
-    {"id": 216, "cat": "souvenir", "name": "กระเป๋าผ้า ถุงสปันบอนด์", "mat": 4.5, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["กระเป๋าผ้า", "สปันบอนด์", "ถุงผ้า"]},
-    {"id": 217, "cat": "souvenir", "name": "หนังสือยาซีน มินิมอลสไตล์", "mat": 4.8, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["หนังสือยาซีน", "ยาซีน"]},
+    {"id": 211, "cat": "souvenir", "name": "พิมเสน", "mat": 5.0, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["พิมเสน"]},
+    {"id": 212, "cat": "souvenir", "name": "พวงกุญแจหนังแบบแบน", "mat": 5.0, "tiers": {100: 9.0, 300: 8.5, 500: 8.0}, "kw": ["พวงกุญแจหนัง", "กุญแจหนัง"]},
+    {"id": 213, "cat": "souvenir", "name": "ผ้าขนหนู (ติด Tag)", "mat": 5.0, "tiers": {100: 10.0, 300: 8.0, 500: 7.0}, "kw": ["ผ้าขนหนู"]},
+    {"id": 214, "cat": "souvenir", "name": "ยางมัดผม (แพ็คเกจปกติ)", "mat": 5.0, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["ยางมัดผมปกติ", "ยางมัดผม"]},
+    {"id": 215, "cat": "souvenir", "name": "ยางมัดผม (พร้อมถุงแก้ว)", "mat": 9.0, "tiers": {100: 15.0, 300: 14.0, 500: 13.0}, "kw": ["ยางมัดผมถุงแก้ว", "ถุงแก้ว", "ยางมัดผมถุงตาข่าย", "ถุงตาข่าย"]},
+    {"id": 216, "cat": "souvenir", "name": "กระเป๋าผ้า ถุงสปันบอนด์", "mat": 5.0, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["กระเป๋าผ้า", "สปันบอนด์", "ถุงผ้า"]},
+    {"id": 217, "cat": "souvenir", "name": "หนังสือยาซีน มินิมอลสไตล์", "mat": 5.0, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["หนังสือยาซีน", "ยาซีน"]},
     {"id": 218, "cat": "souvenir", "name": "หนังสืออัซการ", "mat": 5.8, "tiers": {100: 12.0, 300: 11.5, 500: 10.0}, "kw": ["หนังสืออัซการ", "อัซการ"]},
     {"id": 219, "cat": "souvenir", "name": "สบู่หอม", "mat": 6.0, "tiers": {100: 12.0, 300: 12.0, 500: 12.0}, "kw": ["สบู่หอม", "สบู่"]},
-    {"id": 220, "cat": "souvenir", "name": "ช้อนเงิน (ติด Tag)", "mat": 7.5, "tiers": {100: 15.0, 300: 14.0, 500: 14.0}, "kw": ["ช้อนเงิน"]},
-    {"id": 221, "cat": "souvenir", "name": "ช้อนทอง (ติด Tag)", "mat": 8.0, "tiers": {100: 16.0, 300: 15.0, 500: 15.0}, "kw": ["ช้อนทอง"]},
+    {"id": 220, "cat": "souvenir", "name": "ช้อนเงิน (ติด Tag)", "mat": 8.5, "tiers": {100: 15.0, 300: 14.0, 500: 14.0}, "kw": ["ช้อนเงิน"]},
+    {"id": 221, "cat": "souvenir", "name": "ช้อนทอง (ติด Tag)", "mat": 9.0, "tiers": {100: 16.0, 300: 15.0, 500: 15.0}, "kw": ["ช้อนทอง"]},
     {"id": 222, "cat": "souvenir", "name": "สมุดโน้ต A5", "mat": 7.5, "tiers": {100: 15.0, 300: 15.0, 500: 15.0}, "kw": ["สมุดโน้ต a5", "สมุด a5", "a5"]},
-    {"id": 223, "cat": "souvenir", "name": "น้ำผึ้ง 30ml", "mat": 9.0, "tiers": {100: 18.0, 300: 17.0, 500: 15.0}, "kw": ["น้ำผึ้ง"]},
-    {"id": 224, "cat": "souvenir", "name": "น้ำหอมในรถ (50 ชิ้นขึ้นไป)", "mat": 14.5, "tiers": {100: 29.0, 300: 29.0, 500: 29.0}, "kw": ["น้ำหอมในรถ"]},
+    {"id": 223, "cat": "souvenir", "name": "น้ำผึ้ง 30ml", "mat": 11.0, "tiers": {100: 18.0, 300: 17.0, 500: 15.0}, "kw": ["น้ำผึ้ง"]},
+    {"id": 224, "cat": "souvenir", "name": "น้ำหอมในรถ (50 ชิ้นขึ้นไป)", "mat": 15.5, "tiers": {100: 29.0, 300: 29.0, 500: 29.0}, "kw": ["น้ำหอมในรถ"]},
 ]
 
 
@@ -460,9 +460,10 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
             doc = db.collection("onestudio_admin").document("calculator_state").get()
             if doc.exists:
                 saved_state = doc.to_dict() or {}
-                for item in saved_state.get("catalog", []):
-                    if "id" in item and "mat" in item:
-                        custom_mat_map[int(item["id"])] = float(item["mat"])
+                if saved_state.get("catalogVersion") == 4:
+                    for item in saved_state.get("catalog", []):
+                        if "id" in item and "mat" in item:
+                            custom_mat_map[int(item["id"])] = float(item["mat"])
         except Exception as e:
             logger.warning(f"Failed to load custom catalog from Firestore: {e}")
 
@@ -606,13 +607,14 @@ def get_calculator_state():
             data = doc.to_dict() or {}
             return JSONResponse({
                 "ok": True,
+                "catalogVersion": data.get("catalogVersion", 0),
                 "catalog": data.get("catalog", []),
                 "orderHistory": data.get("orderHistory", []),
                 "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
                 "latestLineCustomer": data.get("latestLineCustomer", ""),
                 "recentCustomers": data.get("recentCustomers", []),
             })
-        return JSONResponse({"ok": True, "catalog": [], "orderHistory": [], "monthlyTargets": None, "latestLineCustomer": "", "recentCustomers": []})
+        return JSONResponse({"ok": True, "catalogVersion": 0, "catalog": [], "orderHistory": [], "monthlyTargets": None, "latestLineCustomer": "", "recentCustomers": []})
     except Exception as e:
         logger.error(f"Error loading calculator state: {e}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
@@ -626,6 +628,8 @@ async def save_calculator_state(request: Request):
     try:
         payload = await request.json()
         update_data = {"updated_at": firestore.SERVER_TIMESTAMP}
+        if "catalogVersion" in payload:
+            update_data["catalogVersion"] = payload["catalogVersion"]
         if "catalog" in payload and isinstance(payload["catalog"], list):
             update_data["catalog"] = payload["catalog"]
         if "orderHistory" in payload and isinstance(payload["orderHistory"], list):
