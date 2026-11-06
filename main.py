@@ -449,8 +449,36 @@ def record_recent_line_customer(user_id: str, last_text: str = "") -> str:
     return display_name
 
 
+def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
+    """สกัดรายการสินค้าและจำนวนชิ้นจากข้อความสั่งซื้อ (#oder / #order หรือข้อความแชทของลูกค้า)"""
+    working = re.sub(r'(ค่าส่ง\s*\d+|ส่งจริง\s*\d+|ลด\s*\d+|ยอด\s*\d+)', '', raw_text.lower())
+    detected = []
+    sorted_cat = sorted(DEFAULT_ORDER_CATALOG, key=lambda x: len(x["kw"][0]), reverse=True)
+    for prod in sorted_cat:
+        for kw in prod["kw"]:
+            idx = working.find(kw.lower())
+            if idx != -1:
+                after = working[idx + len(kw): idx + len(kw) + 35]
+                num_m = re.search(r'(\d{2,5})', after)
+                qty = int(num_m.group(1)) if num_m else 100
+                unit_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
+                mat_cost = custom_mat_map.get(prod["id"], prod["mat"])
+                detected.append({
+                    "id": prod["id"],
+                    "name": prod["name"],
+                    "cat": prod["cat"],
+                    "qty": qty,
+                    "unit_sell": unit_sell,
+                    "line_total": round(qty * unit_sell, 1),
+                    "line_mat": round(qty * mat_cost, 1),
+                })
+                working = working.replace(kw.lower(), "___", 1)
+                break
+    return detected
+
+
 def parse_and_build_order_summary(raw_text: str, user_id: str = None):
-    """สกัดคำสั่ง #order พร้อมดึงชื่อจริงจาก LINE Profile, ต้นทุนล่าสุดจาก Firestore และบันทึกยอดสะสมอัตโนมัติ"""
+    """สกัดคำสั่ง #oder / #order พร้อมดึงชื่อจริงของลูกค้าจาก LINE OA, คำนวณกำไร 4 กองทุน และซิงค์เข้าหน้าแอปทันที"""
     discount_match = re.search(r'ลด\s*(\d+)', raw_text)
     free_ship = "ส่งฟรี" in raw_text
     ship_charge_match = re.search(r'ค่าส่ง\s*(\d+)', raw_text)
@@ -474,40 +502,51 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         except Exception as e:
             logger.warning(f"Failed to load custom catalog from Firestore: {e}")
 
-    # ดึงชื่อลูกค้า: ถ้าระบุ "คุณ..." ในคำสั่งให้ใช้ชื่อนั้น แต่ถ้าไม่ระบุ ให้ดึงชื่อจริงจาก LINE ที่สั่งทันที!
-    cust_match = re.search(r'(?:#order\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
+    # ดึงชื่อลูกค้าจริงจาก LINE OA ล่าสุดก่อนเสมอ (เพื่อไม่ให้ดึงชื่อแอดมินแทนชื่อลูกค้า)
+    cust_match = re.search(r'(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
+    recent_list = saved_state.get("recentCustomers", []) if isinstance(saved_state.get("recentCustomers"), list) else []
+    if not recent_list and db:
+        recent_list = discover_real_line_customers_from_firestore([])
+
+    latest_cust_uid = recent_list[0].get("userId", "") if recent_list and isinstance(recent_list[0], dict) else ""
     if cust_match:
         customer = cust_match.group(1)
     else:
-        line_name = get_line_display_name(user_id) or saved_state.get("latestLineCustomer") or ""
+        line_name = (
+            saved_state.get("latestLineCustomer")
+            or (recent_list[0].get("displayName", "") if recent_list and isinstance(recent_list[0], dict) else "")
+            or get_line_display_name(user_id)
+            or ""
+        )
         if line_name:
             customer = line_name if line_name.startswith("คุณ") else f"คุณ{line_name}"
         else:
             customer = "คุณลูกค้า (LINE)"
 
-    working = re.sub(r'(ค่าส่ง\s*\d+|ส่งจริง\s*\d+|ลด\s*\d+|ยอด\s*\d+)', '', raw_text.lower())
+    # 1) สกัดสินค้าจากข้อความคำสั่ง #oder / #order ที่แอดมินพิมพ์
+    detected = extract_order_items_from_text(raw_text, custom_mat_map)
 
-    detected = []
-    sorted_cat = sorted(DEFAULT_ORDER_CATALOG, key=lambda x: len(x["kw"][0]), reverse=True)
-    for prod in sorted_cat:
-        for kw in prod["kw"]:
-            idx = working.find(kw.lower())
-            if idx != -1:
-                after = working[idx + len(kw): idx + len(kw) + 35]
-                num_m = re.search(r'(\d{2,5})', after)
-                qty = int(num_m.group(1)) if num_m else 100
-                unit_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
-                mat_cost = custom_mat_map.get(prod["id"], prod["mat"])
-                detected.append({
-                    "name": prod["name"],
-                    "cat": prod["cat"],
-                    "qty": qty,
-                    "unit_sell": unit_sell,
-                    "line_total": round(qty * unit_sell, 1),
-                    "line_mat": round(qty * mat_cost, 1),
-                })
-                working = working.replace(kw.lower(), "___", 1)
-                break
+    # 2) หากแอดมินพิมพ์แค่ #oder / #order เฉยๆ ให้ดึงรายการสินค้าจากข้อความแชทล่าสุดของลูกค้าใน LINE OA อัตโนมัติ!
+    if not detected and db and (latest_cust_uid or user_id):
+        target_uid = latest_cust_uid or user_id
+        try:
+            msgs = list(
+                db.collection("chat_history")
+                .document(target_uid)
+                .collection("messages")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                .limit(8)
+                .stream()
+            )
+            combined_user_text = " ".join(
+                str((m.to_dict() or {}).get("text", ""))
+                for m in msgs
+                if (m.to_dict() or {}).get("role") == "user"
+            )
+            if combined_user_text:
+                detected = extract_order_items_from_text(combined_user_text, custom_mat_map)
+        except Exception as e:
+            logger.warning(f"Failed to auto-extract items from customer chat_history: {e}")
 
     if not detected:
         return None
@@ -526,8 +565,37 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     house = rem / 3
     vehicle = rem / 3
     ord_no = f"ORD-{random.randint(100000, 999999)}"
+    now_ts = int(time.time())
 
-    # บันทึกออเดอร์ลง Firestore เพื่อให้ซิงค์ขึ้นหน้าแอปบน iPhone ทันที
+    latest_order_payload = {
+        "ordNo": ord_no,
+        "customerName": customer,
+        "rawCommand": raw_text,
+        "shipCharge": ship_charge,
+        "shipCost": ship_cost,
+        "discount": discount,
+        "netRevenue": net_rev,
+        "totalMaterial": total_mat,
+        "totalCost": total_cost,
+        "grossProfit": profit,
+        "supplies": supplies,
+        "wage": wage,
+        "house": house,
+        "vehicle": vehicle,
+        "items": [
+            {
+                "prodId": i["id"],
+                "name": i["name"],
+                "qty": i["qty"],
+                "unitSell": i["unit_sell"],
+                "lineTotal": i["line_total"],
+            }
+            for i in detected
+        ],
+        "updatedAt": now_ts,
+    }
+
+    # บันทึกทั้งประวัติสะสม (orderHistory) และออเดอร์ล่าสุด (latestOrder) ลง Firestore เพื่อซิงค์เข้าหน้าแอปอัตโนมัติทันที!
     if db:
         try:
             history = saved_state.get("orderHistory", [])
@@ -546,7 +614,12 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 "status": "deposit_50",
             })
             db.collection("onestudio_admin").document("calculator_state").set(
-                {"orderHistory": history[:200], "updated_at": firestore.SERVER_TIMESTAMP},
+                {
+                    "stateVersion": 2,
+                    "latestOrder": latest_order_payload,
+                    "orderHistory": history[:200],
+                    "updated_at": firestore.SERVER_TIMESTAMP,
+                },
                 merge=True,
             )
         except Exception as e:
@@ -718,6 +791,7 @@ def get_calculator_state(refresh: int = 0):
             "stateVersion": 2,
             "catalogVersion": data.get("catalogVersion", 0),
             "catalog": data.get("catalog", []),
+            "latestOrder": data.get("latestOrder"),
             "orderHistory": order_history,
             "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
             "latestLineCustomer": latest_customer,
@@ -776,6 +850,8 @@ async def save_calculator_state(request: Request):
             update_data["orderHistory"] = clean_hist[:200]
         if "monthlyTargets" in payload and isinstance(payload["monthlyTargets"], dict):
             update_data["monthlyTargets"] = payload["monthlyTargets"]
+        if "latestOrder" in payload and isinstance(payload["latestOrder"], dict):
+            update_data["latestOrder"] = payload["latestOrder"]
         db.collection("onestudio_admin").document("calculator_state").set(update_data, merge=True)
         return JSONResponse({"ok": True})
     except Exception as e:
@@ -844,9 +920,9 @@ def handle_text_message(event):
             logger.warning(f"Deduplication check error: {dedup_err}")
 
     # -------------------------------------------------------------
-    # ระบบคำสั่งพิเศษ #order สำหรับแอดมินสรุปบิลและคำนวณกำไร 4 กองทุนอัตโนมัติ
+    # ระบบคำสั่งพิเศษ #oder / #order / #ออเดอร์ / #บิล สำหรับแอดมินสรุปบิลและคำนวณกำไร 4 กองทุนอัตโนมัติ
     # -------------------------------------------------------------
-    if user_text.strip().lower().startswith("#order"):
+    if re.match(r'^#\s*(?:order|oder|ออเดอร์|บิล)\b', user_text.strip(), flags=re.IGNORECASE):
         try:
             parsed_order = parse_and_build_order_summary(user_text.strip(), user_id=user_id)
             if parsed_order:
@@ -859,6 +935,19 @@ def handle_text_message(event):
                     ]
                 )
                 logger.info(f"Replied with #order bill and 4-fund summary for {user_id}")
+                return
+            else:
+                line_bot_api.reply_message(
+                    reply_token,
+                    TextSendMessage(
+                        text=(
+                            "⚠️ ไม่พบชื่อสินค้าในคำสั่งค่ะ\n"
+                            "ลองพิมพ์: #oder ตามด้วยชื่อสินค้าและจำนวนชิ้น เช่น\n"
+                            "• #oder การ์ด 4x6 หน้าหลัง 300, น้ำผึ้ง 300 ค่าส่ง 80\n"
+                            "• #oder ดินสอไม้ 500 ส่งฟรี"
+                        )
+                    )
+                )
                 return
         except Exception as ord_err:
             logger.error(f"Error processing #order command: {ord_err}")

@@ -759,6 +759,8 @@
     let activeLineCustomerName = "";
     let activeLineUserId = "";
     let recentLineCustomers = [];
+    let lastSyncedOrdNo = "";
+    let latestOrderPayload = null;
 
     try {
       // ล้างประวัติตัวอย่างเก่า (v1) ออกทั้งหมด
@@ -819,19 +821,140 @@
       clearTimeout(window._cloudSyncTimer);
       window._cloudSyncTimer = setTimeout(async () => {
         try {
+          const payload = {
+            stateVersion: 2,
+            catalogVersion: 4,
+            catalog: catalog.map(c => ({ id: c.id, name: c.name, mat: c.mat, category: c.category, priceInfo: c.priceInfo, tiers: c.tiers, keywords: c.keywords })),
+            orderHistory,
+            monthlyTargets
+          };
+          if (latestOrderPayload) payload.latestOrder = latestOrderPayload;
           await fetch(`${API_BASE}/api/calculator-state`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              stateVersion: 2,
-              catalogVersion: 4,
-              catalog: catalog.map(c => ({ id: c.id, name: c.name, mat: c.mat, category: c.category, priceInfo: c.priceInfo, tiers: c.tiers, keywords: c.keywords })),
-              orderHistory,
-              monthlyTargets
-            })
+            body: JSON.stringify(payload)
           });
         } catch (e) {}
       }, 600);
+    }
+
+    function renderBotOrderBubbleInChat(rawCommand, ordNo, customerName, summary) {
+      const chatBox = document.getElementById("line-chat-messages");
+      if (!chatBox) return;
+
+      if (rawCommand) {
+        const userBubble = document.createElement("div");
+        userBubble.className = "flex justify-end";
+        userBubble.innerHTML = `
+          <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium">
+            ${rawCommand}
+          </div>
+        `;
+        chatBox.appendChild(userBubble);
+      }
+
+      const itemsHtml = summary.billLines.map(l => `
+        <div class="flex justify-between text-xs py-0.5">
+          <span class="text-slate-700 truncate pr-2">• ${l.name} (${l.qty}×${l.unitSell}฿)</span>
+          <span class="font-semibold text-slate-900 shrink-0">฿${l.lineTotal.toLocaleString()}</span>
+        </div>
+      `).join("");
+
+      const botReply = document.createElement("div");
+      botReply.className = "flex items-start gap-2";
+      botReply.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
+        <div class="space-y-2 max-w-[88%]">
+          <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+            <div class="bg-[#06C755] text-white px-3.5 py-2 flex items-center justify-between">
+              <span class="text-xs font-bold">🌸 บิลคำสั่งซื้อ ONESTUDIO</span>
+              <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${ordNo}</span>
+            </div>
+            <div class="p-3 space-y-1.5 text-xs">
+              <div class="font-bold text-slate-800 border-b border-slate-100 pb-1">ลูกค้า: ${customerName}</div>
+              <div class="space-y-0.5">${itemsHtml}</div>
+              <div class="flex justify-between text-sky-600 pt-1 border-t border-dashed border-slate-200">
+                <span>🚚 ค่าจัดส่ง</span>
+                <span class="font-semibold">${summary.shipCharge > 0 ? `+฿${summary.shipCharge.toLocaleString()}` : 'ส่งฟรี!'}</span>
+              </div>
+              ${summary.discount > 0 ? `<div class="flex justify-between text-rose-500"><span>ส่วนลดพิเศษ</span><span>-฿${summary.discount.toLocaleString()}</span></div>` : ''}
+              <div class="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                <span class="font-bold text-slate-700">ยอดโอนสุทธิ</span>
+                <span class="text-base font-extrabold text-[#06C755]">฿${summary.netRevenue.toLocaleString()}</span>
+              </div>
+              <div class="flex justify-between items-center bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-800">
+                <span>💳 มัดจำเริ่มงาน 50%:</span>
+                <span class="font-bold">฿${Math.round(summary.netRevenue / 2).toLocaleString()}</span>
+              </div>
+              <div class="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                ⏰ ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน)
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 pt-1">
+                <button onclick="copyBillTextForLine()" class="py-1.5 bg-[#06C755] text-white rounded-lg font-semibold text-xs">📤 คัดลอกบิลส่งลูกค้า</button>
+                <button onclick="switchTab('bill')" class="py-1.5 bg-slate-100 text-slate-700 rounded-lg font-semibold text-xs">🖨️ ดูใบเสร็จ/ปริ้น</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900 text-white p-3 rounded-2xl shadow-sm text-xs space-y-1.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+              <span class="font-bold text-emerald-400">📊 สรุปกำไร & แบ่ง 4 กองอัตโนมัติ</span>
+              <span class="text-slate-400">กำไร ${summary.margin.toFixed(0)}%</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-amber-300">🛒 ทุนของ (฿${summary.totalMaterial.toLocaleString()}) + ส่งจริง (฿${summary.shipCost}):</span>
+              <span class="font-bold text-amber-400">-฿${summary.totalCost.toLocaleString()}</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-800 pb-1">
+              <span class="text-slate-300">💰 เหลือกำไรสุทธิแบ่ง 4 กอง:</span>
+              <span class="font-bold text-emerald-400">฿${summary.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 pt-0.5 text-xs">
+              <div>👤 ค่าแรงเรา (30%): <b class="text-emerald-300">฿${summary.wage.toFixed(0)}</b></div>
+              <div>🛍️ ซื้อของอื่น (10%): <b class="text-blue-300">฿${summary.supplies.toFixed(0)}</b></div>
+              <div>🏠 ค่าบ้าน (30%): <b class="text-indigo-300">฿${summary.house.toFixed(0)}</b></div>
+              <div>🚗 ค่ารถ (30%): <b class="text-purple-300">฿${summary.vehicle.toFixed(0)}</b></div>
+            </div>
+          </div>
+        </div>
+      `;
+      chatBox.appendChild(botReply);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function applyLatestOrderFromLine(lo) {
+      if (!lo || !lo.ordNo || lo.ordNo === lastSyncedOrdNo) return;
+      lastSyncedOrdNo = lo.ordNo;
+      latestOrderPayload = lo;
+
+      if (lo.customerName) {
+        activeLineCustomerName = lo.customerName;
+        const custInput = document.getElementById("input-customer");
+        if (custInput) custInput.value = lo.customerName;
+      }
+      const ordInput = document.getElementById("input-order-no");
+      if (ordInput) ordInput.value = lo.ordNo;
+      const scInput = document.getElementById("input-ship-charge");
+      if (scInput) scInput.value = lo.shipCharge || 0;
+      const sCostInput = document.getElementById("input-ship-cost");
+      if (sCostInput) sCostInput.value = lo.shipCost || 0;
+      const discInput = document.getElementById("input-discount");
+      if (discInput) discInput.value = lo.discount || 0;
+      const autoToggle = document.getElementById("auto-price-toggle");
+      if (autoToggle) autoToggle.checked = true;
+
+      if (Array.isArray(lo.items) && lo.items.length > 0) {
+        orderItems = lo.items.map((it, idx) => ({
+          id: Date.now() + idx,
+          prodId: parseInt(it.prodId) || 101,
+          qty: parseInt(it.qty) || 100
+        }));
+      }
+
+      renderOrderItems();
+      const summary = calculate(lo.discount || 0);
+      renderBotOrderBubbleInChat(lo.rawCommand || `#oder (${lo.ordNo})`, lo.ordNo, lo.customerName || "คุณลูกค้า", summary);
+      showToast(`⚡ ดึงออเดอร์ ${lo.ordNo} (${lo.customerName}) จาก LINE OA คำนวณอัตโนมัติแล้ว!`);
     }
 
     async function loadLineCustomerChat(userId, displayName) {
@@ -848,12 +971,16 @@
         if (data && data.ok && Array.isArray(data.messages) && data.messages.length > 0 && chatBox) {
           chatBox.innerHTML = data.messages.map(m => {
             if (m.role === "user") {
+              const safeCmd = (`#oder ${m.text}`).replace(/'/g, "\\'").replace(/\n/g, " ");
               return `
                 <div class="flex items-start gap-2">
                   <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">👤</div>
-                  <div class="bg-white text-slate-800 px-3.5 py-2.5 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[82%]">
-                    <div class="font-bold text-emerald-700 mb-0.5">${displayName}</div>
+                  <div class="bg-white text-slate-800 px-3.5 py-2.5 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[82%] space-y-1.5">
+                    <div class="font-bold text-emerald-700">${displayName}</div>
                     <div class="whitespace-pre-line">${m.text}</div>
+                    <button onclick="runPresetOrder('${safeCmd}')" class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#06C755] border border-emerald-200 font-semibold text-xs transition">
+                      ⚡ ดึงข้อความนี้คำนวณ #oder ทันที
+                    </button>
                   </div>
                 </div>
               `;
@@ -867,6 +994,10 @@
               `;
             }
           }).join("");
+          if (latestOrderPayload && latestOrderPayload.ordNo) {
+            const summary = calculate(latestOrderPayload.discount || 0);
+            renderBotOrderBubbleInChat(latestOrderPayload.rawCommand, latestOrderPayload.ordNo, latestOrderPayload.customerName, summary);
+          }
           chatBox.scrollTop = chatBox.scrollHeight;
         }
       } catch (e) {}
@@ -961,8 +1092,12 @@
           }
           renderRecentLineCustomers();
           renderCatalog();
-          renderOrderItems();
-          calculate();
+          if (data.latestOrder && data.latestOrder.ordNo && data.latestOrder.ordNo !== lastSyncedOrdNo) {
+            applyLatestOrderFromLine(data.latestOrder);
+          } else {
+            renderOrderItems();
+            calculate();
+          }
           renderAccumulatedDashboard();
           if (forceRefresh) {
             showToast(activeLineCustomerName ? `🟢 ซิงค์ข้อมูลจริงจาก LINE ล่าสุด: ${activeLineCustomerName}` : "✅ ซิงค์ข้อมูลจริงจาก LINE Bot เรียบร้อยแล้ว");
@@ -1022,7 +1157,7 @@
       if (tab === 'bill' || tab === 'calculator') calculate();
     }
 
-    // 3. ระบบจำลองห้องแชท LINE พิมพ์ #order (พร้อมสกัดค่าส่งเก็บลูกค้า & ค่าส่งจ่ายจริง)
+    // 3. ระบบห้องแชท LINE พิมพ์ #oder / #order (พร้อมสกัดค่าส่งเก็บลูกค้า & ค่าส่งจ่ายจริง)
     function runPresetOrder(cmdText) {
       document.getElementById("chat-command-input").value = cmdText;
       sendChatOrderCommand();
@@ -1035,18 +1170,8 @@
 
       const chatBox = document.getElementById("line-chat-messages");
 
-      // 1) แสดงบอลลูนข้อความฝั่งแอดมิน
-      const userBubble = document.createElement("div");
-      userBubble.className = "flex justify-end";
-      userBubble.innerHTML = `
-        <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium">
-          ${rawText}
-        </div>
-      `;
-      chatBox.appendChild(userBubble);
-
-      // 2) ประมวลผลคำสั่ง #order (หากไม่ได้พิมพ์ชื่อลูกค้า ระบบจะดึงชื่อจริงจาก LINE ที่สั่งให้อัตโนมัติ!)
-      const custMatch = rawText.match(/(?:#order\s*)?(คุณ[^\s,]+(?:\s*&\s*คุณ[^\s,]+)?)/i);
+      // 1) ประมวลผลคำสั่ง #oder / #order (หากไม่ได้พิมพ์ชื่อลูกค้า ระบบจะดึงชื่อจริงจาก LINE ที่สั่งให้อัตโนมัติ!)
+      const custMatch = rawText.match(/(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*)?(คุณ[^\s,]+(?:\s*&\s*คุณ[^\s,]+)?)/i);
       const customerName = custMatch ? custMatch[1] : (activeLineCustomerName || document.getElementById("input-customer")?.value || "คุณลูกค้า (LINE)");
       document.getElementById("input-customer").value = customerName;
 
@@ -1104,6 +1229,7 @@
       if (detectedItems.length > 0) {
         orderItems = detectedItems;
         const ordNo = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+        lastSyncedOrdNo = ordNo;
         document.getElementById("input-order-no").value = ordNo;
 
         if (manualRevMatch) {
@@ -1121,6 +1247,34 @@
 
         renderOrderItems();
         const summary = calculate(discountMatch ? parseInt(discountMatch[1]) : null);
+
+        latestOrderPayload = {
+          ordNo,
+          customerName,
+          rawCommand: rawText,
+          shipCharge: summary.shipCharge,
+          shipCost: summary.shipCost,
+          discount: summary.discount,
+          netRevenue: summary.netRevenue,
+          totalMaterial: summary.totalMaterial,
+          totalCost: summary.totalCost,
+          grossProfit: summary.grossProfit,
+          supplies: summary.supplies,
+          wage: summary.wage,
+          house: summary.house,
+          vehicle: summary.vehicle,
+          items: orderItems.map(it => {
+            const p = catalog.find(c => c.id === it.prodId);
+            return {
+              prodId: it.prodId,
+              name: p ? p.name : "",
+              qty: it.qty,
+              unitSell: getSellingUnitPrice(p, it.qty),
+              lineTotal: it.qty * getSellingUnitPrice(p, it.qty)
+            };
+          }),
+          updatedAt: Math.floor(Date.now() / 1000)
+        };
 
         // บันทึกลงประวัติออเดอร์สะสม (ตั้งสถานะเริ่มต้น: มัดจำ 50% แล้ว)
         orderHistory.unshift({
@@ -1141,89 +1295,30 @@
         syncStateToCloud();
         renderAccumulatedDashboard();
 
-        // 3) สร้างบอลลูนตอบกลับจาก LINE Bot
-        const itemsHtml = summary.billLines.map(l => `
-          <div class="flex justify-between text-xs py-0.5">
-            <span class="text-slate-700 truncate pr-2">• ${l.name} (${l.qty}×${l.unitSell}฿)</span>
-            <span class="font-semibold text-slate-900 shrink-0">฿${l.lineTotal.toLocaleString()}</span>
-          </div>
-        `).join("");
-
-        const botReply = document.createElement("div");
-        botReply.className = "flex items-start gap-2";
-        botReply.innerHTML = `
-          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
-          <div class="space-y-2 max-w-[88%]">
-            <!-- การ์ดที่ 1: Flex Message บิลสำหรับกดแชร์ส่งลูกค้า -->
-            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-              <div class="bg-[#06C755] text-white px-3.5 py-2 flex items-center justify-between">
-                <span class="text-xs font-bold">🌸 บิลคำสั่งซื้อ ONESTUDIO</span>
-                <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${ordNo}</span>
-              </div>
-              <div class="p-3 space-y-1.5 text-xs">
-                <div class="font-bold text-slate-800 border-b border-slate-100 pb-1">ลูกค้า: ${customerName}</div>
-                <div class="space-y-0.5">${itemsHtml}</div>
-                <div class="flex justify-between text-sky-600 pt-1 border-t border-dashed border-slate-200">
-                  <span>🚚 ค่าจัดส่ง</span>
-                  <span class="font-semibold">${summary.shipCharge > 0 ? `+฿${summary.shipCharge.toLocaleString()}` : 'ส่งฟรี!'}</span>
-                </div>
-                ${summary.discount > 0 ? `<div class="flex justify-between text-rose-500"><span>ส่วนลดพิเศษ</span><span>-฿${summary.discount.toLocaleString()}</span></div>` : ''}
-                <div class="flex justify-between items-center pt-1.5 border-t border-slate-200">
-                  <span class="font-bold text-slate-700">ยอดโอนสุทธิ</span>
-                  <span class="text-base font-extrabold text-[#06C755]">฿${summary.netRevenue.toLocaleString()}</span>
-                </div>
-                <div class="flex justify-between items-center bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-800">
-                  <span>💳 มัดจำเริ่มงาน 50%:</span>
-                  <span class="font-bold">฿${Math.round(summary.netRevenue / 2).toLocaleString()}</span>
-                </div>
-                <div class="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded">
-                  ⏰ ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน)
-                </div>
-                <div class="grid grid-cols-2 gap-1.5 pt-1">
-                  <button onclick="copyBillTextForLine()" class="py-1.5 bg-[#06C755] text-white rounded-lg font-semibold text-xs">📤 คัดลอกบิลส่งลูกค้า</button>
-                  <button onclick="switchTab('bill')" class="py-1.5 bg-slate-100 text-slate-700 rounded-lg font-semibold text-xs">🔍 ดูบิลเต็มจอ</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- การ์ดที่ 2: สรุปต้นทุน-กำไร 4 กองให้แอดมินทันที -->
-            <div class="bg-slate-900 text-white p-3 rounded-2xl shadow-sm text-xs space-y-1.5">
-              <div class="flex items-center justify-between border-b border-slate-800 pb-1">
-                <span class="font-bold text-emerald-400">📊 สรุปกำไร & แบ่ง 4 กองอัตโนมัติ</span>
-                <span class="text-slate-400">กำไร ${summary.margin.toFixed(0)}%</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-amber-300">🛒 ทุนของ (฿${summary.totalMaterial.toLocaleString()}) + ส่งจริง (฿${summary.shipCost}):</span>
-                <span class="font-bold text-amber-400">-฿${summary.totalCost.toLocaleString()}</span>
-              </div>
-              <div class="flex justify-between border-b border-slate-800 pb-1">
-                <span class="text-slate-300">💰 เหลือกำไรสุทธิแบ่ง 4 กอง:</span>
-                <span class="font-bold text-emerald-400">฿${summary.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-              </div>
-              <div class="grid grid-cols-2 gap-1 pt-0.5 text-xs">
-                <div>👤 ค่าแรงเรา (30%): <b class="text-emerald-300">฿${summary.wage.toFixed(0)}</b></div>
-                <div>🛍️ ซื้อของอื่น (10%): <b class="text-blue-300">฿${summary.supplies.toFixed(0)}</b></div>
-                <div>🏠 ค่าบ้าน (30%): <b class="text-indigo-300">฿${summary.house.toFixed(0)}</b></div>
-                <div>🚗 ค่ารถ (30%): <b class="text-purple-300">฿${summary.vehicle.toFixed(0)}</b></div>
-              </div>
-            </div>
-          </div>
-        `;
-        chatBox.appendChild(botReply);
+        renderBotOrderBubbleInChat(rawText, ordNo, customerName, summary);
+        inputEl.value = "";
         showToast("⚡ สรุปบิล + ค่าส่ง + แบ่ง 4 กองเรียบร้อย!");
       } else {
+        const userBubble = document.createElement("div");
+        userBubble.className = "flex justify-end";
+        userBubble.innerHTML = `
+          <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium">
+            ${rawText}
+          </div>
+        `;
+        chatBox.appendChild(userBubble);
+
         const errBubble = document.createElement("div");
         errBubble.className = "flex items-start gap-2";
         errBubble.innerHTML = `
           <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
           <div class="bg-white text-rose-600 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[85%]">
-            ไม่พบชื่อสินค้าในคำสั่ง ลองพิมพ์ชื่อสินค้าเช่น "4x6 หน้าหลัง 300, น้ำผึ้ง 300 ค่าส่ง 80" นะคะ
+            ไม่พบชื่อสินค้าในคำสั่ง ลองพิมพ์เช่น "#oder 4x6 หน้าหลัง 300, น้ำผึ้ง 300 ค่าส่ง 80" นะคะ
           </div>
         `;
         chatBox.appendChild(errBubble);
+        chatBox.scrollTop = chatBox.scrollHeight;
       }
-
-      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function toggleTargetEditor() {
@@ -1819,7 +1914,7 @@ ${itemsText}━━━━━━━━━━━━━━
       saveCatalogToStorage();
     }
 
-    // Boot (เริ่มต้นที่ 0 และซิงค์ข้อมูลจริงจาก LINE Bot อัตโนมัติ)
+    // Boot (เริ่มต้นที่ 0 และซิงค์ข้อมูลจริงจาก LINE Bot อัตโนมัติทุก 4 วินาที)
     document.getElementById("count-badge").innerText = catalog.length;
     if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
     if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
@@ -1830,6 +1925,7 @@ ${itemsText}━━━━━━━━━━━━━━
     calculate();
     renderAccumulatedDashboard();
     loadStateFromCloud();
+    setInterval(() => loadStateFromCloud(false), 4000);
   </script>
 </body>
 
