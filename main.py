@@ -449,9 +449,84 @@ def record_recent_line_customer(user_id: str, last_text: str = "") -> str:
     return display_name
 
 
-def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None):
-    """จับคู่สินค้าจากข้อความแต่ละบรรทัด พร้อมแยกแยะรุ่นย่อยจากเรทราคาต่อชิ้นที่แอดมินพิมพ์ (เช่น 100*7฿ vs 100*8฿)"""
-    by_id = {p["id"]: p for p in DEFAULT_ORDER_CATALOG}
+def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None, custom_catalog: list = None):
+    """จับคู่สินค้าจากข้อความแต่ละบรรทัด พร้อมแยกแยะรุ่นย่อยจากเรทราคาต่อชิ้นที่แอดมินพิมพ์ (เช่น 100*7฿ vs 100*8฿) และรองรับสินค้าที่แก้ไข/เพิ่มใหม่จากหน้าเว็บ"""
+    by_id = {p["id"]: dict(p) for p in DEFAULT_ORDER_CATALOG}
+    extra_custom_prods = []
+
+    if isinstance(custom_catalog, list):
+        for c in custom_catalog:
+            if not isinstance(c, dict) or "id" not in c:
+                continue
+            cid = int(c["id"])
+            if cid in by_id:
+                if c.get("name"):
+                    by_id[cid]["name"] = str(c["name"])
+                if c.get("mat") is not None:
+                    by_id[cid]["mat"] = float(c["mat"])
+                if isinstance(c.get("tiers"), dict):
+                    t = c["tiers"]
+                    by_id[cid]["tiers"] = {
+                        100: float(t.get("100", t.get(100, by_id[cid]["tiers"][100]))),
+                        300: float(t.get("300", t.get(300, by_id[cid]["tiers"][300]))),
+                        500: float(t.get("500", t.get(500, by_id[cid]["tiers"][500]))),
+                    }
+            else:
+                cname = str(c.get("name") or "").strip()
+                if cname:
+                    clean_kw = re.sub(r'^[^\wก-๙]+', '', cname).strip().lower()
+                    t = c.get("tiers") if isinstance(c.get("tiers"), dict) else {}
+                    base_p = float(c.get("defaultPrice") or t.get("100") or t.get(100) or 5.0)
+                    extra_custom_prods.append({
+                        "id": cid,
+                        "name": cname,
+                        "cat": str(c.get("cat") or "ของชำร่วย"),
+                        "mat": float(c.get("mat") or 0.0),
+                        "tiers": {
+                            100: float(t.get("100", t.get(100, base_p))),
+                            300: float(t.get("300", t.get(300, base_p))),
+                            500: float(t.get("500", t.get(500, base_p))),
+                        },
+                        "kw": [kw for kw in [clean_kw, cname.lower()] if kw],
+                    })
+
+    # ตรวจสอบสินค้าที่แอดมินเพิ่มใหม่ในแคตตาล็อกก่อน
+    for cprod in extra_custom_prods:
+        for kw in cprod["kw"]:
+            if kw and kw in seg_lower:
+                return cprod
+
+    # กฎแยกแยะการ์ดแต่งงานและซองจากคำสำคัญหรือราคาขายต่อชิ้น (*ราคา฿)
+    if "การ์ด" in seg_lower:
+        is_5x7 = "5x7" in seg_lower or "5*7" in seg_lower
+        is_double = "หน้า-หลัง" in seg_lower or "หน้าหลัง" in seg_lower or "2 หน้า" in seg_lower or "สองหน้า" in seg_lower
+        is_single = "หน้าเดียว" in seg_lower or "1 หน้า" in seg_lower
+        if is_5x7:
+            if is_double or (explicit_unit is not None and explicit_unit >= 7.0):
+                return by_id[104]
+            return by_id[103]
+        if "4x6" in seg_lower or "4*6" in seg_lower:
+            if is_double or (explicit_unit is not None and explicit_unit >= 4.2):
+                return by_id[102]
+            return by_id[101]
+        if explicit_unit is not None:
+            if explicit_unit <= 3.8:
+                return by_id[101]
+            if explicit_unit <= 5.2:
+                return by_id[102]
+            if explicit_unit <= 6.5:
+                return by_id[103]
+            return by_id[104]
+        if is_double:
+            return by_id[102]
+        if is_single:
+            return by_id[101]
+        return by_id[102]
+
+    if "ซอง" in seg_lower and "การ์ด" not in seg_lower:
+        if "เขียว" in seg_lower or (explicit_unit is not None and explicit_unit >= 1.8):
+            return by_id[106]
+        return by_id[105]
 
     # กฎแยกแยะชื่อย่อที่แอดมินใช้บ่อยโดยดูจากคำสำคัญและราคาขายต่อชิ้น (*ราคา฿)
     if "พวงกุญแจ" in seg_lower or "กุญแจ" in seg_lower:
@@ -481,7 +556,7 @@ def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None):
             return by_id[221]
         return by_id[220]
 
-    sorted_cat = sorted(DEFAULT_ORDER_CATALOG, key=lambda x: len(x["kw"][0]), reverse=True)
+    sorted_cat = sorted(by_id.values(), key=lambda x: len(x["kw"][0]), reverse=True)
     for prod in sorted_cat:
         for kw in prod["kw"]:
             if kw.lower() in seg_lower:
@@ -489,8 +564,8 @@ def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None):
     return None
 
 
-def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
-    """สกัดรายการสินค้าทั้งรูปแบบหลายบรรทัด (เช่น 1. ยางมัดผม 100*10฿=฿1,000.00) และรูปแบบบรรทัดเดียว"""
+def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_catalog: list = None) -> list:
+    """สกัดรายการสินค้าทั้งรูปแบบหลายบรรทัด (เช่น 1. ยางมัดผม 100*10฿=฿1,000.00) รูปแบบบรรทัดเดียว และสินค้าพิเศษนอกแคตตาล็อก"""
     detected = []
     lines = raw_text.splitlines()
 
@@ -519,6 +594,13 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
             if not seg_clean:
                 continue
 
+            # ตรวจจับการระบุต้นทุนต่อชิ้นในวงเล็บ เช่น "(ทุน 150)" หรือ "ทุน 3.5฿"
+            explicit_mat = None
+            mat_m = re.search(r'\(?\s*ทุน(?:ต่อชิ้น|ของ)?\s*฿?\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?\s*\)?', seg_clean, flags=re.IGNORECASE)
+            if mat_m:
+                explicit_mat = float(mat_m.group(1))
+                seg_clean = (seg_clean[:mat_m.start()] + " " + seg_clean[mat_m.end():]).strip()
+
             qty = None
             explicit_unit = None
             explicit_total = None
@@ -543,20 +625,37 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict) -> list:
                     if val >= 10:
                         qty = val
 
-            prod = match_catalog_product_smart(seg_clean.lower(), explicit_unit)
+            prod = match_catalog_product_smart(seg_clean.lower(), explicit_unit, custom_catalog)
             if prod:
                 if qty is None:
                     qty = 100
                 default_tier_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
                 unit_sell = explicit_unit if explicit_unit is not None else default_tier_sell
                 line_total = round(explicit_total if explicit_total is not None else (qty * unit_sell), 1)
-                mat_cost = custom_mat_map.get(prod["id"], prod["mat"])
+                mat_cost = explicit_mat if explicit_mat is not None else custom_mat_map.get(prod["id"], prod["mat"])
                 detected.append({
                     "id": prod["id"],
                     "name": prod["name"],
                     "cat": prod["cat"],
                     "qty": qty,
                     "unit_sell": unit_sell,
+                    "unit_mat": mat_cost,
+                    "line_total": line_total,
+                    "line_mat": round(qty * mat_cost, 1),
+                })
+            elif mul_m and qty and explicit_unit is not None:
+                # รองรับสินค้าพิเศษ / สินค้าใหม่นอกแคตตาล็อกอัตโนมัติ (เช่น "6. ค่าบล็อกฟอยล์ 1*300฿=฿300.00")
+                raw_custom_name = (seg_clean[:mul_m.start()] + " " + seg_clean[mul_m.end():]).strip(" -•:=")
+                custom_name = f"✨ {raw_custom_name}" if raw_custom_name else "✨ สินค้าพิเศษ (นอกแคตตาล็อก)"
+                line_total = round(explicit_total if explicit_total is not None else (qty * explicit_unit), 1)
+                mat_cost = explicit_mat if explicit_mat is not None else 0.0
+                detected.append({
+                    "id": 0,
+                    "name": custom_name,
+                    "cat": "สินค้าพิเศษ",
+                    "qty": qty,
+                    "unit_sell": explicit_unit,
+                    "unit_mat": mat_cost,
                     "line_total": line_total,
                     "line_mat": round(qty * mat_cost, 1),
                 })
@@ -575,8 +674,9 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     ship_charge = 0 if free_ship else (int(float(ship_charge_match.group(1).replace(',', ''))) if ship_charge_match else 0)
     ship_cost = int(float(ship_cost_match.group(1).replace(',', ''))) if ship_cost_match else (100 if free_ship else ship_charge)
 
-    # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ และชื่อลูกค้า LINE ล่าสุดจาก Firestore (ถ้ามี)
+    # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ การตั้งค่าร้าน (shopSettings) และชื่อลูกค้า LINE ล่าสุดจาก Firestore (ถ้ามี)
     custom_mat_map = {}
+    custom_catalog = []
     saved_state = {}
     if db:
         try:
@@ -584,11 +684,23 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
             if doc.exists:
                 saved_state = doc.to_dict() or {}
                 if saved_state.get("catalogVersion") == 4:
-                    for item in saved_state.get("catalog", []):
-                        if "id" in item and "mat" in item:
+                    custom_catalog = saved_state.get("catalog", []) if isinstance(saved_state.get("catalog"), list) else []
+                    for item in custom_catalog:
+                        if isinstance(item, dict) and "id" in item and "mat" in item:
                             custom_mat_map[int(item["id"])] = float(item["mat"])
         except Exception as e:
             logger.warning(f"Failed to load custom catalog from Firestore: {e}")
+
+    shop_settings = saved_state.get("shopSettings") if isinstance(saved_state.get("shopSettings"), dict) else {}
+    bank_info = str(shop_settings.get("bankInfo") or "").strip()
+    lead_time_text = str(
+        shop_settings.get("leadTimeText")
+        or "✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ"
+    ).strip()
+    supplies_pct = float(shop_settings.get("suppliesPct", 10) or 10)
+    wage_pct = float(shop_settings.get("wagePct", 30) or 30)
+    house_pct = float(shop_settings.get("housePct", 30) or 30)
+    vehicle_pct = float(shop_settings.get("vehiclePct", 30) or 30)
 
     # ดึงชื่อลูกค้าจริงจาก LINE OA ล่าสุดก่อนเสมอ (เพื่อไม่ให้ดึงชื่อแอดมินแทนชื่อลูกค้า)
     cust_match = re.search(r'(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
@@ -612,7 +724,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
             customer = "คุณลูกค้า (LINE)"
 
     # 1) สกัดสินค้าจากข้อความคำสั่ง #oder / #order ที่แอดมินพิมพ์
-    detected = extract_order_items_from_text(raw_text, custom_mat_map)
+    detected = extract_order_items_from_text(raw_text, custom_mat_map, custom_catalog)
 
     # 2) หากแอดมินพิมพ์แค่ #oder / #order เฉยๆ ให้ดึงรายการสินค้าจากข้อความแชทล่าสุดของลูกค้าใน LINE OA อัตโนมัติ!
     if not detected and db and (latest_cust_uid or user_id):
@@ -626,13 +738,13 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 .limit(8)
                 .stream()
             )
-            combined_user_text = " ".join(
+            combined_user_text = "\n".join(
                 str((m.to_dict() or {}).get("text", ""))
                 for m in msgs
                 if (m.to_dict() or {}).get("role") == "user"
             )
             if combined_user_text:
-                detected = extract_order_items_from_text(combined_user_text, custom_mat_map)
+                detected = extract_order_items_from_text(combined_user_text, custom_mat_map, custom_catalog)
         except Exception as e:
             logger.warning(f"Failed to auto-extract items from customer chat_history: {e}")
 
@@ -651,16 +763,38 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     total_mat = sum(i["line_mat"] for i in detected)
     total_cost = total_mat + ship_cost
     profit = net_rev - total_cost
-    supplies = max(0, profit * 0.10)
+
+    supplies = max(0, profit * (supplies_pct / 100.0))
+    rem_pct = wage_pct + house_pct + vehicle_pct
     rem = max(0, profit - supplies)
-    wage = rem / 3
-    house = rem / 3
-    vehicle = rem / 3
+    if rem_pct > 0:
+        wage = rem * (wage_pct / rem_pct)
+        house = rem * (house_pct / rem_pct)
+        vehicle = rem * (vehicle_pct / rem_pct)
+    else:
+        wage = rem / 3
+        house = rem / 3
+        vehicle = rem / 3
+
     ord_no = f"ORD-{random.randint(100000, 999999)}"
     now_ts = int(time.time())
+    order_date_str = time.strftime("%d/%m/%Y", time.localtime(now_ts + 7 * 3600))
+
+    order_items_payload = [
+        {
+            "prodId": i["id"],
+            "name": i["name"],
+            "qty": i["qty"],
+            "unitSell": i["unit_sell"],
+            "unitMat": i.get("unit_mat", 0),
+            "lineTotal": i["line_total"],
+        }
+        for i in detected
+    ]
 
     latest_order_payload = {
         "ordNo": ord_no,
+        "orderDate": order_date_str,
         "customerName": customer,
         "rawCommand": raw_text,
         "shipCharge": ship_charge,
@@ -674,20 +808,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         "wage": wage,
         "house": house,
         "vehicle": vehicle,
-        "items": [
-            {
-                "prodId": i["id"],
-                "name": i["name"],
-                "qty": i["qty"],
-                "unitSell": i["unit_sell"],
-                "lineTotal": i["line_total"],
-            }
-            for i in detected
-        ],
+        "items": order_items_payload,
         "updatedAt": now_ts,
     }
 
-    # บันทึกทั้งประวัติสะสม (orderHistory) และออเดอร์ล่าสุด (latestOrder) ลง Firestore เพื่อซิงค์เข้าหน้าแอปอัตโนมัติทันที!
+    # บันทึกทั้งประวัติสะสม (orderHistory พร้อมรายละเอียดสินค้าเพื่อเปิดบิลย้อนหลังได้) และออเดอร์ล่าสุด (latestOrder) ลง Firestore
     if db:
         try:
             history = saved_state.get("orderHistory", [])
@@ -695,7 +820,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 history = []
             history.insert(0, {
                 "ordNo": ord_no,
+                "orderDate": order_date_str,
                 "customerName": customer,
+                "shipCharge": ship_charge,
+                "shipCost": ship_cost,
+                "discount": discount,
                 "netRevenue": net_rev,
                 "totalMaterial": total_cost,
                 "grossProfit": profit,
@@ -704,6 +833,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 "house": house,
                 "vehicle": vehicle,
                 "status": "deposit_50",
+                "items": order_items_payload,
             })
             db.collection("onestudio_admin").document("calculator_state").set(
                 {
@@ -723,10 +853,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     )
     ship_str = f"{ship_charge:,} บาท" if ship_charge > 0 else "ส่งฟรี! 🎁"
     disc_str = f"\nส่วนลดพิเศษ: -{discount:,} บาท" if discount > 0 else ""
+    bank_block = f"\n🏦 ช่องทางชำระเงิน:\n{bank_info}\n" if bank_info else ""
 
     customer_bill = (
         f"🌸 ใบสรุปรายการคำสั่งซื้อ (ONESTUDIO) 🌸\n"
-        f"เลขที่ออเดอร์: {ord_no}\n"
+        f"เลขที่ออเดอร์: {ord_no} ({order_date_str})\n"
         f"ลูกค้า: {customer}\n"
         f"━━━━━━━━━━━━━━\n"
         f"{items_str}\n"
@@ -735,8 +866,9 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         f"🚚 ค่าจัดส่ง: {ship_str}{disc_str}\n"
         f"💰 ยอดชำระสุทธิ: {net_rev:,.0f} บาท\n"
         f"💳 ยอดโอนมัดจำเริ่มงาน (50%): {deposit:,.0f} บาท\n"
+        f"{bank_block}"
         f"━━━━━━━━━━━━━━\n"
-        f"✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ\n"
+        f"{lead_time_text}\n"
         f"ขอบพระคุณที่ไว้วางใจให้ ONESTUDIO ดูแลในวันสำคัญนะคะ 💕🙏"
     )
 
@@ -744,10 +876,10 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         f"🔒 [สรุปกำไร 4 กองทุน - {customer} ({ord_no})]\n"
         f"🛒 ทุนของ ({total_mat:,.0f}฿) + ส่งจริง ({ship_cost:,.0f}฿) = -{total_cost:,.0f}฿\n"
         f"💰 กำไรสุทธิแบ่ง 4 กอง: {profit:,.0f}฿\n"
-        f"• 👤 ค่าแรงตัวเอง (30%): {wage:,.0f}฿\n"
-        f"• 🛍️ ซื้อของอื่นๆ (10%): {supplies:,.0f}฿\n"
-        f"• 🏠 ค่างวดบ้าน (30%): {house:,.0f}฿\n"
-        f"• 🚗 ค่างวดรถ (30%): {vehicle:,.0f}฿\n"
+        f"• 👤 ค่าแรงตัวเอง ({wage_pct:g}%): {wage:,.0f}฿\n"
+        f"• 🛍️ ซื้อของอื่นๆ ({supplies_pct:g}%): {supplies:,.0f}฿\n"
+        f"• 🏠 ค่างวดบ้าน ({house_pct:g}%): {house:,.0f}฿\n"
+        f"• 🚗 ค่างวดรถ ({vehicle_pct:g}%): {vehicle:,.0f}฿\n"
         f"📱 ดูแดชบอร์ดสะสมบน iPhone: https://line-bot-alpha-six.vercel.app/calculator"
     )
     return customer_bill, admin_summary
@@ -883,6 +1015,7 @@ def get_calculator_state(refresh: int = 0):
             "stateVersion": 2,
             "catalogVersion": data.get("catalogVersion", 0),
             "catalog": data.get("catalog", []),
+            "shopSettings": data.get("shopSettings", {}),
             "latestOrder": data.get("latestOrder"),
             "orderHistory": order_history,
             "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
@@ -942,6 +1075,8 @@ async def save_calculator_state(request: Request):
             update_data["orderHistory"] = clean_hist[:200]
         if "monthlyTargets" in payload and isinstance(payload["monthlyTargets"], dict):
             update_data["monthlyTargets"] = payload["monthlyTargets"]
+        if "shopSettings" in payload and isinstance(payload["shopSettings"], dict):
+            update_data["shopSettings"] = payload["shopSettings"]
         if "latestOrder" in payload and isinstance(payload["latestOrder"], dict):
             update_data["latestOrder"] = payload["latestOrder"]
         db.collection("onestudio_admin").document("calculator_state").set(update_data, merge=True)
