@@ -83,70 +83,49 @@
     <!-- ========================================== -->
     <div id="tab-linechat" class="space-y-4">
 
-      <!-- คำแนะนำวิธีใช้งานจริง + ดึงชื่อจริงจาก LINE ที่สั่งอัตโนมัติ -->
+      <!-- เชื่อมข้อมูลจริงจาก LINE Bot (Firebase + LINE Profile API) -->
       <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-emerald-200 space-y-2.5">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-            <span class="bg-[#06C755] text-white px-2 py-0.5 rounded-full text-xs">ดึงชื่อจาก LINE อัตโนมัติ</span>
-            ไม่ต้องพิมพ์ชื่อลูกค้าใน #order ก็ได้!
+            <span class="bg-[#06C755] text-white px-2 py-0.5 rounded-full text-xs">LIVE เชื่อม LINE Bot จริง</span>
+            ดึงรายชื่อ & แชทจริงจาก LINE OA
           </span>
           <button onclick="loadStateFromCloud(true)" class="text-xs text-emerald-700 hover:underline font-semibold flex items-center gap-1">
-            🔄 ดึงชื่อ LINE ล่าสุด
+            🔄 ซิงค์ข้อมูล LINE ล่าสุด
           </button>
         </div>
 
-        <!-- แถบแสดงชื่อจริงจาก LINE ของลูกค้าที่เพิ่งทักแชทสั่งซื้อ -->
+        <!-- แถบแสดงชื่อจริงจาก LINE ของลูกค้าที่ทักแชทสั่งซื้อจริง -->
         <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5 space-y-1.5">
           <div class="flex items-center justify-between text-xs">
-            <span class="text-emerald-900 font-medium">🟢 ชื่อจริงจาก LINE ที่สั่งล่าสุด:</span>
-            <span id="active-line-customer-badge" class="font-bold text-[#06C755] bg-white px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs">คุณแพรว (LINE)</span>
+            <span class="text-emerald-900 font-medium">🟢 ลูกค้าจาก LINE Bot ล่าสุด:</span>
+            <span id="active-line-customer-badge" class="font-bold text-[#06C755] bg-white px-2.5 py-0.5 rounded-full border border-emerald-200 shadow-2xs">กำลังซิงค์จาก LINE Bot...</span>
           </div>
           <div id="recent-line-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5"></div>
         </div>
 
-        <p class="text-xs text-slate-500">พิมพ์แค่ <b>#order รายการสินค้า จำนวน ค่าส่ง...</b> ระบบจะดึงชื่อจริงจาก LINE ของลูกค้าที่สั่งมาใส่บิลให้อัตโนมัติ</p>
-
-        <!-- ปุ่มกดทดลองคำสั่ง #order ตัวอย่าง (ไม่ต้องพิมพ์ชื่อลูกค้า ดึงจาก LINE อัตโนมัติ) -->
-        <div class="pt-0.5 flex gap-1.5 overflow-x-auto pb-1">
-          <button
-            onclick="runPresetOrder('#order การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120')"
-            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
-            🚚 ตัวอย่าง 1: ดึงชื่อ LINE อัตโนมัติ + ค่าส่ง 80฿
-          </button>
-          <button onclick="runPresetOrder('#order การ์ด 5x7 หน้าหลัง 500, ดินสอไม้ 500 ส่งฟรี ส่งจริง 150')"
-            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
-            🎁 ตัวอย่าง 2: ดึงชื่อ LINE อัตโนมัติ + ส่งฟรี
-          </button>
-          <button onclick="runPresetOrder('#order การ์ด 4x6 หน้าเดียว 200, ช้อนทอง 200 ค่าส่ง 100 ลด 50')"
-            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
-            ⚡ ตัวอย่าง 3: ค่าส่ง 100฿ + ส่วนลด 50฿
-          </button>
-        </div>
+        <p class="text-xs text-slate-500">แตะเลือกชื่อลูกค้าจริงจาก LINE ด้านบนเพื่อดูข้อความแชทล่าสุด แล้วพิมพ์ <b>#order รายการสินค้า จำนวน ค่าส่ง...</b> ด้านล่างได้เลย</p>
       </div>
 
-      <!-- หน้าจอจำลองห้องแชท LINE (LINE Chat Simulator) -->
+      <!-- หน้าจอห้องแชท LINE จริง & ออกบิล #order -->
       <div class="rounded-3xl overflow-hidden shadow-md border border-slate-300 bg-[#8CABD9]">
         <!-- แถบหัวห้องแชท LINE -->
         <div class="bg-[#2B3648] text-white px-4 py-2.5 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-[#06C755]"></span>
-            <span class="text-xs font-bold">ห้องแอดมิน ONESTUDIO (LINE Bot)</span>
+            <span id="chat-room-header-title" class="text-xs font-bold">แชทจริงจาก LINE OA (ONESTUDIO)</span>
           </div>
-          <span class="text-xs text-slate-300">รองรับคำนวณค่าขนส่ง</span>
+          <span id="chat-sync-status" class="text-xs text-emerald-300">● เชื่อมต่อ LINE Bot แล้ว</span>
         </div>
 
         <!-- พื้นที่แสดงข้อความแชท -->
         <div id="line-chat-messages" class="p-3.5 space-y-3 max-h-[420px] overflow-y-auto">
-          <!-- ข้อความต้อนรับเริ่มต้น -->
           <div class="flex items-start gap-2">
-            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸
-            </div>
-            <div
-              class="bg-white text-slate-800 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs space-y-1 max-w-[85%]">
-              <div class="font-bold text-[#06C755]">แอดมินบอท ONESTUDIO</div>
-              <div>พิมพ์ <b>#order</b> พร้อมระบุ <b>ค่าส่ง</b> ได้เลยนะคะ เช่น:</div>
-              <div class="bg-slate-100 p-2 rounded-lg text-slate-600 font-mono text-xs">#order คุณแพรว 4x6หน้าหลัง 300,
-                น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120</div>
+            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
+            <div class="bg-white text-slate-800 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs space-y-1 max-w-[85%]">
+              <div class="font-bold text-[#06C755]">ระบบเชื่อมข้อมูลจริง LINE OA (ONESTUDIO)</div>
+              <div>รีเซ็ตข้อมูลตัวอย่างออกทั้งหมดแล้วค่ะ ตอนนี้ระบบเชื่อมกับฐานข้อมูลจริงของ LINE Bot เรียบร้อย!</div>
+              <div class="text-slate-500">• แตะชื่อลูกค้าด้านบนเพื่อดูประวัติแชทจริงจาก LINE หรือพิมพ์ <b>#order</b> ด้านล่างเพื่อออกบิลจริงได้เลยค่ะ</div>
             </div>
           </div>
         </div>
@@ -154,13 +133,13 @@
         <!-- ช่องพิมพ์ข้อความแชท LINE -->
         <div class="bg-white p-2.5 border-t border-slate-200 flex items-center gap-2">
           <input type="text" id="chat-command-input"
-            value="#order การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120"
+            value=""
             onkeydown="if(event.key==='Enter') sendChatOrderCommand()"
-            placeholder="พิมพ์ #order สินค้า จำนวน ค่าส่ง... (ดึงชื่อ LINE อัตโนมัติ)"
+            placeholder="พิมพ์ #order สินค้า จำนวน ค่าส่ง... (ดึงชื่อ LINE จริงอัตโนมัติ)"
             class="flex-1 bg-slate-100 px-3 py-2 rounded-full text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755]">
           <button onclick="sendChatOrderCommand()"
             class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2 rounded-full text-xs shadow-xs transition shrink-0">
-            ส่ง LINE
+            ออกบิล
           </button>
         </div>
       </div>
@@ -309,12 +288,12 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="text-xs text-slate-500 font-medium">ชื่อลูกค้า / บ่าวสาว</label>
-              <input type="text" id="input-customer" value="คุณแพรว" oninput="calculate()"
+              <input type="text" id="input-customer" value="" placeholder="ดึงจาก LINE อัตโนมัติ" oninput="calculate()"
                 class="w-full mt-1 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
               <label class="text-xs text-slate-500 font-medium">เลขที่ออเดอร์</label>
-              <input type="text" id="input-order-no" value="ORD-20261107" oninput="calculate()"
+              <input type="text" id="input-order-no" value="ORD-0001" oninput="calculate()"
                 class="w-full mt-1 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
           </div>
@@ -322,7 +301,7 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="text-xs text-slate-500 font-medium">ยอดรวมค่าสินค้า (บาท)</label>
-              <input type="number" id="input-revenue" value="7050" step="50" oninput="onManualRevenueInput()"
+              <input type="number" id="input-revenue" value="0" step="50" oninput="onManualRevenueInput()"
                 class="w-full mt-1 px-3 py-2 text-base font-bold text-emerald-700 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
@@ -348,12 +327,12 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-xs text-sky-800 block">ค่าส่งที่เรียกเก็บลูกค้า (+฿)</label>
-                <input type="number" id="input-ship-charge" value="80" step="10" oninput="calculate()"
+                <input type="number" id="input-ship-charge" value="0" step="10" oninput="calculate()"
                   class="w-full mt-1 px-2.5 py-1.5 text-sm font-bold text-sky-900 bg-white border border-sky-300 rounded-lg outline-none">
               </div>
               <div>
                 <label class="text-xs text-amber-800 block">ค่าส่งที่ร้านจ่ายจริง (-฿)</label>
-                <input type="number" id="input-ship-cost" value="120" step="10" oninput="calculate()"
+                <input type="number" id="input-ship-cost" value="0" step="10" oninput="calculate()"
                   class="w-full mt-1 px-2.5 py-1.5 text-sm font-bold text-amber-900 bg-white border border-amber-300 rounded-lg outline-none">
               </div>
             </div>
@@ -521,7 +500,7 @@
         <div class="px-5 py-3.5 bg-emerald-50/40 border-b border-slate-100 flex items-center justify-between text-xs">
           <div>
             <span class="text-slate-400 block">ชื่อลูกค้า</span>
-            <span id="bill-customer" class="font-bold text-slate-800 text-sm">คุณแพรว</span>
+            <span id="bill-customer" class="font-bold text-slate-800 text-sm">รอดึงชื่อลูกค้าจาก LINE</span>
           </div>
           <div class="text-right">
             <span class="text-slate-400 block">เลขที่เอกสาร</span>
@@ -768,20 +747,22 @@
       { id: 224, category: "ของชำร่วย", name: "21. น้ำหอมในรถ (50 ชิ้นขึ้นไป)", priceInfo: "29฿", mat: 15.5, tiers: { 100: 29.0, 300: 29.0, 500: 29.0 }, keywords: ["น้ำหอมในรถ"] }
     ];
 
+    const API_BASE = (location.protocol.startsWith("http") && (location.hostname.includes("vercel.app") || location.hostname === "localhost" || location.hostname === "127.0.0.1"))
+      ? ""
+      : "https://line-bot-alpha-six.vercel.app";
     const STORAGE_KEY = "onestudio_cost_catalog_v4";
-    const HISTORY_KEY = "onestudio_order_history_v1";
+    const HISTORY_KEY = "onestudio_order_history_v2";
     const TARGETS_KEY = "onestudio_monthly_targets_v1";
     let catalog = JSON.parse(JSON.stringify(defaultCatalog));
     let orderHistory = [];
     let monthlyTargets = { wage: 15000, house: 15000, vehicle: 10000 };
-    let activeLineCustomerName = "คุณแพรว (LINE)";
-    let recentLineCustomers = [
-      { displayName: "แพรว 🌸", lastText: "สนใจสั่งการ์ด 4x6 ค่ะ" },
-      { displayName: "Minny 💕", lastText: "รับดินสอไม้ 500 ชิ้นค่ะ" },
-      { displayName: "เมย์ พัชรพร", lastText: "ขอเลขบัญชีมัดจำค่ะ" }
-    ];
+    let activeLineCustomerName = "";
+    let activeLineUserId = "";
+    let recentLineCustomers = [];
 
     try {
+      // ล้างประวัติตัวอย่างเก่า (v1) ออกทั้งหมด
+      localStorage.removeItem("onestudio_order_history_v1");
       const savedV4 = localStorage.getItem(STORAGE_KEY);
       if (savedV4) {
         const parsed = JSON.parse(savedV4);
@@ -808,9 +789,7 @@
 
     let currentCategoryFilter = 'all';
     let orderItems = [
-      { id: Date.now(), prodId: 102, qty: 300 },
-      { id: Date.now() + 1, prodId: 105, qty: 300 },
-      { id: Date.now() + 2, prodId: 223, qty: 300 }
+      { id: Date.now(), prodId: 101, qty: 0 }
     ];
 
     function getSellingUnitPrice(prod, qty) {
@@ -840,11 +819,11 @@
       clearTimeout(window._cloudSyncTimer);
       window._cloudSyncTimer = setTimeout(async () => {
         try {
-          if (!location.protocol.startsWith("http")) return;
-          await fetch("/api/calculator-state", {
+          await fetch(`${API_BASE}/api/calculator-state`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              stateVersion: 2,
               catalogVersion: 4,
               catalog: catalog.map(c => ({ id: c.id, name: c.name, mat: c.mat, category: c.category, priceInfo: c.priceInfo, tiers: c.tiers, keywords: c.keywords })),
               orderHistory,
@@ -855,38 +834,84 @@
       }, 600);
     }
 
-    function selectLineCustomer(rawName) {
+    async function loadLineCustomerChat(userId, displayName) {
+      if (!userId) return;
+      const chatBox = document.getElementById("line-chat-messages");
+      const headerTitle = document.getElementById("chat-room-header-title");
+      if (headerTitle && displayName) {
+        headerTitle.innerText = `แชทจริง LINE: ${displayName}`;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/line-customer-messages?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.ok && Array.isArray(data.messages) && data.messages.length > 0 && chatBox) {
+          chatBox.innerHTML = data.messages.map(m => {
+            if (m.role === "user") {
+              return `
+                <div class="flex items-start gap-2">
+                  <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">👤</div>
+                  <div class="bg-white text-slate-800 px-3.5 py-2.5 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[82%]">
+                    <div class="font-bold text-emerald-700 mb-0.5">${displayName}</div>
+                    <div class="whitespace-pre-line">${m.text}</div>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div class="flex justify-end">
+                  <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] whitespace-pre-line">
+                    ${m.text}
+                  </div>
+                </div>
+              `;
+            }
+          }).join("");
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      } catch (e) {}
+    }
+
+    function selectLineCustomer(rawName, userId = "") {
       if (!rawName) return;
       activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
+      if (userId) activeLineUserId = userId;
       const badgeEl = document.getElementById("active-line-customer-badge");
       if (badgeEl) badgeEl.innerText = activeLineCustomerName;
       const custInput = document.getElementById("input-customer");
       if (custInput) custInput.value = activeLineCustomerName;
       renderRecentLineCustomers();
       calculate();
-      showToast(`🟢 ดึงชื่อลูกค้าจาก LINE: ${activeLineCustomerName}`);
+      if (userId) {
+        loadLineCustomerChat(userId, activeLineCustomerName);
+      }
+      showToast(`🟢 เลือกลูกค้าจาก LINE จริง: ${activeLineCustomerName}`);
     }
 
     function renderRecentLineCustomers() {
       const badgeEl = document.getElementById("active-line-customer-badge");
-      if (badgeEl) badgeEl.innerText = activeLineCustomerName;
+      if (badgeEl) {
+        badgeEl.innerText = activeLineCustomerName || "ยังไม่มีลูกค้าทักแชทล่าสุด";
+      }
       const listEl = document.getElementById("recent-line-customers-list");
       if (!listEl) return;
+      if (recentLineCustomers.length === 0) {
+        listEl.innerHTML = `<span class="text-xs text-slate-400">กำลังดึงรายชื่อลูกค้าจริงจาก LINE Bot... (กดปุ่ม 🔄 ด้านบนเพื่อรีเฟรช)</span>`;
+        return;
+      }
       listEl.innerHTML = recentLineCustomers.map(c => {
         const formatted = (c.displayName || "").startsWith("คุณ") ? c.displayName : `คุณ${c.displayName}`;
         const isActive = formatted === activeLineCustomerName;
-        const safeArg = (c.displayName || "").replace(/'/g, "\\'");
-        return `<button onclick="selectLineCustomer('${safeArg}')" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border ${isActive ? 'bg-[#06C755] text-white border-[#06C755]' : 'bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100'}">👤 ${c.displayName}</button>`;
+        const safeName = (c.displayName || "").replace(/'/g, "\\'");
+        const safeUid = (c.userId || "").replace(/'/g, "\\'");
+        return `<button onclick="selectLineCustomer('${safeName}', '${safeUid}')" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border ${isActive ? 'bg-[#06C755] text-white border-[#06C755]' : 'bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100'}">👤 ${c.displayName}</button>`;
       }).join("");
     }
 
-    async function loadStateFromCloud(showNotification = false) {
+    async function loadStateFromCloud(forceRefresh = false) {
       try {
-        if (!location.protocol.startsWith("http")) {
-          if (showNotification) showToast("🟢 ดึงชื่อจาก LINE ล่าสุด: " + activeLineCustomerName);
-          return;
-        }
-        const res = await fetch("/api/calculator-state");
+        const url = `${API_BASE}/api/calculator-state${forceRefresh ? '?refresh=1' : ''}`;
+        const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.ok) {
@@ -904,7 +929,7 @@
           } else {
             syncStateToCloud();
           }
-          if (Array.isArray(data.orderHistory) && data.orderHistory.length > 0) {
+          if (Array.isArray(data.orderHistory)) {
             orderHistory = data.orderHistory;
             try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) {}
           }
@@ -915,21 +940,33 @@
             if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
             if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
           }
-          if (Array.isArray(data.recentCustomers) && data.recentCustomers.length > 0) {
+          if (Array.isArray(data.recentCustomers)) {
             recentLineCustomers = data.recentCustomers;
           }
           if (data.latestLineCustomer) {
             const rawName = data.latestLineCustomer;
             activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
             const custInput = document.getElementById("input-customer");
-            if (custInput) custInput.value = activeLineCustomerName;
+            if (custInput && !custInput.value) custInput.value = activeLineCustomerName;
+          }
+          if (recentLineCustomers.length > 0 && !activeLineUserId) {
+            activeLineUserId = recentLineCustomers[0].userId || "";
+            if (!activeLineCustomerName && recentLineCustomers[0].displayName) {
+              const rn = recentLineCustomers[0].displayName;
+              activeLineCustomerName = rn.startsWith("คุณ") ? rn : `คุณ${rn}`;
+            }
+            if (activeLineUserId) {
+              loadLineCustomerChat(activeLineUserId, activeLineCustomerName);
+            }
           }
           renderRecentLineCustomers();
           renderCatalog();
           renderOrderItems();
           calculate();
           renderAccumulatedDashboard();
-          if (showNotification) showToast(`🟢 ดึงชื่อจริงจาก LINE ล่าสุด: ${activeLineCustomerName}`);
+          if (forceRefresh) {
+            showToast(activeLineCustomerName ? `🟢 ซิงค์ข้อมูลจริงจาก LINE ล่าสุด: ${activeLineCustomerName}` : "✅ ซิงค์ข้อมูลจริงจาก LINE Bot เรียบร้อยแล้ว");
+          }
         }
       } catch (e) {}
     }
@@ -1782,7 +1819,7 @@ ${itemsText}━━━━━━━━━━━━━━
       saveCatalogToStorage();
     }
 
-    // Boot
+    // Boot (เริ่มต้นที่ 0 และซิงค์ข้อมูลจริงจาก LINE Bot อัตโนมัติ)
     document.getElementById("count-badge").innerText = catalog.length;
     if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
     if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
@@ -1792,9 +1829,6 @@ ${itemsText}━━━━━━━━━━━━━━
     renderOrderItems();
     calculate();
     renderAccumulatedDashboard();
-    if (orderHistory.length === 0) {
-      sendChatOrderCommand();
-    }
     loadStateFromCloud();
   </script>
 </body>

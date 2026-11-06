@@ -10,6 +10,7 @@ import random
 from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -360,6 +361,12 @@ def get_chat_session(user_id):
 
 # สร้าง FastAPI App
 app = FastAPI(title="Line OA Gemini Agent")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------
 # ฐานข้อมูลสินค้า 30 รายการ & ระบบคำนวณต้นทุน-กำไร 4 กองทุน (#order)
@@ -596,28 +603,156 @@ def serve_calculator_app():
     return HTMLResponse(content="<h1>ไม่พบไฟล์ calculator.html</h1>", status_code=404)
 
 
+def discover_real_line_customers_from_firestore(existing_recent: list = None) -> list:
+    """สแกนประวัติแชทจริงของ LINE Bot ใน Firestore (chat_history) แล้วดึงชื่อจริงจาก LINE Profile API"""
+    if not db:
+        return existing_recent or []
+    DEMO_NAMES = {"คุณแพรว", "คุณแพรว (line)", "แพรว 🌸", "minny 💕", "เมย์ พัชรพร"}
+    cleaned = []
+    seen_uids = set()
+    for c in (existing_recent or []):
+        if isinstance(c, dict):
+            dname = (c.get("displayName") or "").strip()
+            uid = (c.get("userId") or "").strip()
+            if dname and dname.lower() not in DEMO_NAMES and uid:
+                cleaned.append(c)
+                seen_uids.add(uid)
+    try:
+        doc_refs = list(db.collection("chat_history").list_documents(page_size=20))
+        discovered = []
+        for uref in doc_refs:
+            uid = uref.id
+            if not uid or uid in seen_uids:
+                continue
+            last_text = ""
+            last_ts = 0
+            try:
+                msgs = list(
+                    uref.collection("messages")
+                    .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                    .limit(4)
+                    .stream()
+                )
+                for m in msgs:
+                    mdata = m.to_dict() or {}
+                    ts = mdata.get("timestamp")
+                    if ts and hasattr(ts, "timestamp") and last_ts == 0:
+                        last_ts = int(ts.timestamp())
+                    if mdata.get("role") == "user" and mdata.get("text") and not last_text:
+                        last_text = str(mdata.get("text"))[:60]
+            except Exception:
+                pass
+            display_name = get_line_display_name(uid)
+            if display_name:
+                discovered.append({
+                    "userId": uid,
+                    "displayName": display_name,
+                    "lastText": last_text,
+                    "updatedAt": last_ts or int(time.time()),
+                })
+                seen_uids.add(uid)
+        merged = cleaned + discovered
+        merged.sort(key=lambda x: x.get("updatedAt", 0), reverse=True)
+        return merged[:15]
+    except Exception as e:
+        logger.warning(f"Failed to discover real LINE customers from chat_history: {e}")
+        return cleaned[:15]
+
+
 @app.get("/api/calculator-state")
-def get_calculator_state():
-    """โหลดข้อมูลต้นทุนสินค้า ยอดสะสม เป้าหมายรายเดือน และรายชื่อลูกค้าจาก LINE OA ล่าสุด"""
+def get_calculator_state(refresh: int = 0):
+    """โหลดข้อมูลต้นทุนสินค้า ยอดสะสม เป้าหมายรายเดือน และรายชื่อลูกค้าจริงจาก LINE OA"""
     if not db:
         return JSONResponse({"ok": False, "reason": "no_db"})
     try:
-        doc = db.collection("onestudio_admin").document("calculator_state").get()
-        if doc.exists:
-            data = doc.to_dict() or {}
-            return JSONResponse({
-                "ok": True,
-                "catalogVersion": data.get("catalogVersion", 0),
-                "catalog": data.get("catalog", []),
-                "orderHistory": data.get("orderHistory", []),
-                "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
-                "latestLineCustomer": data.get("latestLineCustomer", ""),
-                "recentCustomers": data.get("recentCustomers", []),
-            })
-        return JSONResponse({"ok": True, "catalogVersion": 0, "catalog": [], "orderHistory": [], "monthlyTargets": None, "latestLineCustomer": "", "recentCustomers": []})
+        doc_ref = db.collection("onestudio_admin").document("calculator_state")
+        doc = doc_ref.get()
+        data = (doc.to_dict() or {}) if doc.exists else {}
+
+        state_version = data.get("stateVersion", 0)
+        order_history = data.get("orderHistory", [])
+        if not isinstance(order_history, list):
+            order_history = []
+        recent_customers = data.get("recentCustomers", [])
+        if not isinstance(recent_customers, list):
+            recent_customers = []
+        latest_customer = data.get("latestLineCustomer", "")
+
+        needs_save = False
+        DEMO_NAMES = {"คุณแพรว", "คุณแพรว (line)", "คุณแพรว & คุณนนท์", "แพรว 🌸", "minny 💕", "เมย์ พัชรพร"}
+
+        # รีเซ็ตข้อมูลตัวอย่าง (คุณแพรว ฯลฯ) ออกทั้งหมด และเชื่อมข้อมูลจริงจาก LINE Bot
+        if state_version < 2:
+            order_history = [
+                h for h in order_history
+                if isinstance(h, dict) and (h.get("customerName") or "").strip().lower() not in DEMO_NAMES
+            ]
+            recent_customers = [
+                c for c in recent_customers
+                if isinstance(c, dict) and (c.get("displayName") or "").strip().lower() not in DEMO_NAMES
+            ]
+            if latest_customer.strip().lower() in DEMO_NAMES:
+                latest_customer = ""
+            state_version = 2
+            needs_save = True
+
+        if not recent_customers or refresh == 1:
+            recent_customers = discover_real_line_customers_from_firestore(recent_customers)
+            if recent_customers and not latest_customer:
+                latest_customer = recent_customers[0].get("displayName", "")
+            elif recent_customers and refresh == 1:
+                latest_customer = recent_customers[0].get("displayName", "")
+            needs_save = True
+
+        if needs_save:
+            doc_ref.set({
+                "stateVersion": 2,
+                "orderHistory": order_history,
+                "recentCustomers": recent_customers,
+                "latestLineCustomer": latest_customer,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            }, merge=True)
+
+        return JSONResponse({
+            "ok": True,
+            "stateVersion": 2,
+            "catalogVersion": data.get("catalogVersion", 0),
+            "catalog": data.get("catalog", []),
+            "orderHistory": order_history,
+            "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
+            "latestLineCustomer": latest_customer,
+            "recentCustomers": recent_customers,
+        })
     except Exception as e:
         logger.error(f"Error loading calculator state: {e}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/line-customer-messages")
+def get_line_customer_messages(userId: str = ""):
+    """ดึงข้อความแชทจริงล่าสุดของลูกค้าจาก LINE Bot (คอลเลกชัน chat_history)"""
+    if not db or not userId:
+        return JSONResponse({"ok": False, "messages": []})
+    try:
+        messages_ref = db.collection("chat_history").document(userId).collection("messages")
+        docs = list(messages_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(12).stream())
+        docs.reverse()
+        messages = []
+        for d in docs:
+            m = d.to_dict() or {}
+            text = (m.get("text") or "").strip()
+            role = m.get("role") or "user"
+            if not text or "[SILENCE]" in text:
+                continue
+            clean = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '🖼️ [ส่งรูปภาพตัวอย่างสินค้า]', text).strip()
+            messages.append({
+                "role": role,
+                "text": clean[:500],
+            })
+        return JSONResponse({"ok": True, "userId": userId, "messages": messages})
+    except Exception as e:
+        logger.warning(f"Error loading customer messages for {userId}: {e}")
+        return JSONResponse({"ok": False, "messages": []})
 
 
 @app.post("/api/calculator-state")
@@ -627,13 +762,18 @@ async def save_calculator_state(request: Request):
         return JSONResponse({"ok": False, "reason": "no_db"})
     try:
         payload = await request.json()
-        update_data = {"updated_at": firestore.SERVER_TIMESTAMP}
+        update_data = {"stateVersion": 2, "updated_at": firestore.SERVER_TIMESTAMP}
+        DEMO_NAMES = {"คุณแพรว", "คุณแพรว (line)", "คุณแพรว & คุณนนท์"}
         if "catalogVersion" in payload:
             update_data["catalogVersion"] = payload["catalogVersion"]
         if "catalog" in payload and isinstance(payload["catalog"], list):
             update_data["catalog"] = payload["catalog"]
         if "orderHistory" in payload and isinstance(payload["orderHistory"], list):
-            update_data["orderHistory"] = payload["orderHistory"][:200]
+            clean_hist = [
+                h for h in payload["orderHistory"]
+                if isinstance(h, dict) and (h.get("customerName") or "").strip().lower() not in DEMO_NAMES
+            ]
+            update_data["orderHistory"] = clean_hist[:200]
         if "monthlyTargets" in payload and isinstance(payload["monthlyTargets"], dict):
             update_data["monthlyTargets"] = payload["monthlyTargets"]
         db.collection("onestudio_admin").document("calculator_state").set(update_data, merge=True)
