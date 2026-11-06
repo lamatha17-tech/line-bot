@@ -20,6 +20,13 @@
       -webkit-tap-highlight-color: transparent;
     }
     .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      header, nav, #top-segmented-menu, .no-print, #tab-linechat, #tab-calculator, #tab-products, #toast { display: none !important; }
+      #tab-bill { display: block !important; margin: 0 !important; padding: 0 !important; }
+      main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      #line-oa-receipt { box-shadow: none !important; border: 1px solid #cbd5e1 !important; border-radius: 16px !important; max-width: 480px !important; margin: 0 auto !important; }
+    }
   </style>
 </head>
 
@@ -52,7 +59,7 @@
   <main class="max-w-md mx-auto p-4 space-y-4">
 
     <!-- Top Segmented Menu (4 แท็บครบวงจร) -->
-    <div class="bg-slate-200/90 p-1 rounded-xl grid grid-cols-4 gap-1">
+    <div id="top-segmented-menu" class="bg-slate-200/90 p-1 rounded-xl grid grid-cols-4 gap-1 no-print">
       <button onclick="switchTab('linechat')" id="top-tab-linechat"
         class="py-2 px-1.5 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1">
         <span>💬</span> แชท #order
@@ -468,32 +475,47 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- TAB 2: บิลคำสั่งซื้อสไตล์ LINE OA (มีค่าส่ง & มัดจำ 50%) -->
+    <!-- TAB 2: บิลคำสั่งซื้อ & ใบเสร็จรับเงิน (รองรับสั่งปริ้น / PDF) -->
     <!-- ========================================== -->
     <div id="tab-bill" class="space-y-4 hidden">
 
-      <div class="grid grid-cols-2 gap-2">
+      <!-- ปุ่มเลือกประเภทเอกสาร (ซ่อนตอนสั่งปริ้น) -->
+      <div class="bg-white p-2.5 rounded-2xl shadow-xs border border-slate-200 space-y-2 no-print">
+        <div class="text-xs font-semibold text-slate-600 px-1">📄 เลือกรูปแบบหัวบิลก่อนส่งหรือสั่งปริ้น:</div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button onclick="setReceiptDocType('quote')" id="doc-btn-quote" class="py-1.5 px-2 rounded-xl text-xs font-semibold bg-[#06C755] text-white shadow-2xs transition">
+            📋 ใบสรุปยอด
+          </button>
+          <button onclick="setReceiptDocType('deposit')" id="doc-btn-deposit" class="py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+            💳 ใบเสร็จมัดจำ 50%
+          </button>
+          <button onclick="setReceiptDocType('paid')" id="doc-btn-paid" class="py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+            🧾 ใบเสร็จรับเงิน
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 no-print">
         <button onclick="copyBillTextForLine()"
           class="py-2.5 px-3 bg-[#06C755] hover:bg-emerald-600 text-white font-semibold rounded-xl text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5">
-          <span>💬</span> คัดลอกข้อความบิลส่งลูกค้า
+          <span>💬</span> คัดลอกข้อความส่ง LINE
         </button>
-        <button onclick="window.print()"
+        <button onclick="printOfficialReceipt()"
           class="py-2.5 px-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5">
-          <span>🖨️</span> พิมพ์ / บันทึกรูปบิล
+          <span>🖨️</span> ปริ้นใบเสร็จ / บันทึก PDF
         </button>
       </div>
 
-      <div id="line-oa-receipt" class="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden">
+      <div id="line-oa-receipt" class="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden relative">
         <div class="bg-[#06C755] text-white px-5 py-4">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold tracking-wider uppercase bg-white/20 px-2.5 py-0.5 rounded-full">LINE
-              OFFICIAL ACCOUNT</span>
+            <span id="bill-badge-top" class="text-xs font-semibold tracking-wider uppercase bg-white/20 px-2.5 py-0.5 rounded-full">ORDER CONFIRMATION</span>
             <span id="bill-date" class="text-xs text-emerald-50">07/11/2026</span>
           </div>
           <h2 class="text-lg font-bold mt-2 flex items-center gap-1.5">
             <span>🌸</span> ONESTUDIO การ์ดแต่งงาน & ของชำร่วย
           </h2>
-          <p class="text-xs text-emerald-50">ใบสรุปรายการคำสั่งซื้อ (Order Confirmation)</p>
+          <p id="bill-doc-title" class="text-xs text-emerald-50 font-medium">ใบสรุปรายการคำสั่งซื้อ (Order Confirmation)</p>
         </div>
 
         <div class="px-5 py-3.5 bg-emerald-50/40 border-b border-slate-100 flex items-center justify-between text-xs">
@@ -502,7 +524,7 @@
             <span id="bill-customer" class="font-bold text-slate-800 text-sm">คุณแพรว</span>
           </div>
           <div class="text-right">
-            <span class="text-slate-400 block">เลขที่ใบสั่งซื้อ</span>
+            <span class="text-slate-400 block">เลขที่เอกสาร</span>
             <span id="bill-order-no" class="font-semibold text-slate-700">ORD-20261107</span>
           </div>
         </div>
@@ -539,28 +561,45 @@
               <span id="bill-net-total" class="text-2xl font-extrabold text-[#06C755]">฿0</span>
             </div>
             <!-- แบ่งจ่ายมัดจำ 50% สำหรับงานสั่งผลิต -->
-            <div
+            <div id="bill-deposit-box"
               class="mt-2 p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl flex justify-between items-center text-xs">
-              <span class="text-emerald-800 font-medium">💳 ยอดโอนมัดจำเริ่มงาน (50%)</span>
+              <span id="bill-deposit-label" class="text-emerald-800 font-medium">💳 ยอดโอนมัดจำเริ่มงาน (50%)</span>
               <span id="bill-deposit" class="font-bold text-sm text-emerald-900">฿0</span>
+            </div>
+            <div id="bill-remaining-box" class="hidden p-2 bg-amber-50 border border-amber-200 rounded-xl flex justify-between items-center text-xs">
+              <span class="text-amber-800 font-medium">⏳ ยอดค้างชำระคงเหลือ (50% ก่อนจัดส่ง)</span>
+              <span id="bill-remaining" class="font-bold text-sm text-amber-900">฿0</span>
             </div>
           </div>
 
           <div class="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
             <div class="font-semibold text-slate-700 flex items-center gap-1">
-              <span>📌</span> รายละเอียดการผลิต (ONESTUDIO)
+              <span>📌</span> รายละเอียดการผลิต & การรับเงิน (ONESTUDIO)
             </div>
             <p class="text-slate-500">• ออกแบบให้ฟรี และปรับโทนสีแพ็คเกจตามธีมงานได้ค่ะ</p>
-            <p class="text-slate-700 font-medium">• ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ดแต่งงาน 7–15 วัน)
-              หลังคอนเฟิร์มแบบ</p>
+            <p class="text-slate-700 font-medium">• ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ดแต่งงาน 7–15 วัน) หลังคอนเฟิร์มแบบ</p>
             <p class="text-emerald-700 font-medium">💕 ขอบพระคุณที่ไว้วางใจ ONESTUDIO ในวันสำคัญนะคะ</p>
+          </div>
+
+          <!-- ช่องตราประทับและผู้รับเงินสำหรับใบเสร็จรับเงิน -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div>
+              <span id="bill-stamp-badge" class="inline-block px-2.5 py-1 rounded-md font-bold border border-emerald-600 text-emerald-700 bg-emerald-50">
+                📋 รอโอนมัดจำเริ่มงาน
+              </span>
+            </div>
+            <div class="text-right text-slate-500">
+              <div>ผู้รับเงิน / ผู้ออกเอกสาร</div>
+              <div class="font-bold text-slate-800 mt-0.5">ONESTUDIO</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="bg-slate-900 text-white p-4 rounded-2xl text-xs space-y-2.5">
+      <!-- ซ่อนกล่องต้นทุนและกำไรของแอดมินอัตโนมัติเวลาสั่งปริ้นใบเสร็จให้ลูกค้า -->
+      <div class="bg-slate-900 text-white p-4 rounded-2xl text-xs space-y-2.5 no-print">
         <div class="flex items-center justify-between">
-          <div class="font-semibold text-emerald-400">🔒 สรุปหลังบ้านสำหรับแอดมิน (เฉพาะบิลนี้)</div>
+          <div class="font-semibold text-emerald-400">🔒 สรุปหลังบ้านสำหรับแอดมิน (ไม่แสดงในใบเสร็จลูกค้า)</div>
           <button onclick="saveCurrentOrderToHistory()"
             class="bg-[#06C755] hover:bg-emerald-500 text-white font-semibold px-2.5 py-1 rounded-lg text-xs transition">+
             บันทึกเข้ายอดสะสม</button>
@@ -1518,12 +1557,17 @@
         </div>
       `).join("");
 
+      const depositAmt = Math.round(netRevenue / 2);
+      const remainingAmt = Math.max(0, netRevenue - depositAmt);
       document.getElementById("bill-total-qty").innerText = `${totalQty.toLocaleString()} ชิ้น`;
       document.getElementById("bill-subtotal").innerText = `฿${revenue.toLocaleString()}`;
       document.getElementById("bill-shipping-charge").innerText = shipCharge > 0 ? `+฿${shipCharge.toLocaleString()}` : "ฟรีค่าจัดส่ง 🎁";
       document.getElementById("bill-discount").innerText = `-฿${discount.toLocaleString()}`;
       document.getElementById("bill-net-total").innerText = `฿${netRevenue.toLocaleString()}`;
-      document.getElementById("bill-deposit").innerText = `฿${Math.round(netRevenue / 2).toLocaleString()}`;
+      document.getElementById("bill-deposit").innerText = `฿${depositAmt.toLocaleString()}`;
+      const remEl = document.getElementById("bill-remaining");
+      if (remEl) remEl.innerText = `฿${remainingAmt.toLocaleString()}`;
+      updateReceiptDocTypeUI(netRevenue, depositAmt, remainingAmt);
 
       document.getElementById("bill-admin-mat").innerText = `฿${totalCost.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
       document.getElementById("bill-admin-wage").innerText = `฿${wage.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
@@ -1531,6 +1575,74 @@
       document.getElementById("bill-admin-vehicle").innerText = `฿${vehicle.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
 
       return { revenue, discount, shipCharge, shipCost, netRevenue, totalMaterial, totalCost, grossProfit, margin, supplies, wage, house, vehicle, billLines };
+    }
+
+    let currentReceiptDocType = 'quote';
+
+    function setReceiptDocType(type) {
+      currentReceiptDocType = type;
+      ['quote', 'deposit', 'paid'].forEach(t => {
+        const btn = document.getElementById(`doc-btn-${t}`);
+        if (btn) {
+          btn.className = t === type
+            ? "py-1.5 px-2 rounded-xl text-xs font-semibold bg-[#06C755] text-white shadow-2xs transition"
+            : "py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition";
+        }
+      });
+      calculate();
+    }
+
+    function updateReceiptDocTypeUI(netRevenue, depositAmt, remainingAmt) {
+      const badgeTop = document.getElementById("bill-badge-top");
+      const docTitle = document.getElementById("bill-doc-title");
+      const depBox = document.getElementById("bill-deposit-box");
+      const depLabel = document.getElementById("bill-deposit-label");
+      const depVal = document.getElementById("bill-deposit");
+      const remBox = document.getElementById("bill-remaining-box");
+      const stampBadge = document.getElementById("bill-stamp-badge");
+      if (!badgeTop || !docTitle) return;
+
+      if (currentReceiptDocType === 'deposit') {
+        badgeTop.innerText = "DEPOSIT RECEIPT (50%)";
+        docTitle.innerText = "ใบเสร็จรับเงินมัดจำ (Deposit Receipt)";
+        depBox?.classList.remove("hidden");
+        if (depLabel) depLabel.innerText = "✅ รับเงินมัดจำเริ่มงานแล้ว (50%)";
+        if (depVal) depVal.innerText = `฿${depositAmt.toLocaleString()}`;
+        remBox?.classList.remove("hidden");
+        if (stampBadge) {
+          stampBadge.className = "inline-block px-2.5 py-1 rounded-md font-bold border border-sky-600 text-sky-700 bg-sky-50";
+          stampBadge.innerText = "💳 รับเงินมัดจำ 50% แล้ว";
+        }
+      } else if (currentReceiptDocType === 'paid') {
+        badgeTop.innerText = "OFFICIAL RECEIPT";
+        docTitle.innerText = "ใบเสร็จรับเงิน (Official Receipt)";
+        depBox?.classList.remove("hidden");
+        if (depLabel) depLabel.innerText = "✅ รับชำระเงินครบถ้วนแล้ว (100%)";
+        if (depVal) depVal.innerText = `฿${netRevenue.toLocaleString()}`;
+        remBox?.classList.add("hidden");
+        if (stampBadge) {
+          stampBadge.className = "inline-block px-2.5 py-1 rounded-md font-bold border border-emerald-600 text-emerald-700 bg-emerald-50";
+          stampBadge.innerText = "✅ ชำระเงินครบถ้วน (PAID)";
+        }
+      } else {
+        badgeTop.innerText = "ORDER CONFIRMATION";
+        docTitle.innerText = "ใบสรุปรายการคำสั่งซื้อ (Order Confirmation)";
+        depBox?.classList.remove("hidden");
+        if (depLabel) depLabel.innerText = "💳 ยอดโอนมัดจำเริ่มงาน (50%)";
+        if (depVal) depVal.innerText = `฿${depositAmt.toLocaleString()}`;
+        remBox?.classList.add("hidden");
+        if (stampBadge) {
+          stampBadge.className = "inline-block px-2.5 py-1 rounded-md font-bold border border-amber-500 text-amber-700 bg-amber-50";
+          stampBadge.innerText = "📋 รอโอนมัดจำเริ่มงาน";
+        }
+      }
+    }
+
+    function printOfficialReceipt() {
+      switchTab('bill');
+      setTimeout(() => {
+        window.print();
+      }, 150);
     }
 
     function copyBillTextForLine() {
