@@ -6,8 +6,11 @@ import time
 import io
 import PIL.Image
 import json
+import random
+from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi.responses import HTMLResponse, JSONResponse
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage, ImageMessage
@@ -276,7 +279,7 @@ system_instruction = """
 - แต่ถ้า "เคยตอบไปแล้ว" ให้พิมพ์ `[SILENCE]` ทันที
 
 [คำถามที่พบบ่อย (Q&A) & ข้อมูลช่องทางการติดต่อ]
-- ระยะเวลาผลิต: หลังจากคอนเฟิร์มแบบ จะใช้เวลาผลิตและจัดเตรียมประมาณ 7-15 วันค่ะ 
+- ระยะเวลาผลิต: หลังจากคอนเฟิร์มแบบ ของชำร่วยใช้เวลาผลิตและจัดเตรียมประมาณ 7-25 วันค่ะ (ส่วนการ์ดแต่งงานประมาณ 7-15 วันค่ะ)
 - การจัดส่ง: ทางร้านมีส่วนลดค่าจัดส่งพิเศษทั่วประเทศ เมื่อมียอดสั่งซื้อเกิน 3,000 บาท
 - ขอดูแคตตาล็อกราคาการ์ด: (https://drive.google.com/file/d/1LwOI8PZ8CAngJP9q-ZIPBkpCb7NvDYjp/view?usp=drive_link)
 - ขอดูของชำร่วยทั้งหมด: ให้ส่งรูปทุกรูป (สินค้าที่มีรูป) และส่งชื่อ+ราคาเป็นข้อความ (สินค้าที่ไม่มีรูป) ดังนี้:
@@ -358,9 +361,228 @@ def get_chat_session(user_id):
 # สร้าง FastAPI App
 app = FastAPI(title="Line OA Gemini Agent")
 
+# ---------------------------------------------------------
+# ฐานข้อมูลสินค้า 30 รายการ & ระบบคำนวณต้นทุน-กำไร 4 กองทุน (#order)
+# ---------------------------------------------------------
+DEFAULT_ORDER_CATALOG = [
+    {"id": 101, "cat": "card", "name": "การ์ด 4x6 นิ้ว (หน้าเดียว) + ซองฟรี", "mat": 1.5, "tiers": {100: 3.3, 300: 3.3, 500: 3.3}, "kw": ["4x6 หน้าเดียว", "4x6หน้าเดียว", "การ์ดหน้าเดียว"]},
+    {"id": 102, "cat": "card", "name": "การ์ด 4x6 นิ้ว (หน้า-หลัง) + ซองฟรี", "mat": 2.2, "tiers": {100: 5.0, 300: 5.0, 500: 5.0}, "kw": ["4x6 หน้าหลัง", "4x6 หน้า-หลัง", "4x6หน้าหลัง", "การ์ด 4x6", "4x6"]},
+    {"id": 103, "cat": "card", "name": "การ์ด 5x7 นิ้ว (หน้าเดียว) + ซองฟรี", "mat": 2.8, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["5x7 หน้าเดียว", "5x7หน้าเดียว"]},
+    {"id": 104, "cat": "card", "name": "การ์ด 5x7 นิ้ว (หน้า-หลัง) + ซองฟรี", "mat": 3.5, "tiers": {100: 8.0, 300: 8.0, 500: 8.0}, "kw": ["5x7 หน้าหลัง", "5x7 หน้า-หลัง", "5x7หน้าหลัง", "การ์ด 5x7", "5x7"]},
+    {"id": 105, "cat": "card", "name": "อัปเกรดซองสีครีม (+1.5฿)", "mat": 0.8, "tiers": {100: 1.5, 300: 1.5, 500: 1.5}, "kw": ["ซองสีครีม", "ซองครีม"]},
+    {"id": 106, "cat": "card", "name": "อัปเกรดซองสีเขียว (+2฿)", "mat": 1.2, "tiers": {100: 2.0, 300: 2.0, 500: 2.0}, "kw": ["ซองสีเขียว", "ซองเขียว"]},
+    {"id": 201, "cat": "souvenir", "name": "ดินสอไม้มินิมอล", "mat": 2.5, "tiers": {100: 6.0, 300: 5.5, 500: 5.0}, "kw": ["ดินสอไม้มินิมอล", "ดินสอไม้", "ดินสอ"]},
+    {"id": 202, "cat": "souvenir", "name": "เข็มกลัดดอกกุหลาบ", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"]},
+    {"id": 203, "cat": "souvenir", "name": "เข็มกลัดดอกเดซี่", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกเดซี่", "ดอกเดซี่", "เดซี่"]},
+    {"id": 204, "cat": "souvenir", "name": "เข็มกลัดดอกไม้ (ตัดเสียบ)", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกไม้", "เข็มกลัด"]},
+    {"id": 205, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (ตัดเสียบ)", "mat": 3.0, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"]},
+    {"id": 206, "cat": "souvenir", "name": "น้ำหอมขวดจิ๋ว (พับปิด)", "mat": 3.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"]},
+    {"id": 207, "cat": "souvenir", "name": "สมุดโน้ต 3x4 นิ้ว", "mat": 2.8, "tiers": {100: 6.0, 300: 6.0, 500: 6.0}, "kw": ["สมุดโน้ต 3x4", "สมุด 3x4"]},
+    {"id": 208, "cat": "souvenir", "name": "พวงกุญแจ PU ถัก", "mat": 3.2, "tiers": {100: 7.0, 300: 6.5, 500: 6.0}, "kw": ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"]},
+    {"id": 209, "cat": "souvenir", "name": "กระจกวิเศษทรงกลม", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 5.8}, "kw": ["กระจกวิเศษ", "กระจก"]},
+    {"id": 210, "cat": "souvenir", "name": "ปากกาลูกลื่น", "mat": 3.0, "tiers": {100: 7.0, 300: 6.0, 500: 6.0}, "kw": ["ปากกาลูกลื่น", "ปากกา"]},
+    {"id": 211, "cat": "souvenir", "name": "พิมเสน", "mat": 3.5, "tiers": {100: 8.0, 300: 7.0, 500: 6.0}, "kw": ["พิมเสน"]},
+    {"id": 212, "cat": "souvenir", "name": "พวงกุญแจหนังแบบแบน", "mat": 4.5, "tiers": {100: 9.0, 300: 8.5, 500: 8.0}, "kw": ["พวงกุญแจหนัง", "กุญแจหนัง"]},
+    {"id": 213, "cat": "souvenir", "name": "ผ้าขนหนู (ติด Tag)", "mat": 4.5, "tiers": {100: 10.0, 300: 8.0, 500: 7.0}, "kw": ["ผ้าขนหนู"]},
+    {"id": 214, "cat": "souvenir", "name": "ยางมัดผม (แพ็คเกจปกติ)", "mat": 4.2, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["ยางมัดผมปกติ", "ยางมัดผม"]},
+    {"id": 215, "cat": "souvenir", "name": "ยางมัดผม (พร้อมถุงแก้ว)", "mat": 6.5, "tiers": {100: 15.0, 300: 14.0, 500: 13.0}, "kw": ["ยางมัดผมถุงแก้ว", "ถุงแก้ว", "ยางมัดผมถุงตาข่าย", "ถุงตาข่าย"]},
+    {"id": 216, "cat": "souvenir", "name": "กระเป๋าผ้า ถุงสปันบอนด์", "mat": 4.5, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["กระเป๋าผ้า", "สปันบอนด์", "ถุงผ้า"]},
+    {"id": 217, "cat": "souvenir", "name": "หนังสือยาซีน มินิมอลสไตล์", "mat": 4.8, "tiers": {100: 10.0, 300: 9.0, 500: 8.0}, "kw": ["หนังสือยาซีน", "ยาซีน"]},
+    {"id": 218, "cat": "souvenir", "name": "หนังสืออัซการ", "mat": 5.8, "tiers": {100: 12.0, 300: 11.5, 500: 10.0}, "kw": ["หนังสืออัซการ", "อัซการ"]},
+    {"id": 219, "cat": "souvenir", "name": "สบู่หอม", "mat": 6.0, "tiers": {100: 12.0, 300: 12.0, 500: 12.0}, "kw": ["สบู่หอม", "สบู่"]},
+    {"id": 220, "cat": "souvenir", "name": "ช้อนเงิน (ติด Tag)", "mat": 7.5, "tiers": {100: 15.0, 300: 14.0, 500: 14.0}, "kw": ["ช้อนเงิน"]},
+    {"id": 221, "cat": "souvenir", "name": "ช้อนทอง (ติด Tag)", "mat": 8.0, "tiers": {100: 16.0, 300: 15.0, 500: 15.0}, "kw": ["ช้อนทอง"]},
+    {"id": 222, "cat": "souvenir", "name": "สมุดโน้ต A5", "mat": 7.5, "tiers": {100: 15.0, 300: 15.0, 500: 15.0}, "kw": ["สมุดโน้ต a5", "สมุด a5", "a5"]},
+    {"id": 223, "cat": "souvenir", "name": "น้ำผึ้ง 30ml", "mat": 9.0, "tiers": {100: 18.0, 300: 17.0, 500: 15.0}, "kw": ["น้ำผึ้ง"]},
+    {"id": 224, "cat": "souvenir", "name": "น้ำหอมในรถ (50 ชิ้นขึ้นไป)", "mat": 14.5, "tiers": {100: 29.0, 300: 29.0, 500: 29.0}, "kw": ["น้ำหอมในรถ"]},
+]
+
+
+def parse_and_build_order_summary(raw_text: str):
+    """สกัดคำสั่ง #order พร้อมดึงต้นทุนล่าสุดจาก Firestore และบันทึกยอดสะสมอัตโนมัติ"""
+    cust_match = re.search(r'(?:#order\s*)?(คุณ[^\s,]+)', raw_text, re.IGNORECASE)
+    customer = cust_match.group(1) if cust_match else "คุณลูกค้า"
+
+    discount_match = re.search(r'ลด\s*(\d+)', raw_text)
+    free_ship = "ส่งฟรี" in raw_text
+    ship_charge_match = re.search(r'ค่าส่ง\s*(\d+)', raw_text)
+    ship_cost_match = re.search(r'ส่งจริง\s*(\d+)', raw_text)
+
+    ship_charge = 0 if free_ship else (int(ship_charge_match.group(1)) if ship_charge_match else 0)
+    ship_cost = int(ship_cost_match.group(1)) if ship_cost_match else (100 if free_ship else ship_charge)
+
+    # โหลดต้นทุนของที่แอดมินตั้งค่าไว้ใน Firestore (ถ้ามี)
+    custom_mat_map = {}
+    saved_state = {}
+    if db:
+        try:
+            doc = db.collection("onestudio_admin").document("calculator_state").get()
+            if doc.exists:
+                saved_state = doc.to_dict() or {}
+                for item in saved_state.get("catalog", []):
+                    if "id" in item and "mat" in item:
+                        custom_mat_map[int(item["id"])] = float(item["mat"])
+        except Exception as e:
+            logger.warning(f"Failed to load custom catalog from Firestore: {e}")
+
+    working = re.sub(r'(ค่าส่ง\s*\d+|ส่งจริง\s*\d+|ลด\s*\d+|ยอด\s*\d+)', '', raw_text.lower())
+
+    detected = []
+    sorted_cat = sorted(DEFAULT_ORDER_CATALOG, key=lambda x: len(x["kw"][0]), reverse=True)
+    for prod in sorted_cat:
+        for kw in prod["kw"]:
+            idx = working.find(kw.lower())
+            if idx != -1:
+                after = working[idx + len(kw): idx + len(kw) + 35]
+                num_m = re.search(r'(\d{2,5})', after)
+                qty = int(num_m.group(1)) if num_m else 100
+                unit_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
+                mat_cost = custom_mat_map.get(prod["id"], prod["mat"])
+                detected.append({
+                    "name": prod["name"],
+                    "cat": prod["cat"],
+                    "qty": qty,
+                    "unit_sell": unit_sell,
+                    "line_total": round(qty * unit_sell, 1),
+                    "line_mat": round(qty * mat_cost, 1),
+                })
+                working = working.replace(kw.lower(), "___", 1)
+                break
+
+    if not detected:
+        return None
+
+    subtotal = sum(i["line_total"] for i in detected)
+    discount = int(discount_match.group(1)) if discount_match else 0
+
+    net_rev = max(0, subtotal + ship_charge - discount)
+    deposit = round(net_rev / 2)
+    total_mat = sum(i["line_mat"] for i in detected)
+    total_cost = total_mat + ship_cost
+    profit = net_rev - total_cost
+    supplies = max(0, profit * 0.10)
+    rem = max(0, profit - supplies)
+    wage = rem / 3
+    house = rem / 3
+    vehicle = rem / 3
+    ord_no = f"ORD-{random.randint(100000, 999999)}"
+
+    # บันทึกออเดอร์ลง Firestore เพื่อให้ซิงค์ขึ้นหน้าแอปบน iPhone ทันที
+    if db:
+        try:
+            history = saved_state.get("orderHistory", [])
+            if not isinstance(history, list):
+                history = []
+            history.insert(0, {
+                "ordNo": ord_no,
+                "customerName": customer,
+                "netRevenue": net_rev,
+                "totalMaterial": total_cost,
+                "grossProfit": profit,
+                "supplies": supplies,
+                "wage": wage,
+                "house": house,
+                "vehicle": vehicle,
+                "status": "deposit_50",
+            })
+            db.collection("onestudio_admin").document("calculator_state").set(
+                {"orderHistory": history[:200], "updated_at": firestore.SERVER_TIMESTAMP},
+                merge=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to save #order to Firestore: {e}")
+
+    items_str = "\n".join(
+        f"{idx+1}. {i['name']}\n   {i['qty']:,} ชิ้น × {i['unit_sell']:g}฿ = {i['line_total']:,.0f} บาท"
+        for idx, i in enumerate(detected)
+    )
+    ship_str = f"{ship_charge:,} บาท" if ship_charge > 0 else "ส่งฟรี! 🎁"
+    disc_str = f"\nส่วนลดพิเศษ: -{discount:,} บาท" if discount > 0 else ""
+
+    customer_bill = (
+        f"🌸 ใบสรุปรายการคำสั่งซื้อ (ONESTUDIO) 🌸\n"
+        f"เลขที่ออเดอร์: {ord_no}\n"
+        f"ลูกค้า: {customer}\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"{items_str}\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"ยอดรวมค่าสินค้า: {subtotal:,.0f} บาท\n"
+        f"🚚 ค่าจัดส่ง: {ship_str}{disc_str}\n"
+        f"💰 ยอดชำระสุทธิ: {net_rev:,.0f} บาท\n"
+        f"💳 ยอดโอนมัดจำเริ่มงาน (50%): {deposit:,.0f} บาท\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ\n"
+        f"ขอบพระคุณที่ไว้วางใจให้ ONESTUDIO ดูแลในวันสำคัญนะคะ 💕🙏"
+    )
+
+    admin_summary = (
+        f"🔒 [สรุปกำไร 4 กองทุน - {customer} ({ord_no})]\n"
+        f"🛒 ทุนของ ({total_mat:,.0f}฿) + ส่งจริง ({ship_cost:,.0f}฿) = -{total_cost:,.0f}฿\n"
+        f"💰 กำไรสุทธิแบ่ง 4 กอง: {profit:,.0f}฿\n"
+        f"• 👤 ค่าแรงตัวเอง (30%): {wage:,.0f}฿\n"
+        f"• 🛍️ ซื้อของอื่นๆ (10%): {supplies:,.0f}฿\n"
+        f"• 🏠 ค่างวดบ้าน (30%): {house:,.0f}฿\n"
+        f"• 🚗 ค่างวดรถ (30%): {vehicle:,.0f}฿\n"
+        f"📱 ดูแดชบอร์ดสะสมบน iPhone: https://line-bot-alpha-six.vercel.app/calculator"
+    )
+    return customer_bill, admin_summary
+
+
 @app.get("/")
 def read_root():
     return {"message": "Hello from Line OA Gemini Agent! Firebase Memory is active."}
+
+
+@app.get("/calculator", response_class=HTMLResponse)
+@app.get("/app", response_class=HTMLResponse)
+def serve_calculator_app():
+    """เปิดหน้าเว็บแอปคำนวณต้นทุน-กำไร 4 กองทุนสำหรับ iPhone / มือถือ"""
+    html_path = Path(__file__).parent / "calculator.html"
+    if html_path.exists():
+        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+    return HTMLResponse(content="<h1>ไม่พบไฟล์ calculator.html</h1>", status_code=404)
+
+
+@app.get("/api/calculator-state")
+def get_calculator_state():
+    """โหลดข้อมูลต้นทุนสินค้า ยอดสะสม และเป้าหมายรายเดือนจาก Firebase Firestore"""
+    if not db:
+        return JSONResponse({"ok": False, "reason": "no_db"})
+    try:
+        doc = db.collection("onestudio_admin").document("calculator_state").get()
+        if doc.exists:
+            data = doc.to_dict() or {}
+            return JSONResponse({
+                "ok": True,
+                "catalog": data.get("catalog", []),
+                "orderHistory": data.get("orderHistory", []),
+                "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
+            })
+        return JSONResponse({"ok": True, "catalog": [], "orderHistory": [], "monthlyTargets": None})
+    except Exception as e:
+        logger.error(f"Error loading calculator state: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/calculator-state")
+async def save_calculator_state(request: Request):
+    """บันทึกข้อมูลต้นทุนสินค้า ยอดสะสม และเป้าหมายรายเดือนลง Firebase Firestore"""
+    if not db:
+        return JSONResponse({"ok": False, "reason": "no_db"})
+    try:
+        payload = await request.json()
+        update_data = {"updated_at": firestore.SERVER_TIMESTAMP}
+        if "catalog" in payload and isinstance(payload["catalog"], list):
+            update_data["catalog"] = payload["catalog"]
+        if "orderHistory" in payload and isinstance(payload["orderHistory"], list):
+            update_data["orderHistory"] = payload["orderHistory"][:200]
+        if "monthlyTargets" in payload and isinstance(payload["monthlyTargets"], dict):
+            update_data["monthlyTargets"] = payload["monthlyTargets"]
+        db.collection("onestudio_admin").document("calculator_state").set(update_data, merge=True)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        logger.error(f"Error saving calculator state: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 @app.post("/webhook")
 async def webhook(request: Request):
@@ -422,6 +644,27 @@ def handle_text_message(event):
             msg_doc_ref.set({"created_at": firestore.SERVER_TIMESTAMP})
         except Exception as dedup_err:
             logger.warning(f"Deduplication check error: {dedup_err}")
+
+    # -------------------------------------------------------------
+    # ระบบคำสั่งพิเศษ #order สำหรับแอดมินสรุปบิลและคำนวณกำไร 4 กองทุนอัตโนมัติ
+    # -------------------------------------------------------------
+    if user_text.strip().lower().startswith("#order"):
+        try:
+            parsed_order = parse_and_build_order_summary(user_text.strip())
+            if parsed_order:
+                customer_bill, admin_summary = parsed_order
+                line_bot_api.reply_message(
+                    reply_token,
+                    [
+                        TextSendMessage(text=customer_bill),
+                        TextSendMessage(text=admin_summary),
+                    ]
+                )
+                logger.info(f"Replied with #order bill and 4-fund summary for {user_id}")
+                return
+        except Exception as ord_err:
+            logger.error(f"Error processing #order command: {ord_err}")
+            return
 
     # -------------------------------------------------------------
     # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)

@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>ONESTUDIO ระบบ #order LINE OA & ต้นทุน-กำไร 4 กอง</title>
+  <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/calculator--v1.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ONESTUDIO">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#06C755">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 pb-28">
+
+  <!-- Header -->
+  <header class="bg-[#06C755] text-white shadow-md sticky top-0 z-20 px-4 py-3">
+    <div class="max-w-md mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl">🌸</span>
+        <div>
+          <h1 class="font-bold text-base leading-tight">ONESTUDIO ระบบ #order</h1>
+          <p class="text-emerald-50 text-xs">ออกบิล LINE + ค่าส่ง + แบ่งกำไร 4 กอง</p>
+        </div>
+      </div>
+      <button onclick="switchTab('products')"
+        class="text-xs bg-white text-[#06C755] hover:bg-emerald-50 font-semibold px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition flex items-center gap-1">
+        <span>⚙️</span> ตั้งค่าทุนของ
+      </button>
+    </div>
+  </header>
+
+  <!-- Toast Notification -->
+  <div id="toast"
+    class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white text-xs font-medium px-4 py-2 rounded-full shadow-lg z-50 hidden transition-all whitespace-nowrap">
+    ✅ บันทึกข้อมูลเรียบร้อยแล้ว
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto p-4 space-y-4">
+
+    <!-- Top Segmented Menu (4 แท็บครบวงจร) -->
+    <div class="bg-slate-200/90 p-1 rounded-xl grid grid-cols-4 gap-1">
+      <button onclick="switchTab('linechat')" id="top-tab-linechat"
+        class="py-2 px-1.5 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1">
+        <span>💬</span> แชท #order
+      </button>
+      <button onclick="switchTab('calculator')" id="top-tab-calculator"
+        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>🧮</span> คำนวณ
+      </button>
+      <button onclick="switchTab('bill')" id="top-tab-bill"
+        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>🧾</span> บิล LINE
+      </button>
+      <button onclick="switchTab('products')" id="top-tab-products"
+        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>⚙️</span> ทุนของ
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 0: จำลองห้องแชท LINE แอดมิน พิมพ์ #order -->
+    <!-- ========================================== -->
+    <div id="tab-linechat" class="space-y-4">
+
+      <!-- คำแนะนำวิธีใช้งานจริง 3 ขั้นตอน -->
+      <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-emerald-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+            <span class="bg-[#06C755] text-white px-2 py-0.5 rounded-full text-xs">วิธีใช้งานจริง</span>
+            พิมพ์ #order พร้อมระบุค่าส่งได้เลย
+          </span>
+          <span class="text-xs text-slate-400">กดปุ่มตัวอย่างด้านล่าง 👇</span>
+        </div>
+        <p class="text-xs text-slate-500">พิมพ์ต่อท้ายได้ทั้ง <b>"ค่าส่ง 100"</b> (เก็บลูกค้า), <b>"ส่งจริง 120"</b>
+          (ร้านจ่ายขนส่ง) หรือ <b>"ส่งฟรี"</b></p>
+
+        <!-- ปุ่มกดทดลองคำสั่ง #order ตัวอย่าง -->
+        <div class="pt-1 flex gap-1.5 overflow-x-auto pb-1">
+          <button
+            onclick="runPresetOrder('#order คุณแพรว การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120')"
+            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
+            🚚 ตัวอย่าง 1: เก็บค่าส่ง 80฿ (จ่ายขนส่งจริง 120฿)
+          </button>
+          <button onclick="runPresetOrder('#order คุณมิน การ์ด 5x7 หน้าหลัง 500, ดินสอไม้ 500 ส่งฟรี ส่งจริง 150')"
+            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
+            🎁 ตัวอย่าง 2: ส่งฟรีให้ลูกค้า (ร้านออกค่าส่ง 150฿)
+          </button>
+          <button onclick="runPresetOrder('#order คุณเมย์ การ์ด 4x6 หน้าเดียว 200, ช้อนทอง 200 ค่าส่ง 100 ลด 50')"
+            class="shrink-0 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full font-medium transition">
+            ⚡ ตัวอย่าง 3: ค่าส่ง 100฿ + ส่วนลด 50฿
+          </button>
+        </div>
+      </div>
+
+      <!-- หน้าจอจำลองห้องแชท LINE (LINE Chat Simulator) -->
+      <div class="rounded-3xl overflow-hidden shadow-md border border-slate-300 bg-[#8CABD9]">
+        <!-- แถบหัวห้องแชท LINE -->
+        <div class="bg-[#2B3648] text-white px-4 py-2.5 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#06C755]"></span>
+            <span class="text-xs font-bold">ห้องแอดมิน ONESTUDIO (LINE Bot)</span>
+          </div>
+          <span class="text-xs text-slate-300">รองรับคำนวณค่าขนส่ง</span>
+        </div>
+
+        <!-- พื้นที่แสดงข้อความแชท -->
+        <div id="line-chat-messages" class="p-3.5 space-y-3 max-h-[420px] overflow-y-auto">
+          <!-- ข้อความต้อนรับเริ่มต้น -->
+          <div class="flex items-start gap-2">
+            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸
+            </div>
+            <div
+              class="bg-white text-slate-800 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs space-y-1 max-w-[85%]">
+              <div class="font-bold text-[#06C755]">แอดมินบอท ONESTUDIO</div>
+              <div>พิมพ์ <b>#order</b> พร้อมระบุ <b>ค่าส่ง</b> ได้เลยนะคะ เช่น:</div>
+              <div class="bg-slate-100 p-2 rounded-lg text-slate-600 font-mono text-xs">#order คุณแพรว 4x6หน้าหลัง 300,
+                น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ช่องพิมพ์ข้อความแชท LINE -->
+        <div class="bg-white p-2.5 border-t border-slate-200 flex items-center gap-2">
+          <input type="text" id="chat-command-input"
+            value="#order คุณแพรว การ์ด 4x6 หน้าหลัง 300, ซองครีม 300, น้ำผึ้ง 300 ค่าส่ง 80 ส่งจริง 120"
+            onkeydown="if(event.key==='Enter') sendChatOrderCommand()"
+            placeholder="พิมพ์ #order ชื่อลูกค้า สินค้า จำนวน ค่าส่ง..."
+            class="flex-1 bg-slate-100 px-3 py-2 rounded-full text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755]">
+          <button onclick="sendChatOrderCommand()"
+            class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-2 rounded-full text-xs shadow-xs transition shrink-0">
+            ส่ง LINE
+          </button>
+        </div>
+      </div>
+
+      <!-- แดชบอร์ดยอดสะสมรวมทุกออเดอร์ที่พิมพ์ #order + เป้าหมายรายเดือน 4 กองทุน -->
+      <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              <span>📈</span> ยอดสะสมรวมทุกบิล & เป้าหมายรายเดือน
+            </h3>
+            <p class="text-xs text-slate-400">บันทึกแล้วทั้งหมด <b id="history-count" class="text-white">0</b> ออเดอร์ |
+              รอเก็บส่วนที่เหลือ: <b id="acc-unpaid" class="text-amber-300">฿0</b></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="exportOrderHistoryCSV()"
+              class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg font-medium transition">📥
+              Export CSV</button>
+            <button onclick="clearOrderHistory()"
+              class="text-xs text-slate-400 hover:text-rose-400 underline">ล้างประวัติ</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block">🛒 รวมต้นทุนของ + ขนส่ง</span>
+            <span id="acc-mat" class="text-base font-bold text-amber-400">฿0</span>
+          </div>
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block">💰 กำไรสุทธิสะสมรวม</span>
+            <span id="acc-profit" class="text-base font-bold text-emerald-400">฿0</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
+          <div class="bg-slate-800/90 p-2 rounded-xl">
+            <div class="text-blue-300">🛍️ ของอื่นๆ</div>
+            <div id="acc-supplies" class="font-bold text-white mt-0.5">฿0</div>
+          </div>
+          <div class="bg-emerald-950/80 border border-emerald-700/50 p-2 rounded-xl">
+            <div class="text-emerald-300">👤 ค่าแรงเรา</div>
+            <div id="acc-wage" class="font-bold text-emerald-400 mt-0.5">฿0</div>
+          </div>
+          <div class="bg-slate-800/90 p-2 rounded-xl">
+            <div class="text-indigo-300">🏠 ค่าบ้าน</div>
+            <div id="acc-house" class="font-bold text-white mt-0.5">฿0</div>
+          </div>
+          <div class="bg-slate-800/90 p-2 rounded-xl">
+            <div class="text-purple-300">🚗 ค่ารถ</div>
+            <div id="acc-vehicle" class="font-bold text-white mt-0.5">฿0</div>
+          </div>
+        </div>
+
+        <!-- หลอด Progress Bar เป้าหมายรายเดือน (บ้าน / รถ / ค่าแรง) -->
+        <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-300">🎯 ความคืบหน้าเป้าหมายรายเดือน</span>
+            <button onclick="toggleTargetEditor()" class="text-xs text-emerald-400 hover:underline">✏️
+              ตั้งเป้ารายเดือน</button>
+          </div>
+
+          <!-- ช่องตั้งค่าเป้ารายเดือน (ซ่อนเริ่มต้น) -->
+          <div id="target-editor-box"
+            class="hidden grid grid-cols-3 gap-2 bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <div>
+              <label class="text-xs text-emerald-300 block">เป้าค่าแรง (฿)</label>
+              <input type="number" id="target-wage-input" value="15000" step="1000" oninput="saveMonthlyTargets()"
+                class="w-full mt-1 px-2 py-1 bg-slate-900 text-white rounded border border-slate-600 font-bold text-xs">
+            </div>
+            <div>
+              <label class="text-xs text-indigo-300 block">เป้าค่าบ้าน (฿)</label>
+              <input type="number" id="target-house-input" value="15000" step="1000" oninput="saveMonthlyTargets()"
+                class="w-full mt-1 px-2 py-1 bg-slate-900 text-white rounded border border-slate-600 font-bold text-xs">
+            </div>
+            <div>
+              <label class="text-xs text-purple-300 block">เป้าค่ารถ (฿)</label>
+              <input type="number" id="target-vehicle-input" value="10000" step="1000" oninput="saveMonthlyTargets()"
+                class="w-full mt-1 px-2 py-1 bg-slate-900 text-white rounded border border-slate-600 font-bold text-xs">
+            </div>
+          </div>
+
+          <!-- Progress Bar: ค่าบ้าน -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-indigo-300">🏠 กองทุนค่างวดบ้าน (30%)</span>
+              <span id="prog-house-text" class="text-slate-300 font-medium">฿0 / ฿15,000 (0%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="prog-house-bar" class="h-full bg-indigo-500 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Progress Bar: ค่ารถ -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-purple-300">🚗 กองทุนค่างวดรถ (30%)</span>
+              <span id="prog-vehicle-text" class="text-slate-300 font-medium">฿0 / ฿10,000 (0%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="prog-vehicle-bar" class="h-full bg-purple-500 rounded-full transition-all" style="width: 0%">
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar: ค่าแรงตัวเอง -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs">
+              <span class="text-emerald-300">👤 กองทุนค่าแรงตัวเอง (30%)</span>
+              <span id="prog-wage-text" class="text-slate-300 font-medium">฿0 / ฿15,000 (0%)</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="prog-wage-bar" class="h-full bg-emerald-500 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- รายการออเดอร์สะสม & ติดตามสถานะมัดจำ 50% -->
+        <div class="pt-2 border-t border-slate-800 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold text-slate-300">📋 รายการออเดอร์ & เช็กมัดจำ 50% (กดเปลี่ยนสถานะได้)</span>
+          </div>
+          <div id="order-history-list" class="space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: คำนวณออเดอร์ & จัดการค่าขนส่ง -->
+    <!-- ========================================== -->
+    <div id="tab-calculator" class="space-y-4 hidden">
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <span>🧾</span> ข้อมูลคำสั่งซื้อ & ค่าจัดส่ง
+          </h2>
+          <label class="flex items-center gap-1.5 text-xs text-emerald-700 font-medium cursor-pointer">
+            <input type="checkbox" id="auto-price-toggle" checked onchange="calculate()"
+              class="rounded text-[#06C755] focus:ring-[#06C755]">
+            คิดราคาสินค้าอัตโนมัติ
+          </label>
+        </div>
+
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs text-slate-500 font-medium">ชื่อลูกค้า / บ่าวสาว</label>
+              <input type="text" id="input-customer" value="คุณแพรว" oninput="calculate()"
+                class="w-full mt-1 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 font-medium">เลขที่ออเดอร์</label>
+              <input type="text" id="input-order-no" value="ORD-20261107" oninput="calculate()"
+                class="w-full mt-1 px-3 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs text-slate-500 font-medium">ยอดรวมค่าสินค้า (บาท)</label>
+              <input type="number" id="input-revenue" value="7050" step="50" oninput="onManualRevenueInput()"
+                class="w-full mt-1 px-3 py-2 text-base font-bold text-emerald-700 bg-emerald-50/50 border border-emerald-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 font-medium">ส่วนลดท้ายบิล (บาท)</label>
+              <input type="number" id="input-discount" value="0" step="10" oninput="calculate()"
+                class="w-full mt-1 px-3 py-2 text-base font-semibold text-rose-600 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+          </div>
+
+          <!-- ส่วนจัดการค่าจัดส่ง (แยกฝั่งเก็บลูกค้า vs ฝั่งต้นทุนจ่ายขนส่งจริง) -->
+          <div class="p-3 bg-sky-50/70 border border-sky-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-sky-900 flex items-center gap-1">🚚 การจัดส่ง (Shipping)</span>
+              <div class="flex gap-1">
+                <button onclick="setQuickShipping(0, 100)"
+                  class="text-xs bg-white hover:bg-sky-100 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-md font-medium">ส่งฟรี
+                  (ร้านออก 100฿)</button>
+                <button onclick="setQuickShipping(80, 80)"
+                  class="text-xs bg-white hover:bg-sky-100 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-md font-medium">เก็บตามจริง
+                  80฿</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-sky-800 block">ค่าส่งที่เรียกเก็บลูกค้า (+฿)</label>
+                <input type="number" id="input-ship-charge" value="80" step="10" oninput="calculate()"
+                  class="w-full mt-1 px-2.5 py-1.5 text-sm font-bold text-sky-900 bg-white border border-sky-300 rounded-lg outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-amber-800 block">ค่าส่งที่ร้านจ่ายจริง (-฿)</label>
+                <input type="number" id="input-ship-cost" value="120" step="10" oninput="calculate()"
+                  class="w-full mt-1 px-2.5 py-1.5 text-sm font-bold text-amber-900 bg-white border border-amber-300 rounded-lg outline-none">
+              </div>
+            </div>
+            <div id="shipping-diff-note" class="text-xs text-sky-700"></div>
+          </div>
+
+          <div id="promo-notice"
+            class="hidden text-xs bg-amber-50 text-amber-800 px-3 py-1.5 rounded-lg border border-amber-200">
+            🎉 ได้รับโปรโมชั่นสั่งของชำร่วยรวมตั้งแต่ 500 ชิ้นขึ้นไป ลด 5% อัตโนมัติ!
+          </div>
+        </div>
+      </div>
+
+      <!-- รายการสินค้าที่ผลิต -->
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-600 flex items-center gap-1.5">
+            <span>📦</span> รายการสินค้าในบิลนี้
+          </h2>
+          <div class="flex items-center gap-1.5">
+            <button onclick="switchTab('bill')"
+              class="text-xs bg-[#06C755] text-white font-semibold px-2.5 py-1 rounded-lg shadow-xs active:scale-95 transition">
+              🧾 ดูบิล LINE OA
+            </button>
+            <button onclick="addOrderItem()"
+              class="text-xs bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-1 rounded-lg border border-emerald-200 active:scale-95 transition">
+              + เพิ่มสินค้า
+            </button>
+          </div>
+        </div>
+
+        <div id="order-items-list" class="space-y-3"></div>
+        <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-xs text-slate-400">💡 แก้ได้เฉพาะต้นทุนของ ส่วนค่าแรงคิดอัตโนมัติ</span>
+          <button onclick="manualSaveAll()"
+            class="text-xs bg-slate-800 hover:bg-slate-900 text-white font-semibold px-3 py-1.5 rounded-lg shadow-xs active:scale-95 transition">
+            💾 บันทึกต้นทุนล่าสุด
+          </button>
+        </div>
+      </div>
+
+      <!-- สรุปต้นทุนของ+ค่าส่ง VS ค่าแรงตัวเองอัตโนมัติ -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl">
+          <div class="text-xs text-amber-700 font-medium">🛒 ต้นทุนของ + ค่าส่งจ่ายจริง</div>
+          <div id="stat-material" class="text-xl font-bold text-amber-800 mt-1">฿0</div>
+          <div id="stat-mat-breakdown" class="text-xs text-amber-600">ค่าของ ฿0 + ค่าส่ง ฿0</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl">
+          <div class="text-xs text-emerald-700 font-medium">👤 ค่าแรงตัวเอง (อัตโนมัติ)</div>
+          <div id="stat-auto-wage" class="text-xl font-bold text-emerald-800 mt-1">฿0</div>
+          <div class="text-xs text-emerald-600">30% จากกำไรสุทธิหลังหักของ+ค่าส่ง</div>
+        </div>
+      </div>
+
+      <!-- ผลสรุปกำไรคงเหลือหลังหักค่าของและค่าส่ง -->
+      <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-300">กำไรสุทธิหลังหักค่าของ & ค่าส่ง (นำไปแบ่ง 4 กอง)</span>
+          <span id="stat-margin"
+            class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">0%</span>
+        </div>
+        <div id="stat-profit" class="text-3xl font-extrabold text-emerald-400 mt-1">฿0</div>
+        <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between text-xs text-slate-400">
+          <span>ยอดโอนจากลูกค้า: <b id="stat-net-rev" class="text-emerald-300">฿0</b></span>
+          <span>รวมต้นทุนจ่ายจริง: <b id="stat-cost" class="text-amber-300">฿0</b></span>
+        </div>
+      </div>
+
+      <!-- แบ่งสรรกำไร 4 กองอัตโนมัติ -->
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+          <span>🎯</span> จัดสรรยอดคงเหลือเข้า 4 กองทุน (อัตโนมัติ)
+        </h2>
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs">🛍️</span>
+              <div>
+                <div class="text-xs font-semibold text-slate-800">ค่าซื้อของอื่นๆ (10%)</div>
+                <div class="text-xs text-slate-400">สำรองซื้ออุปกรณ์/เทปกาว/บับเบิ้ล</div>
+              </div>
+            </div>
+            <div id="fund-supplies" class="text-sm font-bold text-blue-700">฿0</div>
+          </div>
+          <div class="flex items-center justify-between p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs">👤</span>
+              <div>
+                <div class="text-xs font-semibold text-emerald-900">ค่าแรงตัวเอง (30% อัตโนมัติ)</div>
+                <div class="text-xs text-emerald-600">เงินเดือน/ค่าแรงผลิตของเจ้าของร้าน</div>
+              </div>
+            </div>
+            <div id="fund-wage" class="text-sm font-bold text-emerald-700">฿0</div>
+          </div>
+          <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-xs">🏠</span>
+              <div>
+                <div class="text-xs font-semibold text-slate-800">ค่างวดบ้าน (30%)</div>
+                <div class="text-xs text-slate-400">สะสมจ่ายงวดบ้าน/ค่าเช่าที่</div>
+              </div>
+            </div>
+            <div id="fund-house" class="text-sm font-bold text-indigo-700">฿0</div>
+          </div>
+          <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-purple-100 text-purple-700 rounded-lg text-xs">🚗</span>
+              <div>
+                <div class="text-xs font-semibold text-slate-800">ค่างวดรถ (30%)</div>
+                <div class="text-xs text-slate-400">สะสมค่างวดรถ/บำรุงรักษา</div>
+              </div>
+            </div>
+            <div id="fund-vehicle" class="text-sm font-bold text-purple-700">฿0</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: บิลคำสั่งซื้อสไตล์ LINE OA (มีค่าส่ง & มัดจำ 50%) -->
+    <!-- ========================================== -->
+    <div id="tab-bill" class="space-y-4 hidden">
+
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="copyBillTextForLine()"
+          class="py-2.5 px-3 bg-[#06C755] hover:bg-emerald-600 text-white font-semibold rounded-xl text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5">
+          <span>💬</span> คัดลอกข้อความบิลส่งลูกค้า
+        </button>
+        <button onclick="window.print()"
+          class="py-2.5 px-3 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5">
+          <span>🖨️</span> พิมพ์ / บันทึกรูปบิล
+        </button>
+      </div>
+
+      <div id="line-oa-receipt" class="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden">
+        <div class="bg-[#06C755] text-white px-5 py-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold tracking-wider uppercase bg-white/20 px-2.5 py-0.5 rounded-full">LINE
+              OFFICIAL ACCOUNT</span>
+            <span id="bill-date" class="text-xs text-emerald-50">07/11/2026</span>
+          </div>
+          <h2 class="text-lg font-bold mt-2 flex items-center gap-1.5">
+            <span>🌸</span> ONESTUDIO การ์ดแต่งงาน & ของชำร่วย
+          </h2>
+          <p class="text-xs text-emerald-50">ใบสรุปรายการคำสั่งซื้อ (Order Confirmation)</p>
+        </div>
+
+        <div class="px-5 py-3.5 bg-emerald-50/40 border-b border-slate-100 flex items-center justify-between text-xs">
+          <div>
+            <span class="text-slate-400 block">ชื่อลูกค้า</span>
+            <span id="bill-customer" class="font-bold text-slate-800 text-sm">คุณแพรว</span>
+          </div>
+          <div class="text-right">
+            <span class="text-slate-400 block">เลขที่ใบสั่งซื้อ</span>
+            <span id="bill-order-no" class="font-semibold text-slate-700">ORD-20261107</span>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-3">
+          <div class="text-xs font-semibold text-slate-400 border-b border-slate-100 pb-1.5 flex justify-between">
+            <span>รายการสินค้า (จำนวน x ราคา/หน่วย)</span>
+            <span>รวม (บาท)</span>
+          </div>
+
+          <div id="bill-items-container" class="space-y-2.5 text-xs"></div>
+
+          <div class="border-t-2 border-dashed border-slate-200 my-3"></div>
+
+          <div class="space-y-1.5 text-xs">
+            <div class="flex justify-between text-slate-500">
+              <span>จำนวนรวมทั้งหมด</span>
+              <span id="bill-total-qty" class="font-medium text-slate-700">0 ชิ้น</span>
+            </div>
+            <div class="flex justify-between text-slate-500">
+              <span>ยอดรวมค่าสินค้า</span>
+              <span id="bill-subtotal" class="font-medium text-slate-700">฿0</span>
+            </div>
+            <div class="flex justify-between text-sky-600">
+              <span>🚚 ค่าจัดส่ง (Shipping)</span>
+              <span id="bill-shipping-charge" class="font-semibold">+฿0</span>
+            </div>
+            <div class="flex justify-between text-rose-500">
+              <span>ส่วนลดพิเศษ</span>
+              <span id="bill-discount">-฿0</span>
+            </div>
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-sm font-bold text-slate-800">ยอดชำระสุทธิ (Total)</span>
+              <span id="bill-net-total" class="text-2xl font-extrabold text-[#06C755]">฿0</span>
+            </div>
+            <!-- แบ่งจ่ายมัดจำ 50% สำหรับงานสั่งผลิต -->
+            <div
+              class="mt-2 p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl flex justify-between items-center text-xs">
+              <span class="text-emerald-800 font-medium">💳 ยอดโอนมัดจำเริ่มงาน (50%)</span>
+              <span id="bill-deposit" class="font-bold text-sm text-emerald-900">฿0</span>
+            </div>
+          </div>
+
+          <div class="mt-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
+            <div class="font-semibold text-slate-700 flex items-center gap-1">
+              <span>📌</span> รายละเอียดการผลิต (ONESTUDIO)
+            </div>
+            <p class="text-slate-500">• ออกแบบให้ฟรี และปรับโทนสีแพ็คเกจตามธีมงานได้ค่ะ</p>
+            <p class="text-slate-700 font-medium">• ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ดแต่งงาน 7–15 วัน)
+              หลังคอนเฟิร์มแบบ</p>
+            <p class="text-emerald-700 font-medium">💕 ขอบพระคุณที่ไว้วางใจ ONESTUDIO ในวันสำคัญนะคะ</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 text-white p-4 rounded-2xl text-xs space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold text-emerald-400">🔒 สรุปหลังบ้านสำหรับแอดมิน (เฉพาะบิลนี้)</div>
+          <button onclick="saveCurrentOrderToHistory()"
+            class="bg-[#06C755] hover:bg-emerald-500 text-white font-semibold px-2.5 py-1 rounded-lg text-xs transition">+
+            บันทึกเข้ายอดสะสม</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-slate-300">
+          <div>🛒 ทุนของ + ค่าส่งจ่ายจริง: <b id="bill-admin-mat" class="text-amber-400">฿0</b></div>
+          <div>👤 ค่าแรงตัวเอง (30%): <b id="bill-admin-wage" class="text-emerald-400">฿0</b></div>
+          <div>🏠 ค่างวดบ้าน (30%): <b id="bill-admin-house" class="text-indigo-300">฿0</b></div>
+          <div>🚗 ค่างวดรถ (30%): <b id="bill-admin-vehicle" class="text-purple-300">฿0</b></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: ตั้งค่าต้นทุนค่าของแต่ละรายการ -->
+    <!-- ========================================== -->
+    <div id="tab-products" class="space-y-4 hidden">
+
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span>⚙️</span> ตั้งค่าต้นทุนของ (<span id="count-badge">29</span> รายการ)
+          </h2>
+          <button onclick="resetToLineBotCatalog()" class="text-xs text-rose-600 hover:underline font-medium">
+            คืนค่าเริ่มต้น
+          </button>
+        </div>
+        <p class="text-xs text-slate-500">แก้ไขได้เฉพาะ <b>ต้นทุนค่าของต่อชิ้น (บาท)</b>
+          ส่วนราคาขายและค่าแรงตัวเองจะคำนวณให้อัตโนมัติ</p>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="manualSaveAll()"
+            class="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition flex items-center justify-center gap-1">
+            <span>💾</span> บันทึกต้นทุนล่าสุด
+          </button>
+          <button onclick="copyCatalogForAI()"
+            class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition flex items-center justify-center gap-1">
+            <span>📋</span> คัดลอกค่าส่งให้แชท
+          </button>
+        </div>
+
+        <div class="relative">
+          <input type="text" id="search-catalog" oninput="renderCatalog()"
+            placeholder="🔍 ค้นหาชื่อสินค้า เช่น การ์ด, ดินสอ, น้ำผึ้ง..."
+            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <div class="flex gap-1.5 overflow-x-auto pb-1">
+          <button onclick="setCategoryFilter('all')" id="filter-all"
+            class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white whitespace-nowrap">ทั้งหมด</button>
+          <button onclick="setCategoryFilter('การ์ดแต่งงาน')" id="filter-card"
+            class="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap">🌸
+            การ์ดแต่งงาน</button>
+          <button onclick="setCategoryFilter('ของชำร่วย')" id="filter-souvenir"
+            class="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap">🎁
+            ของชำร่วย</button>
+        </div>
+      </div>
+
+      <div id="catalog-list" class="space-y-2.5"></div>
+
+      <!-- ฟอร์มเพิ่มสินค้าใหม่ -->
+      <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+        <h2 class="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+          <span>➕</span> เพิ่มรายการสินค้าใหม่
+        </h2>
+        <div class="space-y-2.5">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="text-xs text-slate-500">ชื่อสินค้า / บริการ</label>
+              <input type="text" id="new-prod-name" placeholder="เช่น การ์ดแต่งงาน 4x6 นิ้ว"
+                class="w-full mt-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500">หมวดหมู่</label>
+              <select id="new-prod-cat"
+                class="w-full mt-1 px-2 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white">
+                <option value="การ์ดแต่งงาน">การ์ดแต่งงาน</option>
+                <option value="ของชำร่วย">ของชำร่วย</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-xs text-slate-500">ราคาขายต่อชิ้น (฿)</label>
+              <input type="number" step="0.1" id="new-prod-price" placeholder="6.0"
+                class="w-full mt-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+              <label class="text-xs text-amber-700 font-semibold">🛒 ต้นทุนค่าของ/ชิ้น (฿)</label>
+              <input type="number" step="0.1" id="new-prod-mat" placeholder="2.5"
+                class="w-full mt-1 px-3 py-2 text-xs bg-amber-50/50 border border-amber-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-amber-500 font-bold text-amber-900">
+            </div>
+          </div>
+          <button onclick="saveNewProduct()"
+            class="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold py-2.5 rounded-xl text-xs transition">
+            + บันทึกรายการสินค้าใหม่
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation Bar (4 ปุ่ม รองรับ iPhone Safe Area) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 px-3 z-30 safe-bottom">
+    <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+      <button onclick="switchTab('linechat')" id="nav-btn-linechat"
+        class="flex flex-col items-center py-1 text-[#06C755] font-semibold transition">
+        <span class="text-lg">💬</span>
+        <span class="text-xs mt-0.5">แชท #order</span>
+      </button>
+      <button onclick="switchTab('calculator')" id="nav-btn-calculator"
+        class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
+        <span class="text-lg">🧮</span>
+        <span class="text-xs mt-0.5">คำนวณ</span>
+      </button>
+      <button onclick="switchTab('bill')" id="nav-btn-bill"
+        class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
+        <span class="text-lg">🧾</span>
+        <span class="text-xs mt-0.5">บิล LINE</span>
+      </button>
+      <button onclick="switchTab('products')" id="nav-btn-products"
+        class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
+        <span class="text-lg">⚙️</span>
+        <span class="text-xs mt-0.5">ตั้งค่าทุนของ</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Script Logic -->
+  <script>
+    // 1. ฐานข้อมูลสินค้า 29 รายการจาก LINE OA Bot พร้อมเรทราคาขั้นบันได
+    const defaultCatalog = [
+      { id: 101, category: "การ์ดแต่งงาน", name: "🌸 การ์ด 4x6 นิ้ว (หน้าเดียว) + ซองฟรี", priceInfo: "ขาย 3.3฿", mat: 1.5, tiers: { 100: 3.3, 300: 3.3, 500: 3.3 }, keywords: ["4x6 หน้าเดียว", "4x6หน้าเดียว", "การ์ดหน้าเดียว"] },
+      { id: 102, category: "การ์ดแต่งงาน", name: "🌸 การ์ด 4x6 นิ้ว (หน้า-หลัง) + ซองฟรี", priceInfo: "ขาย 5฿", mat: 2.2, tiers: { 100: 5.0, 300: 5.0, 500: 5.0 }, keywords: ["4x6 หน้าหลัง", "4x6 หน้า-หลัง", "4x6หน้าหลัง", "การ์ด 4x6", "4x6"] },
+      { id: 103, category: "การ์ดแต่งงาน", name: "🌸 การ์ด 5x7 นิ้ว (หน้าเดียว) + ซองฟรี", priceInfo: "ขาย 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["5x7 หน้าเดียว", "5x7หน้าเดียว"] },
+      { id: 104, category: "การ์ดแต่งงาน", name: "🌸 การ์ด 5x7 นิ้ว (หน้า-หลัง) + ซองฟรี", priceInfo: "ขาย 8฿", mat: 3.5, tiers: { 100: 8.0, 300: 8.0, 500: 8.0 }, keywords: ["5x7 หน้าหลัง", "5x7 หน้า-หลัง", "5x7หน้าหลัง", "การ์ด 5x7", "5x7"] },
+      { id: 105, category: "การ์ดแต่งงาน", name: "✉️ อัปเกรดซองสีครีม (+1.5฿)", priceInfo: "+1.5฿", mat: 0.8, tiers: { 100: 1.5, 300: 1.5, 500: 1.5 }, keywords: ["ซองสีครีม", "ซองครีม"] },
+      { id: 106, category: "การ์ดแต่งงาน", name: "✉️ อัปเกรดซองสีเขียว (+2฿)", priceInfo: "+2฿", mat: 1.2, tiers: { 100: 2.0, 300: 2.0, 500: 2.0 }, keywords: ["ซองสีเขียว", "ซองเขียว"] },
+
+      { id: 201, category: "ของชำร่วย", name: "1. ดินสอไม้มินิมอล (แพ็คเกจคราฟท์/ตามธีม)", priceInfo: "5 - 6฿", mat: 2.5, tiers: { 100: 6.0, 300: 5.5, 500: 5.0 }, keywords: ["ดินสอไม้มินิมอล", "ดินสอไม้", "ดินสอ"] },
+      { id: 202, category: "ของชำร่วย", name: "2. เข็มกลัดดอกกุหลาบ", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"] },
+      { id: 203, category: "ของชำร่วย", name: "3. เข็มกลัดดอกเดซี่", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกเดซี่", "ดอกเดซี่", "เดซี่"] },
+      { id: 204, category: "ของชำร่วย", name: "4. เข็มกลัดดอกไม้ (แพ็คเกจตัดเสียบ)", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกไม้", "เข็มกลัด"] },
+      { id: 205, category: "ของชำร่วย", name: "5.1 น้ำหอมขวดจิ๋ว (แพ็คเกจตัดเสียบ)", priceInfo: "6฿", mat: 3.0, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["น้ำหอมตัดเสียบ", "น้ำหอมขวดจิ๋วตัดเสียบ"] },
+      { id: 206, category: "ของชำร่วย", name: "5.2 น้ำหอมขวดจิ๋ว (แพ็คเกจพับปิด)", priceInfo: "6 - 8฿", mat: 3.5, tiers: { 100: 8.0, 300: 7.0, 500: 6.0 }, keywords: ["น้ำหอมพับปิด", "น้ำหอมขวดจิ๋ว", "น้ำหอม"] },
+      { id: 207, category: "ของชำร่วย", name: "6. สมุดโน้ต 3x4 นิ้ว", priceInfo: "6฿", mat: 2.8, tiers: { 100: 6.0, 300: 6.0, 500: 6.0 }, keywords: ["สมุดโน้ต 3x4", "สมุด 3x4"] },
+      { id: 208, category: "ของชำร่วย", name: "7. พวงกุญแจ PU ถัก", priceInfo: "6 - 7฿", mat: 3.2, tiers: { 100: 7.0, 300: 6.5, 500: 6.0 }, keywords: ["พวงกุญแจ pu", "pu ถัก", "กุญแจถัก"] },
+      { id: 209, category: "ของชำร่วย", name: "8. กระจกวิเศษทรงกลม (ตัดเสียบ/ติด Tag)", priceInfo: "5.8 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.0, 500: 5.8 }, keywords: ["กระจกวิเศษ", "กระจก"] },
+      { id: 210, category: "ของชำร่วย", name: "9. ปากกาลูกลื่น (ดำ/น้ำเงิน/แดง)", priceInfo: "6 - 7฿", mat: 3.0, tiers: { 100: 7.0, 300: 6.0, 500: 6.0 }, keywords: ["ปากกาลูกลื่น", "ปากกา"] },
+      { id: 211, category: "ของชำร่วย", name: "10. พิมเสน", priceInfo: "6 - 8฿", mat: 3.5, tiers: { 100: 8.0, 300: 7.0, 500: 6.0 }, keywords: ["พิมเสน"] },
+      { id: 212, category: "ของชำร่วย", name: "11. พวงกุญแจหนังแบบแบน (ผูกโบว์)", priceInfo: "8 - 9฿", mat: 4.5, tiers: { 100: 9.0, 300: 8.5, 500: 8.0 }, keywords: ["พวงกุญแจหนัง", "กุญแจหนัง"] },
+      { id: 213, category: "ของชำร่วย", name: "12. ผ้าขนหนู (ติด Tag)", priceInfo: "7 - 10฿", mat: 4.5, tiers: { 100: 10.0, 300: 8.0, 500: 7.0 }, keywords: ["ผ้าขนหนู"] },
+      { id: 214, category: "ของชำร่วย", name: "13.1 ยางมัดผม (แพ็คเกจปกติ)", priceInfo: "8 - 10฿", mat: 4.2, tiers: { 100: 10.0, 300: 9.0, 500: 8.0 }, keywords: ["ยางมัดผมปกติ", "ยางมัดผม"] },
+      { id: 215, category: "ของชำร่วย", name: "13.2 ยางมัดผม (พร้อมถุงแก้ว)", priceInfo: "13 - 15฿", mat: 6.5, tiers: { 100: 15.0, 300: 14.0, 500: 13.0 }, keywords: ["ยางมัดผมถุงแก้ว", "ถุงแก้ว", "ยางมัดผมถุงตาข่าย", "ถุงตาข่าย"] },
+      { id: 216, category: "ของชำร่วย", name: "14. กระเป๋าผ้า ถุงสปันบอนด์", priceInfo: "8 - 10฿", mat: 4.5, tiers: { 100: 10.0, 300: 9.0, 500: 8.0 }, keywords: ["กระเป๋าผ้า", "สปันบอนด์", "ถุงผ้า"] },
+      { id: 217, category: "ของชำร่วย", name: "15. หนังสือยาซีน มินิมอลสไตล์ (ติด Tag)", priceInfo: "8 - 10฿", mat: 4.8, tiers: { 100: 10.0, 300: 9.0, 500: 8.0 }, keywords: ["หนังสือยาซีน", "ยาซีน"] },
+      { id: 218, category: "ของชำร่วย", name: "16. หนังสืออัซการ", priceInfo: "10 - 12฿", mat: 5.8, tiers: { 100: 12.0, 300: 11.5, 500: 10.0 }, keywords: ["หนังสืออัซการ", "อัซการ"] },
+      { id: 219, category: "ของชำร่วย", name: "17. สบู่หอม", priceInfo: "12฿", mat: 6.0, tiers: { 100: 12.0, 300: 12.0, 500: 12.0 }, keywords: ["สบู่หอม", "สบู่"] },
+      { id: 220, category: "ของชำร่วย", name: "18.1 ช้อนเงิน (แพ็คเกจติด Tag)", priceInfo: "14 - 15฿", mat: 7.5, tiers: { 100: 15.0, 300: 14.0, 500: 14.0 }, keywords: ["ช้อนเงิน"] },
+      { id: 221, category: "ของชำร่วย", name: "18.2 ช้อนทอง (แพ็คเกจติด Tag)", priceInfo: "15 - 16฿", mat: 8.0, tiers: { 100: 16.0, 300: 15.0, 500: 15.0 }, keywords: ["ช้อนทอง"] },
+      { id: 222, category: "ของชำร่วย", name: "19. สมุดโน้ต A5", priceInfo: "15฿", mat: 7.5, tiers: { 100: 15.0, 300: 15.0, 500: 15.0 }, keywords: ["สมุดโน้ต a5", "สมุด a5", "a5"] },
+      { id: 223, category: "ของชำร่วย", name: "20. น้ำผึ้ง 30ml", priceInfo: "15 - 18฿", mat: 9.0, tiers: { 100: 18.0, 300: 17.0, 500: 15.0 }, keywords: ["น้ำผึ้ง"] },
+      { id: 224, category: "ของชำร่วย", name: "21. น้ำหอมในรถ (50 ชิ้นขึ้นไป)", priceInfo: "29฿", mat: 14.5, tiers: { 100: 29.0, 300: 29.0, 500: 29.0 }, keywords: ["น้ำหอมในรถ"] }
+    ];
+
+    const STORAGE_KEY = "onestudio_cost_catalog_v3";
+    const HISTORY_KEY = "onestudio_order_history_v1";
+    const TARGETS_KEY = "onestudio_monthly_targets_v1";
+    let catalog = JSON.parse(JSON.stringify(defaultCatalog));
+    let orderHistory = [];
+    let monthlyTargets = { wage: 15000, house: 15000, vehicle: 10000 };
+
+    try {
+      const savedV3 = localStorage.getItem("onestudio_cost_catalog_v3");
+      const savedV2 = localStorage.getItem("onestudio_cost_catalog_v2");
+      const savedV1 = localStorage.getItem("onestudio_cost_catalog_v1");
+      const raw = savedV3 || savedV2 || savedV1;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        parsed.forEach(savedItem => {
+          const match = catalog.find(c => c.id === savedItem.id);
+          if (match) {
+            match.mat = parseFloat(savedItem.mat) || match.mat;
+            match.name = savedItem.name || match.name;
+          } else {
+            catalog.push({
+              ...savedItem,
+              tiers: savedItem.tiers || { 100: parseFloat(savedItem.priceInfo) || 10, 300: parseFloat(savedItem.priceInfo) || 10, 500: parseFloat(savedItem.priceInfo) || 10 }
+            });
+          }
+        });
+      }
+      const savedHist = localStorage.getItem(HISTORY_KEY);
+      if (savedHist) orderHistory = JSON.parse(savedHist);
+      const savedTargets = localStorage.getItem(TARGETS_KEY);
+      if (savedTargets) monthlyTargets = { ...monthlyTargets, ...JSON.parse(savedTargets) };
+    } catch (e) { }
+
+    let currentCategoryFilter = 'all';
+    let orderItems = [
+      { id: Date.now(), prodId: 102, qty: 300 },
+      { id: Date.now() + 1, prodId: 105, qty: 300 },
+      { id: Date.now() + 2, prodId: 223, qty: 300 }
+    ];
+
+    function getSellingUnitPrice(prod, qty) {
+      if (!prod || !prod.tiers) return 0;
+      if (qty >= 500 && prod.tiers[500] !== undefined) return prod.tiers[500];
+      if (qty >= 300 && prod.tiers[300] !== undefined) return prod.tiers[300];
+      return prod.tiers[100] || 0;
+    }
+
+    function setQuickShipping(charge, cost) {
+      document.getElementById("input-ship-charge").value = charge;
+      document.getElementById("input-ship-cost").value = cost;
+      calculate();
+    }
+
+    function showToast(msg = "✅ บันทึกข้อมูลเรียบร้อยแล้ว") {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.classList.remove("hidden");
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add("hidden");
+      }, 2200);
+    }
+
+    function syncStateToCloud() {
+      clearTimeout(window._cloudSyncTimer);
+      window._cloudSyncTimer = setTimeout(async () => {
+        try {
+          if (!location.protocol.startsWith("http")) return;
+          await fetch("/api/calculator-state", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              catalog: catalog.map(c => ({ id: c.id, name: c.name, mat: c.mat, category: c.category, priceInfo: c.priceInfo, tiers: c.tiers, keywords: c.keywords })),
+              orderHistory,
+              monthlyTargets
+            })
+          });
+        } catch (e) {}
+      }, 600);
+    }
+
+    async function loadStateFromCloud() {
+      try {
+        if (!location.protocol.startsWith("http")) return;
+        const res = await fetch("/api/calculator-state");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.ok) {
+          if (Array.isArray(data.catalog) && data.catalog.length > 0) {
+            data.catalog.forEach(savedItem => {
+              const match = catalog.find(c => c.id === savedItem.id);
+              if (match) {
+                match.mat = parseFloat(savedItem.mat) || match.mat;
+                match.name = savedItem.name || match.name;
+              } else {
+                catalog.push(savedItem);
+              }
+            });
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog)); } catch (e) {}
+          }
+          if (Array.isArray(data.orderHistory) && data.orderHistory.length > 0) {
+            orderHistory = data.orderHistory;
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) {}
+          }
+          if (data.monthlyTargets) {
+            monthlyTargets = { ...monthlyTargets, ...data.monthlyTargets };
+            try { localStorage.setItem(TARGETS_KEY, JSON.stringify(monthlyTargets)); } catch (e) {}
+            if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
+            if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
+            if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
+          }
+          renderCatalog();
+          renderOrderItems();
+          calculate();
+          renderAccumulatedDashboard();
+        }
+      } catch (e) {}
+    }
+
+    function saveCatalogToStorage(silent = false) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
+      } catch (e) { }
+      syncStateToCloud();
+      document.getElementById("count-badge").innerText = catalog.length;
+      renderCatalog();
+      renderOrderItems();
+      calculate();
+      if (!silent) showToast();
+    }
+
+    function manualSaveAll() {
+      saveCatalogToStorage(false);
+      showToast("💾 บันทึกค่าต้นทุนทั้งหมดลงระบบเรียบร้อยแล้ว!");
+    }
+
+    function copyCatalogForAI() {
+      const summary = catalog.map(p => `${p.id}: ${p.name} = ${p.mat}฿`).join("\n");
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(summary);
+        showToast("📋 คัดลอกต้นทุนแล้ว! กดวางในแชทได้เลย");
+      }
+    }
+
+    function resetToLineBotCatalog() {
+      catalog = JSON.parse(JSON.stringify(defaultCatalog));
+      saveCatalogToStorage();
+      showToast("🔄 คืนค่าต้นทุนเริ่มต้นทั้ง 29 รายการแล้ว");
+    }
+
+    // 2. Tab Navigation
+    function switchTab(tab) {
+      const tabs = ['linechat', 'calculator', 'bill', 'products'];
+      tabs.forEach(t => {
+        const contentEl = document.getElementById(`tab-${t}`);
+        const navBtn = document.getElementById(`nav-btn-${t}`);
+        const topBtn = document.getElementById(`top-tab-${t}`);
+        if (t === tab) {
+          contentEl.classList.remove("hidden");
+          navBtn.className = "flex flex-col items-center py-1 text-[#06C755] font-semibold transition";
+          topBtn.className = "py-2 px-1.5 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1";
+        } else {
+          contentEl.classList.add("hidden");
+          navBtn.className = "flex flex-col items-center py-1 text-slate-400 font-medium transition";
+          topBtn.className = "py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1";
+        }
+      });
+      if (tab === 'bill' || tab === 'calculator') calculate();
+    }
+
+    // 3. ระบบจำลองห้องแชท LINE พิมพ์ #order (พร้อมสกัดค่าส่งเก็บลูกค้า & ค่าส่งจ่ายจริง)
+    function runPresetOrder(cmdText) {
+      document.getElementById("chat-command-input").value = cmdText;
+      sendChatOrderCommand();
+    }
+
+    function sendChatOrderCommand() {
+      const inputEl = document.getElementById("chat-command-input");
+      const rawText = inputEl.value.trim();
+      if (!rawText) return;
+
+      const chatBox = document.getElementById("line-chat-messages");
+
+      // 1) แสดงบอลลูนข้อความฝั่งแอดมิน
+      const userBubble = document.createElement("div");
+      userBubble.className = "flex justify-end";
+      userBubble.innerHTML = `
+        <div class="bg-[#85E249] text-slate-900 px-3.5 py-2.5 rounded-2xl rounded-tr-none shadow-xs text-xs max-w-[82%] font-medium">
+          ${rawText}
+        </div>
+      `;
+      chatBox.appendChild(userBubble);
+
+      // 2) ประมวลผลคำสั่ง #order
+      const custMatch = rawText.match(/(?:#order\s*)?(คุณ[^\s,]+(?:\s*&\s*คุณ[^\s,]+)?)/i);
+      const customerName = custMatch ? custMatch[1] : "คุณลูกค้า (LINE OA)";
+      document.getElementById("input-customer").value = customerName;
+
+      // สกัดส่วนลด, ยอดรวม, ค่าส่งเก็บลูกค้า, ค่าส่งจ่ายจริง
+      const discountMatch = rawText.match(/ลด\s*(\d+)/);
+      const manualRevMatch = rawText.match(/ยอด\s*(\d+)/);
+      const freeShipMatch = rawText.match(/ส่งฟรี/);
+      const shipChargeMatch = rawText.match(/ค่าส่ง\s*(\d+)/);
+      const shipCostMatch = rawText.match(/ส่งจริง\s*(\d+)/);
+
+      let shipCharge = 0;
+      let shipCost = 0;
+      if (freeShipMatch) {
+        shipCharge = 0;
+        shipCost = shipCostMatch ? parseInt(shipCostMatch[1]) : 100;
+      } else if (shipChargeMatch) {
+        shipCharge = parseInt(shipChargeMatch[1]);
+        shipCost = shipCostMatch ? parseInt(shipCostMatch[1]) : shipCharge;
+      } else if (shipCostMatch) {
+        shipCost = parseInt(shipCostMatch[1]);
+      }
+
+      document.getElementById("input-ship-charge").value = shipCharge;
+      document.getElementById("input-ship-cost").value = shipCost;
+
+      // ลบคำเกี่ยวกับค่าส่งและส่วนลดออกก่อนค้นหาจำนวนสินค้า เพื่อไม่ให้ตัวเลขค่าส่งไปปนกับจำนวนชิ้น
+      let workingText = rawText.toLowerCase()
+        .replace(/ค่าส่ง\s*\d+/g, "")
+        .replace(/ส่งจริง\s*\d+/g, "")
+        .replace(/ลด\s*\d+/g, "")
+        .replace(/ยอด\s*\d+/g, "");
+
+      const detectedItems = [];
+      const sortedCatalog = [...catalog].sort((a, b) => {
+        const lenA = (a.keywords?.[0] || a.name).length;
+        const lenB = (b.keywords?.[0] || b.name).length;
+        return lenB - lenA;
+      });
+
+      sortedCatalog.forEach(prod => {
+        const kws = prod.keywords || [prod.name.toLowerCase()];
+        for (const kw of kws) {
+          const idx = workingText.indexOf(kw.toLowerCase());
+          if (idx !== -1) {
+            const afterSlice = workingText.slice(idx + kw.length, idx + kw.length + 35);
+            const numMatch = afterSlice.match(/(\d{2,5})/);
+            const qty = numMatch ? parseInt(numMatch[1]) : 100;
+            detectedItems.push({ id: Date.now() + Math.random(), prodId: prod.id, qty });
+            workingText = workingText.replace(kw.toLowerCase(), "___");
+            break;
+          }
+        }
+      });
+
+      if (detectedItems.length > 0) {
+        orderItems = detectedItems;
+        const ordNo = "ORD-" + Math.floor(100000 + Math.random() * 900000);
+        document.getElementById("input-order-no").value = ordNo;
+
+        if (manualRevMatch) {
+          document.getElementById("auto-price-toggle").checked = false;
+          document.getElementById("input-revenue").value = parseInt(manualRevMatch[1]);
+        } else {
+          document.getElementById("auto-price-toggle").checked = true;
+        }
+
+        if (discountMatch) {
+          document.getElementById("input-discount").value = parseInt(discountMatch[1]);
+        } else {
+          document.getElementById("input-discount").value = 0;
+        }
+
+        renderOrderItems();
+        const summary = calculate(discountMatch ? parseInt(discountMatch[1]) : null);
+
+        // บันทึกลงประวัติออเดอร์สะสม (ตั้งสถานะเริ่มต้น: มัดจำ 50% แล้ว)
+        orderHistory.unshift({
+          ordNo,
+          customerName,
+          netRevenue: summary.netRevenue,
+          totalMaterial: summary.totalCost,
+          grossProfit: summary.grossProfit,
+          supplies: summary.supplies,
+          wage: summary.wage,
+          house: summary.house,
+          vehicle: summary.vehicle,
+          status: "deposit_50"
+        });
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory));
+        } catch (e) { }
+        syncStateToCloud();
+        renderAccumulatedDashboard();
+
+        // 3) สร้างบอลลูนตอบกลับจาก LINE Bot
+        const itemsHtml = summary.billLines.map(l => `
+          <div class="flex justify-between text-xs py-0.5">
+            <span class="text-slate-700 truncate pr-2">• ${l.name} (${l.qty}×${l.unitSell}฿)</span>
+            <span class="font-semibold text-slate-900 shrink-0">฿${l.lineTotal.toLocaleString()}</span>
+          </div>
+        `).join("");
+
+        const botReply = document.createElement("div");
+        botReply.className = "flex items-start gap-2";
+        botReply.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
+          <div class="space-y-2 max-w-[88%]">
+            <!-- การ์ดที่ 1: Flex Message บิลสำหรับกดแชร์ส่งลูกค้า -->
+            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+              <div class="bg-[#06C755] text-white px-3.5 py-2 flex items-center justify-between">
+                <span class="text-xs font-bold">🌸 บิลคำสั่งซื้อ ONESTUDIO</span>
+                <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${ordNo}</span>
+              </div>
+              <div class="p-3 space-y-1.5 text-xs">
+                <div class="font-bold text-slate-800 border-b border-slate-100 pb-1">ลูกค้า: ${customerName}</div>
+                <div class="space-y-0.5">${itemsHtml}</div>
+                <div class="flex justify-between text-sky-600 pt-1 border-t border-dashed border-slate-200">
+                  <span>🚚 ค่าจัดส่ง</span>
+                  <span class="font-semibold">${summary.shipCharge > 0 ? `+฿${summary.shipCharge.toLocaleString()}` : 'ส่งฟรี!'}</span>
+                </div>
+                ${summary.discount > 0 ? `<div class="flex justify-between text-rose-500"><span>ส่วนลดพิเศษ</span><span>-฿${summary.discount.toLocaleString()}</span></div>` : ''}
+                <div class="flex justify-between items-center pt-1.5 border-t border-slate-200">
+                  <span class="font-bold text-slate-700">ยอดโอนสุทธิ</span>
+                  <span class="text-base font-extrabold text-[#06C755]">฿${summary.netRevenue.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between items-center bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-800">
+                  <span>💳 มัดจำเริ่มงาน 50%:</span>
+                  <span class="font-bold">฿${Math.round(summary.netRevenue / 2).toLocaleString()}</span>
+                </div>
+                <div class="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                  ⏰ ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน)
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 pt-1">
+                  <button onclick="copyBillTextForLine()" class="py-1.5 bg-[#06C755] text-white rounded-lg font-semibold text-xs">📤 คัดลอกบิลส่งลูกค้า</button>
+                  <button onclick="switchTab('bill')" class="py-1.5 bg-slate-100 text-slate-700 rounded-lg font-semibold text-xs">🔍 ดูบิลเต็มจอ</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- การ์ดที่ 2: สรุปต้นทุน-กำไร 4 กองให้แอดมินทันที -->
+            <div class="bg-slate-900 text-white p-3 rounded-2xl shadow-sm text-xs space-y-1.5">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+                <span class="font-bold text-emerald-400">📊 สรุปกำไร & แบ่ง 4 กองอัตโนมัติ</span>
+                <span class="text-slate-400">กำไร ${summary.margin.toFixed(0)}%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-amber-300">🛒 ทุนของ (฿${summary.totalMaterial.toLocaleString()}) + ส่งจริง (฿${summary.shipCost}):</span>
+                <span class="font-bold text-amber-400">-฿${summary.totalCost.toLocaleString()}</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800 pb-1">
+                <span class="text-slate-300">💰 เหลือกำไรสุทธิแบ่ง 4 กอง:</span>
+                <span class="font-bold text-emerald-400">฿${summary.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1 pt-0.5 text-xs">
+                <div>👤 ค่าแรงเรา (30%): <b class="text-emerald-300">฿${summary.wage.toFixed(0)}</b></div>
+                <div>🛍️ ซื้อของอื่น (10%): <b class="text-blue-300">฿${summary.supplies.toFixed(0)}</b></div>
+                <div>🏠 ค่าบ้าน (30%): <b class="text-indigo-300">฿${summary.house.toFixed(0)}</b></div>
+                <div>🚗 ค่ารถ (30%): <b class="text-purple-300">฿${summary.vehicle.toFixed(0)}</b></div>
+              </div>
+            </div>
+          </div>
+        `;
+        chatBox.appendChild(botReply);
+        showToast("⚡ สรุปบิล + ค่าส่ง + แบ่ง 4 กองเรียบร้อย!");
+      } else {
+        const errBubble = document.createElement("div");
+        errBubble.className = "flex items-start gap-2";
+        errBubble.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-base shrink-0 shadow-xs">🌸</div>
+          <div class="bg-white text-rose-600 p-3 rounded-2xl rounded-tl-none shadow-xs text-xs max-w-[85%]">
+            ไม่พบชื่อสินค้าในคำสั่ง ลองพิมพ์ชื่อสินค้าเช่น "4x6 หน้าหลัง 300, น้ำผึ้ง 300 ค่าส่ง 80" นะคะ
+          </div>
+        `;
+        chatBox.appendChild(errBubble);
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function toggleTargetEditor() {
+      const box = document.getElementById("target-editor-box");
+      if (box) box.classList.toggle("hidden");
+    }
+
+    function saveMonthlyTargets() {
+      monthlyTargets.wage = parseFloat(document.getElementById("target-wage-input")?.value) || 15000;
+      monthlyTargets.house = parseFloat(document.getElementById("target-house-input")?.value) || 15000;
+      monthlyTargets.vehicle = parseFloat(document.getElementById("target-vehicle-input")?.value) || 10000;
+      try {
+        localStorage.setItem(TARGETS_KEY, JSON.stringify(monthlyTargets));
+      } catch (e) { }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+    }
+
+    function renderAccumulatedDashboard() {
+      let accMat = 0, accProfit = 0, accSupplies = 0, accWage = 0, accHouse = 0, accVehicle = 0, accUnpaid = 0;
+      orderHistory.forEach(h => {
+        accMat += h.totalMaterial || 0;
+        accProfit += h.grossProfit || 0;
+        accSupplies += h.supplies || 0;
+        accWage += h.wage || 0;
+        accHouse += h.house || 0;
+        accVehicle += h.vehicle || 0;
+        const net = h.netRevenue || 0;
+        const st = h.status || "deposit_50";
+        if (st === "pending") accUnpaid += net;
+        else if (st === "deposit_50") accUnpaid += Math.round(net / 2);
+      });
+      document.getElementById("history-count").innerText = orderHistory.length;
+      const unpaidEl = document.getElementById("acc-unpaid");
+      if (unpaidEl) unpaidEl.innerText = `฿${accUnpaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-mat").innerText = `฿${accMat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-profit").innerText = `฿${accProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-supplies").innerText = `฿${accSupplies.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-wage").innerText = `฿${accWage.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-house").innerText = `฿${accHouse.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById("acc-vehicle").innerText = `฿${accVehicle.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+      // อัปเดต Progress Bar เป้าหมายรายเดือน
+      const updateBar = (key, currentVal, targetVal) => {
+        const pct = targetVal > 0 ? Math.min(100, Math.round((currentVal / targetVal) * 100)) : 0;
+        const diff = Math.max(0, Math.round(targetVal - currentVal));
+        const txtEl = document.getElementById(`prog-${key}-text`);
+        const barEl = document.getElementById(`prog-${key}-bar`);
+        if (txtEl) {
+          txtEl.innerText = diff > 0
+            ? `฿${Math.round(currentVal).toLocaleString()} / ฿${targetVal.toLocaleString()} (${pct}% • ขาดอีก ฿${diff.toLocaleString()})`
+            : `฿${Math.round(currentVal).toLocaleString()} / ฿${targetVal.toLocaleString()} (ทะลุเป้าแล้ว! 🎉)`;
+        }
+        if (barEl) barEl.style.width = `${pct}%`;
+      };
+      updateBar("house", accHouse, monthlyTargets.house || 15000);
+      updateBar("vehicle", accVehicle, monthlyTargets.vehicle || 10000);
+      updateBar("wage", accWage, monthlyTargets.wage || 15000);
+
+      // แสดงรายการออเดอร์สะสม & ปุ่มสลับสถานะมัดจำ
+      const histList = document.getElementById("order-history-list");
+      if (histList) {
+        if (orderHistory.length === 0) {
+          histList.innerHTML = `<div class="text-xs text-slate-500 text-center py-2">ยังไม่มีออเดอร์สะสม ลองกดส่งคำสั่ง #order ด้านบนได้เลยค่ะ</div>`;
+        } else {
+          histList.innerHTML = orderHistory.map((h, idx) => {
+            const st = h.status || "deposit_50";
+            const half = Math.round((h.netRevenue || 0) / 2);
+            let badgeHtml = "";
+            if (st === "pending") {
+              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ รอโอนมัดจำ (฿${half.toLocaleString()})</button>`;
+            } else if (st === "deposit_50") {
+              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">💳 มัดจำ 50% แล้ว (ค้าง ฿${half.toLocaleString()})</button>`;
+            } else {
+              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">✅ จ่ายครบ / ส่งแล้ว</button>`;
+            }
+            return `
+              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                <div class="min-w-0">
+                  <div class="font-bold text-white truncate">${h.customerName} <span class="text-slate-400 font-normal">(${h.ordNo})</span></div>
+                  <div class="text-slate-400 mt-0.5">ยอดสุทธิ <b class="text-emerald-400">฿${(h.netRevenue || 0).toLocaleString()}</b> • กำไร ฿${Math.round(h.grossProfit || 0).toLocaleString()}</div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  ${badgeHtml}
+                  <button onclick="deleteOrderHistoryItem(${idx})" class="text-slate-500 hover:text-rose-400 px-1">✕</button>
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+      }
+    }
+
+    function cycleOrderStatus(index) {
+      const item = orderHistory[index];
+      if (!item) return;
+      const order = ["pending", "deposit_50", "paid_full"];
+      const nextIdx = (order.indexOf(item.status || "deposit_50") + 1) % order.length;
+      item.status = order[nextIdx];
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+      showToast("🔄 อัปเดตสถานะการชำระเงินแล้ว");
+    }
+
+    function deleteOrderHistoryItem(index) {
+      orderHistory.splice(index, 1);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+    }
+
+    function saveCurrentOrderToHistory() {
+      const summary = calculate();
+      const ordNo = document.getElementById("input-order-no").value || ("ORD-" + Math.floor(100000 + Math.random() * 900000));
+      const customerName = document.getElementById("input-customer").value || "คุณลูกค้า";
+      orderHistory.unshift({
+        ordNo,
+        customerName,
+        netRevenue: summary.netRevenue,
+        totalMaterial: summary.totalCost,
+        grossProfit: summary.grossProfit,
+        supplies: summary.supplies,
+        wage: summary.wage,
+        house: summary.house,
+        vehicle: summary.vehicle,
+        status: "deposit_50"
+      });
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+      showToast("💾 บันทึกบิลนี้เข้ายอดสะสมเรียบร้อยแล้ว!");
+    }
+
+    function exportOrderHistoryCSV() {
+      if (orderHistory.length === 0) {
+        showToast("⚠️ ยังไม่มีข้อมูลออเดอร์ให้ Export");
+        return;
+      }
+      const headers = ["เลขที่บิล", "ชื่อลูกค้า", "สถานะชำระเงิน", "ยอดสุทธิ(บาท)", "ต้นทุนของ+ส่งจริง(บาท)", "กำไรสุทธิ(บาท)", "ซื้อของอื่น10%(บาท)", "ค่าแรงตัวเอง30%(บาท)", "ค่างวดบ้าน30%(บาท)", "ค่างวดรถ30%(บาท)"];
+      const statusMap = { pending: "รอโอนมัดจำ", deposit_50: "มัดจำ 50% แล้ว", paid_full: "จ่ายครบ/ส่งแล้ว" };
+      const rows = orderHistory.map(h => [
+        h.ordNo,
+        `"${(h.customerName || "").replace(/"/g, '""')}"`,
+        statusMap[h.status || "deposit_50"],
+        h.netRevenue || 0,
+        (h.totalMaterial || 0).toFixed(1),
+        (h.grossProfit || 0).toFixed(1),
+        (h.supplies || 0).toFixed(1),
+        (h.wage || 0).toFixed(1),
+        (h.house || 0).toFixed(1),
+        (h.vehicle || 0).toFixed(1)
+      ]);
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ONESTUDIO_Orders_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("📥 ดาวน์โหลดไฟล์ CSV สำหรับเปิดใน Excel/Google Sheets แล้ว!");
+    }
+
+    function clearOrderHistory() {
+      orderHistory = [];
+      try { localStorage.removeItem(HISTORY_KEY); } catch (e) { }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+      showToast("🗑️ ล้างประวัติยอดสะสมแล้ว");
+    }
+
+    // 4. Render Order Items
+    function renderOrderItems() {
+      const list = document.getElementById("order-items-list");
+      list.innerHTML = "";
+
+      orderItems.forEach((item, index) => {
+        const prod = catalog.find(p => p.id === item.prodId) || catalog[0];
+        const unitSell = getSellingUnitPrice(prod, item.qty);
+        const row = document.createElement("div");
+        row.className = "p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2.5";
+
+        let optionsHtml = catalog.map(p =>
+          `<option value="${p.id}" ${p.id === item.prodId ? 'selected' : ''}>${p.name} (${p.priceInfo || 'ทุน ' + p.mat + '฿'})</option>`
+        ).join("");
+
+        row.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <select onchange="updateOrderItemProd(${index}, this.value)" class="w-full text-xs font-semibold text-slate-700 bg-white p-2 rounded-lg border border-slate-200 outline-none">
+              ${optionsHtml}
+            </select>
+            ${orderItems.length > 1 ? `
+              <button onclick="removeOrderItem(${index})" class="text-xs text-rose-500 hover:text-rose-700 px-2 py-1">✕</button>
+            ` : ''}
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <div class="bg-white p-2 rounded-lg border border-slate-200">
+              <span class="text-xs text-slate-500 block">จำนวน (ชิ้น)</span>
+              <input type="number" min="1" value="${item.qty}" oninput="updateOrderItemQty(${index}, this.value)" class="w-full mt-1 font-bold text-sm text-slate-800 outline-none border-b border-slate-200 focus:border-emerald-500">
+            </div>
+            <div class="bg-amber-50/70 p-2 rounded-lg border border-amber-200">
+              <span class="text-xs text-amber-800 block">แก้ไขทุนของ/ชิ้น (฿)</span>
+              <input type="number" step="0.1" value="${prod ? prod.mat : 0}" oninput="updateProdCostLive(${prod ? prod.id : 0}, ${index}, this.value)" class="w-full mt-1 bg-white px-1.5 py-0.5 rounded border border-amber-300 font-bold text-sm text-amber-900 outline-none">
+            </div>
+            <div class="bg-emerald-50/70 p-2 rounded-lg border border-emerald-200 flex flex-col justify-between">
+              <span id="item-sell-rate-${index}" class="text-xs text-emerald-700 block">ขาย @${unitSell}฿</span>
+              <div id="item-mat-${index}" class="text-xs text-amber-900 font-bold">ทุนรวม ฿${((prod ? prod.mat : 0) * item.qty).toLocaleString()}</div>
+            </div>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function updateProdCostLive(prodId, rowIndex, val) {
+      const target = catalog.find(p => p.id === prodId);
+      if (target) {
+        target.mat = parseFloat(val) || 0;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
+        } catch (e) { }
+        const qty = orderItems[rowIndex]?.qty || 0;
+        const matEl = document.getElementById(`item-mat-${rowIndex}`);
+        if (matEl) matEl.innerText = `ทุนรวม ฿${(target.mat * qty).toLocaleString()}`;
+        calculate();
+        showToast();
+      }
+    }
+
+    function addOrderItem() {
+      orderItems.push({ id: Date.now(), prodId: catalog[0]?.id || 101, qty: 100 });
+      renderOrderItems();
+      calculate();
+    }
+
+    function removeOrderItem(index) {
+      orderItems.splice(index, 1);
+      renderOrderItems();
+      calculate();
+    }
+
+    function updateOrderItemProd(index, val) {
+      orderItems[index].prodId = parseInt(val);
+      renderOrderItems();
+      calculate();
+    }
+
+    function updateOrderItemQty(index, val) {
+      const qty = Math.max(0, parseInt(val) || 0);
+      orderItems[index].qty = qty;
+      const prod = catalog.find(p => p.id === orderItems[index].prodId) || catalog[0];
+      const unitSell = getSellingUnitPrice(prod, qty);
+      const matEl = document.getElementById(`item-mat-${index}`);
+      const rateEl = document.getElementById(`item-sell-rate-${index}`);
+      if (matEl) matEl.innerText = `ทุนรวม ฿${((prod ? prod.mat : 0) * qty).toLocaleString()}`;
+      if (rateEl) rateEl.innerText = `ขาย @${unitSell}฿`;
+      calculate();
+    }
+
+    function onManualRevenueInput() {
+      document.getElementById("auto-price-toggle").checked = false;
+      calculate();
+    }
+
+    // 5. Calculate Logic (รวมค่าจัดส่งทั้งฝั่งเรียกเก็บลูกค้า และฝั่งต้นทุนขนส่งจริง)
+    function calculate(forcedDiscount = null) {
+      const autoPrice = document.getElementById("auto-price-toggle")?.checked;
+      let totalQty = 0;
+      let souvenirQty = 0;
+      let totalMaterial = 0;
+      let autoSubtotal = 0;
+      let souvenirSubtotal = 0;
+
+      const billLines = [];
+
+      orderItems.forEach(item => {
+        const prod = catalog.find(p => p.id === item.prodId);
+        if (prod) {
+          const unitSell = getSellingUnitPrice(prod, item.qty);
+          const lineTotal = item.qty * unitSell;
+          totalQty += item.qty;
+          totalMaterial += item.qty * prod.mat;
+          autoSubtotal += lineTotal;
+          if (prod.category === "ของชำร่วย") {
+            souvenirQty += item.qty;
+            souvenirSubtotal += lineTotal;
+          }
+          billLines.push({
+            name: prod.name,
+            qty: item.qty,
+            unitSell,
+            lineTotal
+          });
+        }
+      });
+
+      const promoNotice = document.getElementById("promo-notice");
+      if (autoPrice) {
+        document.getElementById("input-revenue").value = autoSubtotal;
+        if (forcedDiscount !== null) {
+          document.getElementById("input-discount").value = forcedDiscount;
+        }
+        promoNotice?.classList.add("hidden");
+      }
+
+      const revenue = parseFloat(document.getElementById("input-revenue").value) || 0;
+      const discount = parseFloat(document.getElementById("input-discount").value) || 0;
+      const shipCharge = parseFloat(document.getElementById("input-ship-charge").value) || 0;
+      const shipCost = parseFloat(document.getElementById("input-ship-cost").value) || 0;
+
+      // ยอดสุทธิที่ลูกค้าต้องโอน = ค่าสินค้า + ค่าส่งที่เรียกเก็บ - ส่วนลด
+      const netRevenue = Math.max(0, revenue + shipCharge - discount);
+
+      // ต้นทุนรวมที่ร้านต้องจ่ายจริง = ต้นทุนค่าของรวม + ค่าส่งที่จ่ายขนส่งจริง
+      const totalCost = totalMaterial + shipCost;
+      const grossProfit = netRevenue - totalCost;
+      const margin = netRevenue > 0 ? (grossProfit / netRevenue * 100) : 0;
+
+      // แสดงหมายเหตุส่วนต่างค่าส่ง
+      const shipDiff = shipCharge - shipCost;
+      const shipNoteEl = document.getElementById("shipping-diff-note");
+      if (shipNoteEl) {
+        if (shipDiff < 0) {
+          shipNoteEl.innerText = `💡 ร้านช่วยซับพอร์ตค่าส่งให้ลูกค้า ฿${Math.abs(shipDiff)} (หักออกจากกำไรอัตโนมัติแล้ว)`;
+        } else if (shipDiff === 0 && shipCost > 0) {
+          shipNoteEl.innerText = `✅ เก็บค่าส่งลูกค้าเท่ากับค่าขนส่งจริง (ไม่กระทบกำไร)`;
+        } else {
+          shipNoteEl.innerText = `✅ คำนวณรวมในยอดโอนและต้นทุนเรียบร้อยแล้ว`;
+        }
+      }
+
+      let supplies = 0, wage = 0, house = 0, vehicle = 0;
+      if (grossProfit > 0) {
+        supplies = grossProfit * 0.10;
+        const remaining = grossProfit - supplies;
+        wage = remaining / 3;
+        house = remaining / 3;
+        vehicle = remaining / 3;
+      }
+
+      // Update Calculator KPI
+      document.getElementById("stat-material").innerText = `฿${totalCost.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("stat-mat-breakdown").innerText = `ค่าของ ฿${totalMaterial.toLocaleString()} + ค่าส่งจริง ฿${shipCost.toLocaleString()}`;
+      document.getElementById("stat-auto-wage").innerText = `฿${wage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("stat-net-rev").innerText = `฿${netRevenue.toLocaleString()}`;
+      document.getElementById("stat-cost").innerText = `฿${totalCost.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("stat-profit").innerText = `฿${grossProfit.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("stat-margin").innerText = `${margin.toFixed(1)}%`;
+
+      document.getElementById("fund-supplies").innerText = `฿${supplies.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("fund-wage").innerText = `฿${wage.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("fund-house").innerText = `฿${house.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+      document.getElementById("fund-vehicle").innerText = `฿${vehicle.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+
+      // Update LINE OA Bill Tab
+      const now = new Date();
+      document.getElementById("bill-date").innerText = now.toLocaleDateString('th-TH');
+      document.getElementById("bill-customer").innerText = document.getElementById("input-customer").value || "คุณลูกค้า";
+      document.getElementById("bill-order-no").innerText = document.getElementById("input-order-no").value || "ORD-001";
+
+      const billContainer = document.getElementById("bill-items-container");
+      billContainer.innerHTML = billLines.map(line => `
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div class="font-semibold text-slate-800">${line.name}</div>
+            <div class="text-slate-400">จำนวน ${line.qty.toLocaleString()} ชิ้น × ${line.unitSell}฿</div>
+          </div>
+          <div class="font-bold text-slate-800 shrink-0">฿${line.lineTotal.toLocaleString()}</div>
+        </div>
+      `).join("");
+
+      document.getElementById("bill-total-qty").innerText = `${totalQty.toLocaleString()} ชิ้น`;
+      document.getElementById("bill-subtotal").innerText = `฿${revenue.toLocaleString()}`;
+      document.getElementById("bill-shipping-charge").innerText = shipCharge > 0 ? `+฿${shipCharge.toLocaleString()}` : "ฟรีค่าจัดส่ง 🎁";
+      document.getElementById("bill-discount").innerText = `-฿${discount.toLocaleString()}`;
+      document.getElementById("bill-net-total").innerText = `฿${netRevenue.toLocaleString()}`;
+      document.getElementById("bill-deposit").innerText = `฿${Math.round(netRevenue / 2).toLocaleString()}`;
+
+      document.getElementById("bill-admin-mat").innerText = `฿${totalCost.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
+      document.getElementById("bill-admin-wage").innerText = `฿${wage.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
+      document.getElementById("bill-admin-house").innerText = `฿${house.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
+      document.getElementById("bill-admin-vehicle").innerText = `฿${vehicle.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
+
+      return { revenue, discount, shipCharge, shipCost, netRevenue, totalMaterial, totalCost, grossProfit, margin, supplies, wage, house, vehicle, billLines };
+    }
+
+    function copyBillTextForLine() {
+      const cust = document.getElementById("input-customer").value || "คุณลูกค้า";
+      const ordNo = document.getElementById("input-order-no").value || "ORD-001";
+      const revenue = parseFloat(document.getElementById("input-revenue").value) || 0;
+      const discount = parseFloat(document.getElementById("input-discount").value) || 0;
+      const shipCharge = parseFloat(document.getElementById("input-ship-charge").value) || 0;
+      const netRevenue = Math.max(0, revenue + shipCharge - discount);
+      const deposit = Math.round(netRevenue / 2);
+
+      let itemsText = "";
+      orderItems.forEach((item, idx) => {
+        const prod = catalog.find(p => p.id === item.prodId);
+        if (prod) {
+          const unitSell = getSellingUnitPrice(prod, item.qty);
+          const lineTotal = item.qty * unitSell;
+          itemsText += `${idx + 1}. ${prod.name}\n   จำนวน ${item.qty.toLocaleString()} ชิ้น × ${unitSell}฿ = ${lineTotal.toLocaleString()} บาท\n`;
+        }
+      });
+
+      const billMessage = `🌸 ใบสรุปรายการคำสั่งซื้อ (ONESTUDIO) 🌸
+เลขที่ออเดอร์: ${ordNo}
+ลูกค้า: ${cust}
+━━━━━━━━━━━━━━
+${itemsText}━━━━━━━━━━━━━━
+ยอดรวมค่าสินค้า: ${revenue.toLocaleString()} บาท
+🚚 ค่าจัดส่ง: ${shipCharge > 0 ? `${shipCharge.toLocaleString()} บาท` : 'ส่งฟรี! 🎁'}${discount > 0 ? `\nส่วนลดพิเศษ: -${discount.toLocaleString()} บาท` : ''}
+💰 ยอดชำระสุทธิ: ${netRevenue.toLocaleString()} บาท
+💳 ยอดโอนมัดจำเริ่มงาน (50%): ${deposit.toLocaleString()} บาท
+━━━━━━━━━━━━━━
+✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ
+ขอบพระคุณที่ไว้วางใจให้ ONESTUDIO ดูแลในวันสำคัญนะคะ 💕🙏`;
+
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(billMessage);
+        showToast("💬 คัดลอกข้อความบิลแล้ว! นำไปวางส่งให้ลูกค้าใน LINE ได้เลย");
+      }
+    }
+
+    // 6. Product Catalog Management
+    function setCategoryFilter(cat) {
+      currentCategoryFilter = cat;
+      document.getElementById("filter-all").className = cat === 'all'
+        ? "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white whitespace-nowrap"
+        : "px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap";
+      document.getElementById("filter-card").className = cat === 'การ์ดแต่งงาน'
+        ? "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white whitespace-nowrap"
+        : "px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap";
+      document.getElementById("filter-souvenir").className = cat === 'ของชำร่วย'
+        ? "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white whitespace-nowrap"
+        : "px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 whitespace-nowrap";
+      renderCatalog();
+    }
+
+    function renderCatalog() {
+      const list = document.getElementById("catalog-list");
+      const query = (document.getElementById("search-catalog")?.value || "").trim().toLowerCase();
+      list.innerHTML = "";
+
+      const filtered = catalog.filter(p => {
+        const matchCat = currentCategoryFilter === 'all' || p.category === currentCategoryFilter;
+        const matchQuery = !query || p.name.toLowerCase().includes(query) || (p.priceInfo || "").toLowerCase().includes(query);
+        return matchCat && matchQuery;
+      });
+
+      filtered.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "bg-white p-3.5 rounded-2xl shadow-xs border border-slate-200 flex items-center justify-between gap-3";
+        card.innerHTML = `
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-slate-800 truncate">${p.name}</div>
+            <div class="flex items-center gap-2 mt-1">
+              ${p.priceInfo ? `<span class="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md font-medium">${p.priceInfo}</span>` : ''}
+              <button onclick="deleteProduct(${p.id})" class="text-xs text-rose-500 hover:text-rose-700">ลบ</button>
+            </div>
+          </div>
+
+          <div class="bg-amber-50/80 border border-amber-200 rounded-xl px-2.5 py-1.5 flex items-center gap-2 shrink-0">
+            <span class="text-xs text-amber-800 font-semibold">🛒 ทุนของ (฿)</span>
+            <input type="number" step="0.1" value="${p.mat}" oninput="updateCatalogCostById(${p.id}, this.value)" class="w-16 text-right bg-white px-2 py-1 rounded-lg border border-amber-300 font-bold text-sm text-amber-900 focus:ring-2 focus:ring-amber-400 outline-none">
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function updateCatalogCostById(id, val) {
+      const target = catalog.find(p => p.id === id);
+      if (target) {
+        target.mat = parseFloat(val) || 0;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog));
+        } catch (e) { }
+        syncStateToCloud();
+        renderOrderItems();
+        calculate();
+        showToast();
+      }
+    }
+
+    function saveNewProduct() {
+      const name = document.getElementById("new-prod-name").value.trim();
+      const category = document.getElementById("new-prod-cat").value;
+      const sellPrice = parseFloat(document.getElementById("new-prod-price").value) || 0;
+      const mat = parseFloat(document.getElementById("new-prod-mat").value) || 0;
+
+      if (!name) {
+        alert("กรุณากรอกชื่อสินค้า");
+        return;
+      }
+
+      catalog.push({
+        id: Date.now(),
+        category,
+        name,
+        priceInfo: `ขาย ${sellPrice}฿`,
+        mat,
+        tiers: { 100: sellPrice, 300: sellPrice, 500: sellPrice },
+        keywords: [name.toLowerCase()]
+      });
+      saveCatalogToStorage();
+
+      document.getElementById("new-prod-name").value = "";
+      document.getElementById("new-prod-price").value = "";
+      document.getElementById("new-prod-mat").value = "";
+    }
+
+    function deleteProduct(id) {
+      if (catalog.length <= 1) {
+        alert("ต้องมีสินค้าในระบบอย่างน้อย 1 รายการ");
+        return;
+      }
+      catalog = catalog.filter(p => p.id !== id);
+      saveCatalogToStorage();
+    }
+
+    // Boot
+    document.getElementById("count-badge").innerText = catalog.length;
+    if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
+    if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
+    if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
+    renderCatalog();
+    renderOrderItems();
+    calculate();
+    renderAccumulatedDashboard();
+    if (orderHistory.length === 0) {
+      sendChatOrderCommand();
+    }
+    loadStateFromCloud();
+  </script>
+</body>
+
+</html>
