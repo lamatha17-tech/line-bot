@@ -411,77 +411,70 @@ def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> st
             "https://www.facebook.com/TheOneStudioDesign"
         )
 
-    # 6. สอบถามของชำร่วยเฉพาะเจาะจงรายชิ้น (ส่งรูป + เรทราคา)
+    # 6. สอบถามของชำร่วยเฉพาะเจาะจงรายชิ้น (ส่งรูป + เรทราคา ตรงตาม system_instruction 100%)
     specific_souvenirs = [
-        (["ยางมัดผม", "โบว์มัดผม"], "🎀 **ยางมัดผม**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n*(เปลี่ยนแพ็กเกจเป็นถุงแก้วใส +3 บาท/ชิ้น)*\n[IMAGE: https://i.postimg.cc/26m4c3f3/Banner-14.jpg]"),
-        (["กระจก"], "🪞 **กระจกวิเศษทรงกลม (แพ็กเกจตัดเสียบ/ติด Tag)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/bJ0nG9sF/Banner-05.jpg]"),
-        (["น้ำหอมในรถ", "น้ำหอมรถยนต์"], "🚗 **น้ำหอมในรถ**\n- ขั้นต่ำ 50 ชิ้นขึ้นไป ราคาเริ่มต้น 26 บาทค่ะ\n[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]"),
-        (["น้ำหอม", "ขวดจิ๋ว"], "🌸 **น้ำหอมขวดจิ๋ว (แพ็กเกจตัดเสียบ & พับปิด)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]"),
-        (["พวงกุญแจหนัง"], "🔑 **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]"),
-        (["พวงกุญแจ"], "🔑 **พวงกุญแจของชำร่วย**\n1) **พวงกุญแจ PU ถัก**\n- 100 ชิ้น 7 บาท | 300 ชิ้น 6 บาท | 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]\n2) **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]"),
-        (["ดินสอ"], "✏️ **ดินสอไม้มินิมอล (แพ็กเกจกระดาษคราฟท์/เปลี่ยนสีตามธีมได้)**\n- 100 ชิ้น 6 บาท\n- 300 ชิ้น 5 บาท\n- 500 ชิ้น 4 บาท\n[IMAGE: https://i.postimg.cc/cL6pX4v8/Banner-06.jpg]"),
-        (["ผ้าขนหนู"], "🧺 **ผ้าขนหนู (ติด Tag)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/vB9mK1n2/Banner-07.jpg]"),
-        (["ยาซีน", "อัซการ", "หนังสือ"], "📖 **หนังสือยาซีน มินิมอลสไตล์ (ติด Tag)**\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n\n📖 **หนังสืออัซการ**\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n[IMAGE: https://i.postimg.cc/9f1W0z3L/Banner-08.jpg]"),
-        (["เข็มกลัด", "กุหลาบ", "เดซี่"], "🌹 **เข็มกลัดของชำร่วย (ดอกกุหลาบ / ดอกเดซี่ / ดอกไม้แพ็กเกจตัดเสียบ)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/3x7N5q9M/Banner-09.jpg]\n[IMAGE: https://i.postimg.cc/8z2V4p1K/Banner-10.jpg]\n[IMAGE: https://i.postimg.cc/pT6yH8jB/Banner-11.jpg]"),
-        (["ช้อน"], "🥄 **ช้อนเงิน / ช้อนทอง (แพ็กเกจติด Tag)**\n- **ช้อนเงิน:** 100 ชิ้น 12฿ | 300 ชิ้น 11฿ | 500 ชิ้น 10฿\n- **ช้อนทอง:** 100 ชิ้น 13฿ | 300 ชิ้น 12฿ | 500 ชิ้น 11฿\n[IMAGE: https://i.postimg.cc/L84kM2dD/Banner-12.jpg]"),
-        (["ปากกา"], "🖊️ **ปากกาลูกลื่น (หมึกดำ/น้ำเงิน/แดง)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/Y05rJ7tF/Banner-13.jpg]"),
-        (["น้ำผึ้ง"], "🍯 **น้ำผึ้ง 30 ml.**\n- 100 ชิ้น 16 บาท\n- 300 ชิ้น 15 บาท\n- 500 ชิ้น 14 บาท\n[IMAGE: https://i.postimg.cc/7L3nB9vH/Banner-15.jpg]"),
-        (["พิมเสน"], "🌿 **พิมเสน**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/qR8wF5gJ/Banner-16.jpg]"),
-        (["กระเป๋าผ้า", "ถุงผ้า", "สปันบอนด์"], "👜 **กระเป๋าผ้า ถุงสปันบอนด์**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/tJ1kL4mN/Banner-17.jpg]"),
-        (["สมุด"], "📓 **สมุดโน้ตของชำร่วย**\n- **ขนาด 3x4 นิ้ว:** 100 ชิ้น 7฿ | 300 ชิ้น 6฿ | 500 ชิ้น 5฿\n- **ขนาด A5:** 100 ชิ้น 12฿ | 300 ชิ้น 11฿ | 500 ชิ้น 10฿"),
-        (["สบู่"], "🧼 **สบู่หอม**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท"),
+        (["ยางมัดผม", "โบว์มัดผม"], "🎀 **ยางมัดผม**\n- แพ็คเกจปกติ: 100 ชิ้น 10฿ / 300 ชิ้น 9฿ / 500 ชิ้น 8฿\n- พร้อมแพ็คเกจถุงแก้ว: 100 ชิ้น 15฿ / 300 ชิ้น 14฿ / 500 ชิ้น 13฿\n[IMAGE: https://i.postimg.cc/zXMdJq21/Banner-13.jpg]"),
+        (["กระจก"], "🪞 **กระจกวิเศษทรงกลม (แพ็คเกจตัดเสียบ/ติด Tag)**\n- 100 ชิ้น 7฿ / 300 ชิ้น 6฿ / 500 ชิ้น 5.8฿\n[IMAGE: https://i.postimg.cc/ZYw7M8rv/Banner-04.jpg]"),
+        (["น้ำหอมในรถ", "น้ำหอมรถยนต์"], "🚗 **น้ำหอมในรถ**\n- 50 ชิ้นขึ้นไป 29฿/ชิ้นค่ะ"),
+        (["น้ำหอม", "ขวดจิ๋ว"], "🌸 **น้ำหอมขวดจิ๋ว (ราคาเริ่มต้น 8฿ ทุกแบบ)**\n- แพ็คเกจแบบตัดเสียบ: เริ่มต้น 8฿\n- แพ็คเกจแบบพับปิด: เริ่มต้น 8฿\n[IMAGE: https://i.postimg.cc/8kZK0RhJ/Banner-03.jpg]"),
+        (["พวงกุญแจหนัง"], "🔑 **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 9฿ / 300 ชิ้น 8.5฿ / 500 ชิ้น 8฿\n[IMAGE: https://i.postimg.cc/MZ9PF7yn/Banner-02.jpg]"),
+        (["พวงกุญแจ"], "🔑 **พวงกุญแจของชำร่วย**\n1) **พวงกุญแจ PU ถัก**\n- 100 ชิ้น 7฿ / 300 ชิ้น 6.5฿ / 500 ชิ้น 6฿\n[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]\n2) **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 9฿ / 300 ชิ้น 8.5฿ / 500 ชิ้น 8฿\n[IMAGE: https://i.postimg.cc/MZ9PF7yn/Banner-02.jpg]"),
+        (["ดินสอ"], "✏️ **ดินสอไม้มินิมอล (แพ็คเกจกระดาษคราฟท์/สีตามโทนการ์ด)**\n- 100 ชิ้น 6฿ / 300 ชิ้น 5.5฿ / 500 ชิ้น 5฿\n[IMAGE: https://i.postimg.cc/qB1b5s8t/Banner-05.jpg]"),
+        (["ผ้าขนหนู"], "🧺 **ผ้าขนหนู (ติด Tag)**\n- 100 ชิ้น 10฿ / 300 ชิ้น 8฿ / 500 ชิ้น 7฿\n[IMAGE: https://i.postimg.cc/J4t6Vsqc/Banner-06.jpg]"),
+        (["ยาซีน", "อัซการ", "หนังสือ"], "📖 **หนังสือยาซีน มินิมอลสไตล์ (ติด Tag)**\n- 100 ชิ้น 10฿ / 300 ชิ้น 9฿ / 500 ชิ้น 8฿\n[IMAGE: https://i.postimg.cc/Fs1W5YZP/Banner-07.jpg]\n\n📗 **หนังสืออัซการ**\n- 100 ชิ้น 12฿ / 300 ชิ้น 11.5฿ / 500 ชิ้น 10฿"),
+        (["เข็มกลัด", "กุหลาบ", "เดซี่"], "🌹 **เข็มกลัดของชำร่วย (ดอกกุหลาบ / ดอกเดซี่ / ดอกไม้แพ็คเกจตัดเสียบ)**\n- 100 ชิ้น 6฿ / 300 ชิ้น 5.5฿\n[IMAGE: https://i.postimg.cc/RV8PMvs2/Banner-11.jpg]\n[IMAGE: https://i.postimg.cc/sD16dMcq/Banner-10.jpg]\n[IMAGE: https://i.postimg.cc/ZK07tWcw/Banner-08.jpg]"),
+        (["ช้อน"], "🥄 **ช้อนเงิน - ช้อนทอง (แพ็คเกจติด Tag)**\n- **ช้อนเงิน:** 100 ชิ้น 15฿ / 300 ชิ้น 14฿\n- **ช้อนทอง:** 100 ชิ้น 16฿ / 300 ชิ้น 15฿\n[IMAGE: https://i.postimg.cc/xTqxDXR4/Banner-09.jpg]"),
+        (["ปากกา"], "🖊️ **ปากกาลูกลื่น (ดำ, น้ำเงิน, แดง)**\n- 100 ชิ้น 7฿ / 300 ชิ้น 6฿\n[IMAGE: https://i.postimg.cc/9FSxWcg3/Banner-12.jpg]"),
+        (["น้ำผึ้ง"], "🍯 **น้ำผึ้ง 30ml**\n- 100 ชิ้น 18฿ / 300 ชิ้น 17฿ / 500 ชิ้น 15฿\n[IMAGE: https://i.postimg.cc/sD8nV3HC/Banner-14.jpg]"),
+        (["พิมเสน"], "🌿 **พิมเสน**\n- 100 ชิ้น 8฿ / 300 ชิ้น 7฿ / 500 ชิ้น 6฿\n[IMAGE: https://i.postimg.cc/023t89XQ/Banner-15.jpg]"),
+        (["กระเป๋าผ้า", "ถุงผ้า", "สปันบอนด์"], "👜 **กระเป๋าผ้า ถุงสปันบอนด์**\n- 100 ชิ้น 10฿ / 300 ชิ้น 9฿ / 500 ชิ้น 8฿\n[IMAGE: https://i.postimg.cc/nc5dHnSL/Banner-16.jpg]"),
+        (["สมุด"], "📝 **สมุดโน้ตของชำร่วย**\n- **ขนาด 3x4 นิ้ว:** ชิ้นละ 6฿\n- **ขนาด A5:** ชิ้นละ 15฿"),
+        (["สบู่"], "🧼 **สบู่หอม**\n- ชิ้นละ 12฿"),
     ]
     matched_blocks = []
     for keywords, reply_block in specific_souvenirs:
         if any(kw in t for kw in keywords):
             matched_blocks.append(reply_block)
     if matched_blocks:
-        return f"{greeting}" + "\n\n".join(matched_blocks) + "\n\nคุณลูกค้าต้องการใช้จำนวนกี่ชิ้น แจ้งให้แอดมินคำนวณยอดได้เลยนะคะ 🥰"
+        return f"{greeting}" + "\n\n".join(matched_blocks) + "\n\nคุณลูกค้าต้องการใช้จำนวนกี่ชิ้น แจ้งแอดมินได้เลยนะคะ 🥰"
 
     # 7. สอบถามเรื่องการ์ดแต่งงาน หรือ ซอง (เช่น "ซอง กว้าง 5 ยาว 7", "ราคาการ์ด")
     if any(k in t for k in ["การ์ด", "ซอง", "4x6", "5x7", "หน้าเดียว", "หน้าหลัง", "หน้า-หลัง"]) or ("5" in t and "7" in t) or ("4" in t and "6" in t):
         return (
-            f"{greeting}🌸 **เรทราคาการ์ดแต่งงาน (แถมซองฟรีทุกใบ!)** 🌸\n"
-            "*(กระดาษอาร์ตการ์ด 260 แกรม พิมพ์สีคมชัด ออกแบบฟรี)*\n\n"
-            "📌 **ขนาด 4x6 นิ้ว (พิมพ์หน้าเดียว)**\n"
-            "• 100 ใบ = 5 บาท | 300 ใบ = 4 บาท | 500 ใบ = 3 บาท\n"
-            "📌 **ขนาด 4x6 นิ้ว (พิมพ์หน้า-หลัง)**\n"
-            "• 100 ใบ = 6 บาท | 300 ใบ = 5 บาท | 500 ใบ = 4 บาท\n\n"
-            "📌 **ขนาด 5x7 นิ้ว (พิมพ์หน้าเดียว)**\n"
-            "• 100 ใบ = 6 บาท | 300 ใบ = 5 บาท | 500 ใบ = 4 บาท\n"
-            "📌 **ขนาด 5x7 นิ้ว (พิมพ์หน้า-หลัง)**\n"
-            "• 100 ใบ = 7 บาท | 300 ใบ = 6 บาท | 500 ใบ = 5 บาท\n\n"
-            "✉️ **ซองแถมฟรี:** สีชมพู, สีฟ้า, สีครีม (ขนาดมาตรฐานใส่การ์ด 4x6 หรือ 5x7 ได้พอดีค่ะ)\n"
-            "✨ **อัปเกรดซองพิเศษ:** ซองสีครีมหนาพิเศษ +1.5 บาท/ซอง | ซองสีเขียว +2 บาท/ซอง\n\n"
-            "คุณลูกค้าสนใจขนาดไหน และใช้จำนวนประมาณกี่ใบคะ 🥰"
+            f"{greeting}โปรโมชั่นพิเศษเดือนนี้สำหรับกระดาษอาร์ตการ์ด 210 แกรมค่า ✨\n"
+            "🌸 ขนาด 4x6 นิ้ว: หน้าเดียว 3.3฿ / หน้า-หลัง 5฿\n"
+            "แถมฟรี! ซองสีชมพูและสีฟ้า\n"
+            "(หากต้องการซองสีครีม +1.5฿ / สีเขียว +2฿ น้า)\n\n"
+            "🌸 ขนาด 5x7 นิ้ว: หน้าเดียว 6฿ / หน้า-หลัง 8฿\n"
+            "หากลูกค้าสนใจขนาดอื่นหรือซองสีพิเศษ สามารถแจ้งแอดมินได้เลยนะคะ 🥰"
         )
 
     # 8. สอบถามของชำร่วยทั้งหมด
     if any(k in t for k in ["ของชำร่วย", "ชำร่วย", "ของที่ระลึก"]):
         return (
-            f"{greeting}🎁 **รายการของชำร่วยเพิ่มเติมของทางร้านค่ะ**\n"
-            "1. สมุดโน้ต (ขนาด 3x4 นิ้ว)\n- 100 ชิ้น 7 บาท | 300 ชิ้น 6 บาท | 500 ชิ้น 5 บาท\n"
-            "2. สมุดโน้ต (ขนาด A5)\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n"
-            "3. หนังสืออัซการ\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n"
-            "4. สบู่หอม\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n"
-            "5. น้ำหอมในรถ\n- ขั้นต่ำ 50 ชิ้นขึ้นไป ราคาเริ่มต้น 26 บาท\n\n"
-            "📌 *หากต้องการเปลี่ยนแพ็กเกจเป็นถุงแก้วใส มีค่าใช้จ่ายเพิ่มเติม +3 บาท/ชิ้น ค่ะ*\n"
+            f"{greeting}✨ ของชำร่วยเพิ่มเติม:\n"
+            "📝 สมุดโน้ต 3x4 นิ้ว | ชิ้นละ 6฿\n"
+            "📗 หนังสืออัซการ | 100 ชิ้น 12฿ / 300 ชิ้น 11.5฿ / 500 ชิ้น 10฿\n"
+            "🧼 สบู่หอม | ชิ้นละ 12฿\n"
+            "📓 สมุดโน้ต A5 | ชิ้นละ 15฿\n"
+            "🚗 น้ำหอมในรถ | 50 ชิ้นขึ้นไป 29฿/ชิ้น\n\n"
+            "*(สั่ง 50–99 ชิ้น ได้ราคาพิเศษเท่าเรท 100 ชิ้นเลยค่า 🥰)*\n"
             "[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/bJ0nG9sF/Banner-05.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/cL6pX4v8/Banner-06.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/vB9mK1n2/Banner-07.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/9f1W0z3L/Banner-08.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/3x7N5q9M/Banner-09.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/8z2V4p1K/Banner-10.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/pT6yH8jB/Banner-11.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/L84kM2dD/Banner-12.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/Y05rJ7tF/Banner-13.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/26m4c3f3/Banner-14.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/7L3nB9vH/Banner-15.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/qR8wF5gJ/Banner-16.jpg]\n"
-            "[IMAGE: https://i.postimg.cc/tJ1kL4mN/Banner-17.jpg]"
+            "[IMAGE: https://i.postimg.cc/MZ9PF7yn/Banner-02.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/8kZK0RhJ/Banner-03.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/ZYw7M8rv/Banner-04.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/qB1b5s8t/Banner-05.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/J4t6Vsqc/Banner-06.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/Fs1W5YZP/Banner-07.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/ZK07tWcw/Banner-08.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/xTqxDXR4/Banner-09.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/sD16dMcq/Banner-10.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/RV8PMvs2/Banner-11.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/9FSxWcg3/Banner-12.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/zXMdJq21/Banner-13.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/sD8nV3HC/Banner-14.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/023t89XQ/Banner-15.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/nc5dHnSL/Banner-16.jpg]"
         )
 
     # 9. สอบถามเรทราคาทั่วไป / ทักทาย / สอบถามข้อมูลเบื้องต้น
@@ -489,12 +482,12 @@ def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> st
         "ราคา", "เรท", "สอบถาม", "สนใจ", "สวัสดี", "ทัก", "มีอะไรบ้าง", "รายละเอียด", "กี่บาท", "เท่าไหร่"
     ]):
         return (
-            f"{greeting}ทางร้าน **ONESTUDIO** บริการรับทำการ์ดแต่งงาน ของชำร่วย และเช่าพานขันหมากค่ะ 🌸🎁\n\n"
-            "📌 **เรทราคาเริ่มต้น (สั่งขั้นต่ำได้ตั้งแต่ 50 ชิ้นค่ะ):**\n"
-            "• **การ์ดแต่งงาน 4x6 นิ้ว (แถมซองฟรี):** เริ่มต้น 3–6 บาท/ใบ\n"
-            "• **การ์ดแต่งงาน 5x7 นิ้ว (แถมซองฟรี):** เริ่มต้น 4–7 บาท/ใบ\n"
-            "• **ของชำร่วยยอดนิยม (21 รายการ):** เริ่มต้น 4–16 บาท/ชิ้น (เช่น ดินสอไม้, พวงกุญแจ, กระจก, น้ำหอมขวดจิ๋ว, ยางมัดผม, กระเป๋าผ้า, น้ำผึ้ง ฯลฯ)\n\n"
-            "คุณลูกค้าสนใจดูรายละเอียด **การ์ดแต่งงาน** หรือ **ของชำร่วย** (หรือต้องการใช้จำนวนกี่ชิ้น) แจ้งให้แอดมินส่งแบบและประเมินราคาได้เลยนะคะ 🥰"
+            f"{greeting}คุณลูกค้าสนใจเป็นงาน **การ์ดแต่งงาน** หรือ **ของชำร่วย** ดีคะ 😊\n\n"
+            "🌸 **การ์ดแต่งงาน (แถมซองฟรี!):**\n"
+            "• ขนาด 4x6 นิ้ว: หน้าเดียว 3.3฿ / หน้า-หลัง 5฿\n"
+            "• ขนาด 5x7 นิ้ว: หน้าเดียว 6฿ / หน้า-หลัง 8฿\n"
+            "🎁 **ของชำร่วย (21 รายการ):** เริ่มต้น 5–18฿ (สั่งขั้นต่ำได้ตั้งแต่ 50 ชิ้นค่ะ)\n\n"
+            "แจ้งรายการหรือจำนวนที่ต้องการให้แอดมินส่งแบบให้ชมได้เลยนะคะ 🥰"
         )
 
     # 10. กรณีเป็นข้อความทั่วไปสั้นๆ หรือคำถามอื่นๆ
@@ -590,6 +583,8 @@ DEFAULT_ORDER_CATALOG = [
     {"id": 104, "cat": "card", "name": "การ์ด 5x7 นิ้ว (หน้า-หลัง) + ซองฟรี", "mat": 3.5, "tiers": {100: 8.0, 300: 8.0, 500: 8.0}, "kw": ["5x7 หน้าหลัง", "5x7 หน้า-หลัง", "5x7หน้าหลัง", "การ์ด 5x7", "5x7"]},
     {"id": 105, "cat": "card", "name": "อัปเกรดซองสีครีม (+1.5฿)", "mat": 0.8, "tiers": {100: 1.5, 300: 1.5, 500: 1.5}, "kw": ["ซองสีครีม", "ซองครีม"]},
     {"id": 106, "cat": "card", "name": "อัปเกรดซองสีเขียว (+2฿)", "mat": 1.2, "tiers": {100: 2.0, 300: 2.0, 500: 2.0}, "kw": ["ซองสีเขียว", "ซองเขียว"]},
+    {"id": 107, "cat": "card", "name": "ซองการ์ดสีอื่นๆ (ขนาด 4x6 นิ้ว)", "mat": 2.5, "tiers": {100: 4.0, 300: 4.0, 500: 4.0}, "kw": ["ซองการ์ดสีอื่นๆ 4x6", "ซองการ์ด 4x6", "ซอง 4x6", "ซองการ์ดสี", "ซองสีอื่นๆ"]},
+    {"id": 108, "cat": "card", "name": "ซองการ์ดสีอื่นๆ (ขนาด 5x7 นิ้ว)", "mat": 2.5, "tiers": {100: 4.0, 300: 4.0, 500: 4.0}, "kw": ["ซองการ์ดสีอื่นๆ 5x7", "ซองการ์ด 5x7", "ซอง 5x7"]},
     {"id": 201, "cat": "souvenir", "name": "ดินสอไม้มินิมอล", "mat": 2.5, "tiers": {100: 6.0, 300: 5.5, 500: 5.0}, "kw": ["ดินสอไม้มินิมอล", "ดินสอไม้", "ดินสอ"]},
     {"id": 202, "cat": "souvenir", "name": "เข็มกลัดดอกกุหลาบ", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"]},
     {"id": 203, "cat": "souvenir", "name": "เข็มกลัดดอกเดซี่", "mat": 2.8, "tiers": {100: 6.0, 300: 5.5, 500: 5.5}, "kw": ["เข็มกลัดดอกเดซี่", "ดอกเดซี่", "เดซี่"]},
@@ -708,7 +703,43 @@ def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None, cus
             if kw and kw in seg_lower:
                 return cprod
 
-    # กฎแยกแยะการ์ดแต่งงานและซองจากคำสำคัญหรือราคาขายต่อชิ้น (*ราคา฿)
+    # กฎแยกแยะซองการ์ด (ทั้งอัปเกรดซองสีครีม/เขียว และซองการ์ดสีอื่นๆ ทั้งขนาด 4x6 และ 5x7 ต้นทุน 2.5฿)
+    is_envelope_line = (
+        ("ซอง" in seg_lower)
+        and not any(k in seg_lower for k in ["แถมซอง", "+ ซอง", "+ซอง", "ซองฟรี", "หน้าเดียว", "หน้าหลัง", "หน้า-หลัง", "1 หน้า", "2 หน้า", "สองหน้า"])
+        and (
+            seg_lower.strip().startswith(("ซอง", "อัปเกรดซอง", "เปลี่ยนซอง", "เพิ่มซอง", "✉️"))
+            or "ซองการ์ด" in seg_lower
+            or "ซองสี" in seg_lower
+            or "การ์ด" not in seg_lower
+        )
+    )
+    if is_envelope_line:
+        is_5x7_env = "5x7" in seg_lower or "5*7" in seg_lower or ("กว้าง 5" in seg_lower and "7" in seg_lower)
+        is_4x6_env = "4x6" in seg_lower or "4*6" in seg_lower or ("กว้าง 4" in seg_lower and "6" in seg_lower)
+        other_color_words = [
+            "แดง", "ไวน์", "เบอร์กันดี", "น้ำตาล", "ทอง", "โรสโกลด์", "พิ้งโกลด์", "ชมพู",
+            "ฟ้า", "น้ำเงิน", "กรม", "เทา", "เงิน", "ม่วง", "ส้ม", "เหลือง", "ดำ", "ขาว", "พาสเทล", "อื่นๆ"
+        ]
+        has_other_color = any(c in seg_lower for c in other_color_words)
+
+        # กรณีอัปเกรดซองสีครีม (+1.5฿ ทุน 0.8฿) หรืออัปเกรดซองสีเขียว (+2฿ ทุน 1.2฿)
+        if not has_other_color and "ซองการ์ด" not in seg_lower and not is_5x7_env and not is_4x6_env:
+            if "ครีม" in seg_lower and (explicit_unit is None or explicit_unit <= 1.7):
+                return by_id[105]
+            if "เขียว" in seg_lower and (explicit_unit is None or explicit_unit <= 2.2):
+                return by_id[106]
+            if explicit_unit is not None and explicit_unit <= 1.6 and "สี" not in seg_lower:
+                return by_id[105]
+            if explicit_unit is not None and explicit_unit <= 2.1 and "สี" not in seg_lower:
+                return by_id[106]
+
+        # ซองการ์ดสีอื่นๆ ทั้งขนาด 4x6 และ 5x7 นิ้ว (ต้นทุน 2.5฿ เท่ากันทั้งสองขนาด ดึงสีและราคาตามที่สรุป)
+        if is_5x7_env:
+            return by_id[108]
+        return by_id[107]
+
+    # กฎแยกแยะการ์ดแต่งงานจากคำสำคัญหรือราคาขายต่อชิ้น (*ราคา฿)
     if "การ์ด" in seg_lower:
         is_5x7 = "5x7" in seg_lower or "5*7" in seg_lower
         is_double = "หน้า-หลัง" in seg_lower or "หน้าหลัง" in seg_lower or "2 หน้า" in seg_lower or "สองหน้า" in seg_lower
@@ -734,11 +765,6 @@ def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None, cus
         if is_single:
             return by_id[101]
         return by_id[102]
-
-    if "ซอง" in seg_lower and "การ์ด" not in seg_lower:
-        if "เขียว" in seg_lower or (explicit_unit is not None and explicit_unit >= 1.8):
-            return by_id[106]
-        return by_id[105]
 
     # กฎแยกแยะชื่อย่อที่แอดมินใช้บ่อยโดยดูจากคำสำคัญและราคาขายต่อชิ้น (*ราคา฿)
     if "พวงกุญแจ" in seg_lower or "กุญแจ" in seg_lower:
@@ -786,7 +812,7 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
         if not line_str:
             continue
         # ข้ามบรรทัดหัวคำสั่งหรือบรรทัดสรุปยอดท้ายบิล
-        if re.match(r'^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด)', line_str, flags=re.IGNORECASE):
+        if re.match(r'^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด|สถานะ|รอโอน|โอนเต็ม|จ่ายเต็ม|ชำระเต็ม)', line_str, flags=re.IGNORECASE):
             continue
         # ลบคำว่า #order / #oder ที่อยู่ต้นบรรทัด (กรณีพิมพ์บรรทัดเดียวกัน)
         line_str = re.sub(r'^#\s*(?:order|oder|ออเดอร์|บิล)\s*', '', line_str, flags=re.IGNORECASE).strip()
@@ -845,9 +871,26 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
                 unit_sell = explicit_unit if explicit_unit is not None else default_tier_sell
                 line_total = round(explicit_total if explicit_total is not None else (qty * unit_sell), 1)
                 mat_cost = explicit_mat if explicit_mat is not None else custom_mat_map.get(prod["id"], prod["mat"])
+                item_display_name = prod["name"]
+
+                # กรณีซองการ์ดสีอื่นๆ (107 = 4x6 นิ้ว, 108 = 5x7 นิ้ว) ให้ดึงสีและชื่อตามที่สรุปไว้ในบิล พร้อมใช้ต้นทุน 2.5฿ ทั้งสองขนาด
+                if prod["id"] in (107, 108):
+                    if explicit_mat is None and prod["id"] not in custom_mat_map:
+                        mat_cost = 2.5
+                    if mul_m:
+                        raw_env_label = (seg_clean[:mul_m.start()] + " " + seg_clean[mul_m.end():]).strip(" -•:=")
+                    else:
+                        raw_env_label = re.sub(r'\b' + str(qty) + r'\s*(?:ชิ้น|ใบ|ซอง|อัน)?\b', '', seg_clean, count=1).strip(" -•:=")
+                    if raw_env_label:
+                        size_suffix = " (5x7 นิ้ว)" if (prod["id"] == 108 and "5x7" not in raw_env_label and "5*7" not in raw_env_label) else (
+                            " (4x6 นิ้ว)" if (prod["id"] == 107 and "4x6" not in raw_env_label and "4*6" not in raw_env_label) else ""
+                        )
+                        prefix = "" if raw_env_label.startswith("✉️") else "✉️ "
+                        item_display_name = f"{prefix}{raw_env_label}{size_suffix}"
+
                 detected.append({
                     "id": prod["id"],
-                    "name": prod["name"],
+                    "name": item_display_name,
                     "cat": prod["cat"],
                     "qty": qty,
                     "unit_sell": unit_sell,
@@ -882,6 +925,14 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     ship_charge_match = re.search(r'ค่าส่ง\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
     ship_cost_match = re.search(r'ส่งจริง\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
     transfer_match = re.search(r'ยอดโอน(?:สุทธิ)?\s*฿?\s*([\d,]+(?:\.\d+)?)', raw_text)
+
+    # ตรวจจับการติ๊ก/ระบุสถานะการชำระเงินจากคำสั่ง (รอโอน / มัดจำ 50% / โอนเต็ม)
+    if re.search(r'(โอนเต็ม|จ่ายเต็ม|ชำระเต็ม|โอนครบ|จ่ายครบ|100\s*%)', raw_text, flags=re.IGNORECASE):
+        order_status = "paid_full"
+    elif re.search(r'(รอโอน|ยังไม่โอน|แจ้งยอด)', raw_text, flags=re.IGNORECASE):
+        order_status = "pending"
+    else:
+        order_status = "deposit_50"
 
     ship_charge = 0 if free_ship else (int(float(ship_charge_match.group(1).replace(',', ''))) if ship_charge_match else 0)
     ship_cost = int(float(ship_cost_match.group(1).replace(',', ''))) if ship_cost_match else (100 if free_ship else ship_charge)
@@ -972,6 +1023,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
 
     net_rev = max(0, subtotal + ship_charge - discount)
     deposit = round(net_rev / 2)
+    remaining_amt = max(0, net_rev - deposit)
     total_mat = sum(i["line_mat"] for i in detected)
     total_cost = total_mat + ship_cost
     profit = net_rev - total_cost
@@ -1020,6 +1072,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         "wage": wage,
         "house": house,
         "vehicle": vehicle,
+        "status": order_status,
         "items": order_items_payload,
         "updatedAt": now_ts,
     }
@@ -1043,10 +1096,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 "supplies": supplies,
                 "wage": wage,
                 "house": house,
-                "vehicle": vehicle,
-                "status": "deposit_50",
+                "vehicle": house,
+                "status": order_status,
                 "items": order_items_payload,
             })
+            history[0]["vehicle"] = vehicle
             db.collection("onestudio_admin").document("calculator_state").set(
                 {
                     "stateVersion": 2,
@@ -1067,6 +1121,13 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     disc_str = f"\nส่วนลดพิเศษ: -{discount:,} บาท" if discount > 0 else ""
     bank_block = f"\n🏦 ช่องทางชำระเงิน:\n{bank_info}\n" if bank_info else ""
 
+    if order_status == "paid_full":
+        payment_status_line = f"☑️ สถานะ: โอนเต็มจำนวนแล้ว (100% = {net_rev:,.0f} บาท) ✅"
+    elif order_status == "pending":
+        payment_status_line = f"⏳ สถานะ: รอโอน (มัดจำ 50% = {deposit:,.0f} บาท / โอนเต็ม = {net_rev:,.0f} บาท)"
+    else:
+        payment_status_line = f"💳 สถานะ: มัดจำเริ่มงาน 50% ({deposit:,.0f} บาท) • คงเหลือ {remaining_amt:,.0f} บาท"
+
     customer_bill = (
         f"🌸 ใบสรุปรายการคำสั่งซื้อ (ONESTUDIO) 🌸\n"
         f"เลขที่ออเดอร์: {ord_no} ({order_date_str})\n"
@@ -1077,7 +1138,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         f"ยอดรวมค่าสินค้า: {subtotal:,.0f} บาท\n"
         f"🚚 ค่าจัดส่ง: {ship_str}{disc_str}\n"
         f"💰 ยอดชำระสุทธิ: {net_rev:,.0f} บาท\n"
-        f"💳 ยอดโอนมัดจำเริ่มงาน (50%): {deposit:,.0f} บาท\n"
+        f"{payment_status_line}\n"
         f"{bank_block}"
         f"━━━━━━━━━━━━━━\n"
         f"{lead_time_text}\n"

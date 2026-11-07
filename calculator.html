@@ -177,6 +177,24 @@
 
         <!-- ช่องพิมพ์/วางข้อความสรุปยอดหลายบรรทัด -->
         <div class="bg-white p-2.5 border-t border-slate-200 space-y-2">
+          <!-- แถบติ๊กเลือกสถานะการโอนเงิน (รอโอน / มัดจำ 50% / โอนเต็ม) -->
+          <div class="flex items-center justify-between gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+            <span class="text-xs font-semibold text-slate-600 pl-1 shrink-0">📌 สถานะ:</span>
+            <div class="grid grid-cols-3 gap-1 flex-1">
+              <button type="button" onclick="setActivePaymentStatus('pending')" id="chat-pay-status-pending"
+                class="py-1 px-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="chat-pay-check-pending">☐</span> ⏳ รอโอน
+              </button>
+              <button type="button" onclick="setActivePaymentStatus('deposit_50')" id="chat-pay-status-deposit_50"
+                class="py-1 px-1.5 rounded-lg text-xs font-bold bg-sky-600 text-white border border-sky-600 shadow-2xs transition flex items-center justify-center gap-1">
+                <span id="chat-pay-check-deposit_50">☑️</span> 💳 มัดจำ 50%
+              </button>
+              <button type="button" onclick="setActivePaymentStatus('paid_full')" id="chat-pay-status-paid_full"
+                class="py-1 px-1.5 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="chat-pay-check-paid_full">☐</span> ✅ โอนเต็ม
+              </button>
+            </div>
+          </div>
           <div class="flex items-center justify-between gap-1.5">
             <button onclick="pasteAndCalculateOrder()"
               class="flex-1 py-1.5 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1">
@@ -189,7 +207,7 @@
           </div>
           <div class="flex items-end gap-2">
             <textarea id="chat-command-input" rows="3"
-              placeholder="พิมพ์ #order ไว้บรรทัดบนสุด แล้ววางรายการสรุปยอดด้านล่าง เช่น&#10;#order&#10;1. ยางมัดผม 100*10฿=฿1,000.00&#10;2. กระจก 150*7฿=฿1,050.00&#10;ค่าส่ง 130฿ ยอดโอน 4,680฿"
+              placeholder="พิมพ์ #order ไว้บรรทัดบนสุด แล้ววางรายการสรุปยอดด้านล่าง เช่น&#10;#order&#10;1. การ์ด 5x7 หน้า-หลัง 200*8฿=฿1,600.00&#10;2. ซองการ์ดสีไวน์แดง 5x7 200*4฿=฿800.00&#10;ค่าส่ง 80฿"
               class="flex-1 bg-slate-100 px-3 py-2 rounded-2xl text-xs text-slate-800 outline-none focus:ring-2 focus:ring-[#06C755] resize-none"></textarea>
             <button onclick="sendChatOrderCommand()"
               class="bg-[#06C755] hover:bg-emerald-600 active:scale-95 text-white font-bold px-4 py-3 rounded-2xl text-xs shadow-xs transition shrink-0">
@@ -403,6 +421,25 @@
               </div>
             </div>
             <div id="shipping-diff-note" class="text-xs text-sky-700"></div>
+          </div>
+
+          <!-- แถบติ๊กเลือกสถานะการโอนเงินของบิลนี้ (ซิงค์กับบิล LINE และประวัติสะสม) -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+            <span class="text-xs font-bold text-slate-700 block">📌 สถานะการชำระเงินของบิลนี้:</span>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" onclick="setActivePaymentStatus('pending')" id="calc-pay-status-pending"
+                class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="calc-pay-check-pending">☐</span> ⏳ รอโอน
+              </button>
+              <button type="button" onclick="setActivePaymentStatus('deposit_50')" id="calc-pay-status-deposit_50"
+                class="py-1.5 px-2 rounded-lg text-xs font-bold bg-sky-600 text-white border border-sky-600 shadow-2xs transition flex items-center justify-center gap-1">
+                <span id="calc-pay-check-deposit_50">☑️</span> 💳 มัดจำ 50%
+              </button>
+              <button type="button" onclick="setActivePaymentStatus('paid_full')" id="calc-pay-status-paid_full"
+                class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="calc-pay-check-paid_full">☐</span> ✅ โอนเต็ม
+              </button>
+            </div>
           </div>
 
           <div id="promo-notice"
@@ -860,6 +897,8 @@
       { id: 104, category: "การ์ดแต่งงาน", name: "🌸 การ์ด 5x7 นิ้ว (หน้า-หลัง) + ซองฟรี", priceInfo: "ขาย 8฿", mat: 3.5, tiers: { 100: 8.0, 300: 8.0, 500: 8.0 }, keywords: ["5x7 หน้าหลัง", "5x7 หน้า-หลัง", "5x7หน้าหลัง", "การ์ด 5x7", "5x7"] },
       { id: 105, category: "การ์ดแต่งงาน", name: "✉️ อัปเกรดซองสีครีม (+1.5฿)", priceInfo: "+1.5฿", mat: 0.8, tiers: { 100: 1.5, 300: 1.5, 500: 1.5 }, keywords: ["ซองสีครีม", "ซองครีม"] },
       { id: 106, category: "การ์ดแต่งงาน", name: "✉️ อัปเกรดซองสีเขียว (+2฿)", priceInfo: "+2฿", mat: 1.2, tiers: { 100: 2.0, 300: 2.0, 500: 2.0 }, keywords: ["ซองสีเขียว", "ซองเขียว"] },
+      { id: 107, category: "การ์ดแต่งงาน", name: "✉️ ซองการ์ดสีอื่นๆ (ขนาด 4x6 นิ้ว)", priceInfo: "ดึงสี/ราคาตามสรุป • ทุน 2.5฿", mat: 2.5, tiers: { 100: 4.0, 300: 4.0, 500: 4.0 }, keywords: ["ซองการ์ดสีอื่นๆ 4x6", "ซองการ์ด 4x6", "ซอง 4x6", "ซองการ์ดสี", "ซองสีอื่นๆ"] },
+      { id: 108, category: "การ์ดแต่งงาน", name: "✉️ ซองการ์ดสีอื่นๆ (ขนาด 5x7 นิ้ว)", priceInfo: "ดึงสี/ราคาตามสรุป • ทุน 2.5฿", mat: 2.5, tiers: { 100: 4.0, 300: 4.0, 500: 4.0 }, keywords: ["ซองการ์ดสีอื่นๆ 5x7", "ซองการ์ด 5x7", "ซอง 5x7"] },
 
       { id: 201, category: "ของชำร่วย", name: "1. ดินสอไม้มินิมอล (แพ็คเกจคราฟท์/ตามธีม)", priceInfo: "5 - 6฿", mat: 2.5, tiers: { 100: 6.0, 300: 5.5, 500: 5.0 }, keywords: ["ดินสอไม้มินิมอล", "ดินสอไม้", "ดินสอ"] },
       { id: 202, category: "ของชำร่วย", name: "2. เข็มกลัดดอกกุหลาบ", priceInfo: "5.5 - 6฿", mat: 2.8, tiers: { 100: 6.0, 300: 5.5, 500: 5.5 }, keywords: ["เข็มกลัดดอกกุหลาบ", "ดอกกุหลาบ", "กุหลาบ"] },
@@ -911,6 +950,7 @@
     let lastSyncedOrdNo = "";
     let latestOrderPayload = null;
     let editingCatalogId = null;
+    let activePaymentStatus = "deposit_50";
 
     try {
       // ล้างประวัติตัวอย่างเก่า (v1) ออกทั้งหมด
@@ -951,6 +991,63 @@
 
     function getTodayDateStr() {
       return new Date().toLocaleDateString('th-TH');
+    }
+
+    function updatePaymentStatusSelectorUI(status) {
+      const statuses = ["pending", "deposit_50", "paid_full"];
+      const activeStyles = {
+        pending: "bg-amber-500 text-white border-amber-500 font-bold shadow-2xs",
+        deposit_50: "bg-sky-600 text-white border-sky-600 font-bold shadow-2xs",
+        paid_full: "bg-emerald-600 text-white border-emerald-600 font-bold shadow-2xs"
+      };
+      const inactiveStyle = "bg-white text-slate-600 border-slate-200 font-medium";
+
+      statuses.forEach(st => {
+        const isSelected = st === status;
+        ["chat", "calc"].forEach(prefix => {
+          const btn = document.getElementById(`${prefix}-pay-status-${st}`);
+          const chk = document.getElementById(`${prefix}-pay-check-${st}`);
+          if (btn) {
+            const pad = prefix === "chat" ? "py-1 px-1.5" : "py-1.5 px-2";
+            btn.className = `${pad} rounded-lg text-xs border transition flex items-center justify-center gap-1 ${isSelected ? activeStyles[st] : inactiveStyle}`;
+          }
+          if (chk) chk.innerText = isSelected ? "☑️" : "☐";
+        });
+      });
+    }
+
+    function setActivePaymentStatus(status, skipHistorySync = false) {
+      if (!["pending", "deposit_50", "paid_full"].includes(status)) status = "deposit_50";
+      activePaymentStatus = status;
+      updatePaymentStatusSelectorUI(status);
+
+      const docType = status === "paid_full" ? "paid" : (status === "deposit_50" ? "deposit" : "quote");
+      currentReceiptDocType = docType;
+      ['quote', 'deposit', 'paid'].forEach(t => {
+        const btn = document.getElementById(`doc-btn-${t}`);
+        if (btn) {
+          btn.className = t === docType
+            ? "py-1.5 px-2 rounded-xl text-xs font-semibold bg-[#06C755] text-white shadow-2xs transition"
+            : "py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition";
+        }
+      });
+
+      if (!skipHistorySync) {
+        const currentOrdNo = document.getElementById("input-order-no")?.value;
+        if (currentOrdNo) {
+          const idx = orderHistory.findIndex(h => h.ordNo === currentOrdNo);
+          if (idx >= 0) {
+            orderHistory[idx].status = status;
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+            syncStateToCloud();
+            renderAccumulatedDashboard();
+          }
+        }
+        if (latestOrderPayload) {
+          latestOrderPayload.status = status;
+        }
+      }
+      calculate();
     }
 
     function applyShopSettingsToUI() {
@@ -1066,6 +1163,10 @@
         </div>
       `).join("");
 
+      const st = activePaymentStatus || "deposit_50";
+      const halfAmt = Math.round(summary.netRevenue / 2);
+      const remAmt = Math.max(0, summary.netRevenue - halfAmt);
+
       const botReply = document.createElement("div");
       botReply.className = "flex items-start gap-2";
       botReply.innerHTML = `
@@ -1089,8 +1190,22 @@
                 <span class="text-base font-extrabold text-[#06C755]">฿${summary.netRevenue.toLocaleString()}</span>
               </div>
               <div class="flex justify-between items-center bg-emerald-50 px-2 py-1 rounded text-xs text-emerald-800">
-                <span>💳 มัดจำเริ่มงาน 50%:</span>
-                <span class="font-bold">฿${Math.round(summary.netRevenue / 2).toLocaleString()}</span>
+                <span>💳 มัดจำ 50% (฿${halfAmt.toLocaleString()})</span>
+                <span class="font-bold">คงเหลือ ฿${remAmt.toLocaleString()}</span>
+              </div>
+              <div class="space-y-1 pt-1">
+                <span class="text-[11px] font-semibold text-slate-500 block">📌 ติ๊กเลือกสถานะการโอน:</span>
+                <div class="grid grid-cols-3 gap-1">
+                  <button type="button" onclick="setOrderStatusByOrdNo('${ordNo}', 'pending')" class="py-1 px-1 rounded-lg text-[11px] border transition ${st === 'pending' ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                    ${st === 'pending' ? '☑️' : '☐'} รอโอน
+                  </button>
+                  <button type="button" onclick="setOrderStatusByOrdNo('${ordNo}', 'deposit_50')" class="py-1 px-1 rounded-lg text-[11px] border transition ${st === 'deposit_50' ? 'bg-sky-600 text-white border-sky-600 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                    ${st === 'deposit_50' ? '☑️' : '☐'} มัดจำ 50%
+                  </button>
+                  <button type="button" onclick="setOrderStatusByOrdNo('${ordNo}', 'paid_full')" class="py-1 px-1 rounded-lg text-[11px] border transition ${st === 'paid_full' ? 'bg-emerald-600 text-white border-emerald-600 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                    ${st === 'paid_full' ? '☑️' : '☐'} โอนเต็ม
+                  </button>
+                </div>
               </div>
               <div class="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded">
                 ⏰ ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน)
@@ -1165,6 +1280,7 @@
         });
       }
 
+      setActivePaymentStatus(lo.status || "deposit_50", true);
       renderOrderItems();
       const summary = calculate(lo.discount || 0);
       renderBotOrderBubbleInChat(lo.rawCommand || `#order (${lo.ordNo})`, lo.ordNo, lo.customerName || "คุณลูกค้า", summary);
@@ -1426,7 +1542,49 @@
       const byId = {};
       catalog.forEach(p => { byId[p.id] = p; });
 
-      // แยกแยะการ์ดแต่งงานและซองจากขนาด/หน้า หรือราคาขายต่อชิ้น (*ราคา฿)
+      // แยกแยะซองการ์ด (ทั้งอัปเกรดซองสีครีม/เขียว และซองการ์ดสีอื่นๆ ทั้งขนาด 4x6 และ 5x7 ต้นทุน 2.5฿)
+      const isEnvelopeLine = (
+        segLower.includes("ซอง")
+        && !["แถมซอง", "+ ซอง", "+ซอง", "ซองฟรี", "หน้าเดียว", "หน้าหลัง", "หน้า-หลัง", "1 หน้า", "2 หน้า", "สองหน้า"].some(k => segLower.includes(k))
+        && (
+          /^(ซอง|อัปเกรดซอง|เปลี่ยนซอง|เพิ่มซอง|✉️)/.test(segLower.trim())
+          || segLower.includes("ซองการ์ด")
+          || segLower.includes("ซองสี")
+          || !segLower.includes("การ์ด")
+        )
+      );
+      if (isEnvelopeLine) {
+        const is5x7Env = segLower.includes("5x7") || segLower.includes("5*7") || (segLower.includes("กว้าง 5") && segLower.includes("7"));
+        const is4x6Env = segLower.includes("4x6") || segLower.includes("4*6") || (segLower.includes("กว้าง 4") && segLower.includes("6"));
+        const otherColorWords = [
+          "แดง", "ไวน์", "เบอร์กันดี", "น้ำตาล", "ทอง", "โรสโกลด์", "พิ้งโกลด์", "ชมพู",
+          "ฟ้า", "น้ำเงิน", "กรม", "เทา", "เงิน", "ม่วง", "ส้ม", "เหลือง", "ดำ", "ขาว", "พาสเทล", "อื่นๆ"
+        ];
+        const hasOtherColor = otherColorWords.some(c => segLower.includes(c));
+
+        if (!hasOtherColor && !segLower.includes("ซองการ์ด") && !is5x7Env && !is4x6Env) {
+          if (segLower.includes("ครีม") && (explicitUnit === null || explicitUnit <= 1.7)) {
+            return byId[105] || catalog[0];
+          }
+          if (segLower.includes("เขียว") && (explicitUnit === null || explicitUnit <= 2.2)) {
+            return byId[106] || catalog[0];
+          }
+          if (explicitUnit !== null && explicitUnit <= 1.6 && !segLower.includes("สี")) {
+            return byId[105] || catalog[0];
+          }
+          if (explicitUnit !== null && explicitUnit <= 2.1 && !segLower.includes("สี")) {
+            return byId[106] || catalog[0];
+          }
+        }
+
+        // ซองการ์ดสีอื่นๆ ทั้งขนาด 4x6 และ 5x7 นิ้ว (ต้นทุน 2.5฿ เท่ากันทั้งสองขนาด ดึงสีและราคาตามที่สรุป)
+        if (is5x7Env) {
+          return byId[108] || byId[107] || catalog[0];
+        }
+        return byId[107] || catalog[0];
+      }
+
+      // แยกแยะการ์ดแต่งงานจากขนาด/หน้า หรือราคาขายต่อชิ้น (*ราคา฿)
       if (segLower.includes("การ์ด")) {
         const is5x7 = segLower.includes("5x7") || segLower.includes("5*7");
         const isDouble = segLower.includes("หน้า-หลัง") || segLower.includes("หน้าหลัง") || segLower.includes("2 หน้า") || segLower.includes("สองหน้า");
@@ -1448,13 +1606,6 @@
         if (isDouble) return byId[102] || catalog[0];
         if (isSingle) return byId[101] || catalog[0];
         return byId[102] || catalog[0];
-      }
-
-      if (segLower.includes("ซอง") && !segLower.includes("การ์ด")) {
-        if (segLower.includes("เขียว") || (explicitUnit !== null && explicitUnit >= 1.8)) {
-          return byId[106] || catalog[0];
-        }
-        return byId[105] || catalog[0];
       }
 
       if (segLower.includes("พวงกุญแจ") || segLower.includes("กุญแจ")) {
@@ -1520,7 +1671,7 @@
       for (const rawLine of lines) {
         let lineStr = rawLine.trim();
         if (!lineStr) continue;
-        if (/^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด)/i.test(lineStr)) {
+        if (/^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด|สถานะ|รอโอน|โอนเต็ม|จ่ายเต็ม|ชำระเต็ม)/i.test(lineStr)) {
           continue;
         }
         lineStr = lineStr.replace(/^#\s*(?:order|oder|ออเดอร์|บิล)\s*/i, "").trim();
@@ -1547,7 +1698,7 @@
           let qty = null;
           let explicitUnit = null;
 
-          const mulMatch = segClean.match(/(\d[\d,]*)\s*(?:ชิ้น|ใบ|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?/i);
+          const mulMatch = segClean.match(/(\d[\d,]*)\s*(?:ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?/i);
           if (mulMatch) {
             qty = parseInt(mulMatch[1].replace(/,/g, ""));
             explicitUnit = parseFloat(mulMatch[2]);
@@ -1562,15 +1713,37 @@
 
           const prod = matchCatalogProductSmartJS(segClean.toLowerCase(), explicitUnit);
           if (prod) {
+            let itemCustomName = "";
+            let finalMat = explicitMat !== null ? explicitMat : prod.mat;
             if (explicitMat !== null) {
               prod.mat = explicitMat;
+            }
+            // กรณีซองการ์ดสีอื่นๆ (107 = 4x6 นิ้ว, 108 = 5x7 นิ้ว) ให้ดึงสีและชื่อตามที่สรุปไว้ในบิล พร้อมใช้ต้นทุน 2.5฿ ทั้งสองขนาด
+            if (prod.id === 107 || prod.id === 108) {
+              if (explicitMat === null) {
+                finalMat = prod.mat || 2.5;
+              }
+              let rawEnvLabel = "";
+              if (mulMatch) {
+                rawEnvLabel = (segClean.slice(0, mulMatch.index) + " " + segClean.slice(mulMatch.index + mulMatch[0].length)).replace(/^[\s\-•:=]+|[\s\-•:=]+$/g, "");
+              } else if (qty) {
+                rawEnvLabel = segClean.replace(new RegExp(`\\b${qty}\\s*(?:ชิ้น|ใบ|ซอง|อัน)?\\b`), "").replace(/^[\s\-•:=]+|[\s\-•:=]+$/g, "");
+              }
+              if (rawEnvLabel) {
+                const sizeSuffix = (prod.id === 108 && !/5\s*[x\*]\s*7/i.test(rawEnvLabel))
+                  ? " (5x7 นิ้ว)"
+                  : ((prod.id === 107 && !/4\s*[x\*]\s*6/i.test(rawEnvLabel)) ? " (4x6 นิ้ว)" : "");
+                const prefix = rawEnvLabel.startsWith("✉️") ? "" : "✉️ ";
+                itemCustomName = `${prefix}${rawEnvLabel}${sizeSuffix}`;
+              }
             }
             detectedItems.push({
               id: Date.now() + Math.random(),
               prodId: prod.id,
+              customName: itemCustomName,
               qty: qty || 100,
               customUnitSell: explicitUnit,
-              customUnitMat: explicitMat !== null ? explicitMat : prod.mat
+              customUnitMat: finalMat
             });
           } else if (mulMatch && qty && explicitUnit !== null) {
             // สินค้าพิเศษ / นอกแคตตาล็อกที่พิมพ์มาในรูปแบบ จำนวน*ราคา=ยอดรวม
@@ -1596,6 +1769,13 @@
       if (!rawText) return;
 
       const chatBox = document.getElementById("line-chat-messages");
+
+      // ตรวจจับการระบุสถานะในข้อความ (ถ้ามี เช่น พิมพ์คำว่า รอโอน หรือ โอนเต็ม) มิฉะนั้นใช้ปุ่มที่ติ๊กเลือกไว้
+      if (/(โอนเต็ม|จ่ายเต็ม|ชำระเต็ม|โอนครบ|จ่ายครบ|100\s*%)/i.test(rawText)) {
+        setActivePaymentStatus("paid_full", true);
+      } else if (/(รอโอน|ยังไม่โอน|แจ้งยอด)/i.test(rawText)) {
+        setActivePaymentStatus("pending", true);
+      }
 
       // 1) ประมวลผลคำสั่ง #oder / #order (หากไม่ได้พิมพ์ชื่อลูกค้า ระบบจะดึงชื่อจริงจาก LINE ที่สั่งให้อัตโนมัติ!)
       const custMatch = rawText.match(/(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*)?(คุณ[^\s,]+(?:\s*&\s*คุณ[^\s,]+)?)/i);
@@ -1659,13 +1839,15 @@
           const uMat = it.prodId === 0 ? (parseFloat(it.customUnitMat) || 0) : (p ? p.mat : 0);
           return {
             prodId: it.prodId,
-            name: it.prodId === 0 ? (it.customName || "✨ สินค้าพิเศษ") : (p ? p.name : ""),
+            name: (it.customName && it.customName.trim()) ? it.customName.trim() : (it.prodId === 0 ? "✨ สินค้าพิเศษ" : (p ? p.name : "")),
             qty: it.qty,
             unitSell: uSell,
             unitMat: uMat,
             lineTotal: it.qty * uSell
           };
         });
+
+        const chosenStatus = activePaymentStatus || "deposit_50";
 
         latestOrderPayload = {
           ordNo,
@@ -1683,11 +1865,12 @@
           wage: summary.wage,
           house: summary.house,
           vehicle: summary.vehicle,
+          status: chosenStatus,
           items: serializedItems,
           updatedAt: Math.floor(Date.now() / 1000)
         };
 
-        // บันทึกลงประวัติออเดอร์สะสมพร้อมรายละเอียดสินค้า (เพื่อเปิดบิลแก้ไข/ออกใบเสร็จ 100% ย้อนหลังได้)
+        // บันทึกลงประวัติออเดอร์สะสมพร้อมรายละเอียดสินค้าและสถานะที่ติ๊กเลือก
         orderHistory.unshift({
           ordNo,
           orderDate,
@@ -1702,7 +1885,7 @@
           wage: summary.wage,
           house: summary.house,
           vehicle: summary.vehicle,
-          status: "deposit_50",
+          status: chosenStatus,
           items: serializedItems
         });
         try {
@@ -1794,7 +1977,7 @@
       updateBar("vehicle", accVehicle, monthlyTargets.vehicle || 10000);
       updateBar("wage", accWage, monthlyTargets.wage || 15000);
 
-      // แสดงรายการออเดอร์สะสม & ปุ่มสลับสถานะมัดจำ + ปุ่มเปิดบิล/ออกใบเสร็จ 100%
+      // แสดงรายการออเดอร์สะสม & ปุ่มติ๊กเลือก 3 สถานะ (รอโอน / มัดจำ 50% / โอนเต็ม) + ปุ่มเปิดบิล/ออกใบเสร็จ
       const histList = document.getElementById("order-history-list");
       if (histList) {
         if (orderHistory.length === 0) {
@@ -1803,28 +1986,30 @@
           histList.innerHTML = orderHistory.map((h, idx) => {
             const st = h.status || "deposit_50";
             const half = Math.round((h.netRevenue || 0) / 2);
-            let badgeHtml = "";
-            if (st === "pending") {
-              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ รอโอนมัดจำ (฿${half.toLocaleString()})</button>`;
-            } else if (st === "deposit_50") {
-              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">💳 มัดจำ 50% (ค้าง ฿${half.toLocaleString()})</button>`;
-            } else {
-              badgeHtml = `<button onclick="cycleOrderStatus(${idx})" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">✅ จ่ายครบ 100%</button>`;
-            }
             const dateTag = h.orderDate ? ` • ${h.orderDate}` : "";
             return `
-              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-2.5 space-y-1.5 text-xs">
+              <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-2.5 space-y-2 text-xs">
                 <div class="flex items-center justify-between gap-2">
                   <div class="min-w-0">
                     <div class="font-bold text-white truncate">${h.customerName} <span class="text-slate-400 font-normal">(${h.ordNo}${dateTag})</span></div>
-                    <div class="text-slate-400 mt-0.5">ยอดสุทธิ <b class="text-emerald-400">฿${(h.netRevenue || 0).toLocaleString()}</b> • กำไร ฿${Math.round(h.grossProfit || 0).toLocaleString()}</div>
+                    <div class="text-slate-400 mt-0.5">ยอดสุทธิ <b class="text-emerald-400">฿${(h.netRevenue || 0).toLocaleString()}</b> • มัดจำ 50% ฿${half.toLocaleString()} • กำไร ฿${Math.round(h.grossProfit || 0).toLocaleString()}</div>
                   </div>
                   <button onclick="deleteOrderHistoryItem(${idx})" class="text-slate-500 hover:text-rose-400 px-1 shrink-0">✕</button>
                 </div>
-                <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-700/60">
-                  ${badgeHtml}
-                  <button onclick="openOrderFromHistory(${idx})" class="px-2.5 py-0.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs transition shrink-0">
-                    🧾 เปิดบิล / แก้ไข / ใบเสร็จ
+                <div class="grid grid-cols-3 gap-1 pt-1 border-t border-slate-700/60">
+                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'pending')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'pending' ? 'bg-amber-500/30 text-amber-200 border-amber-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                    <span>${st === 'pending' ? '☑️' : '☐'}</span> ⏳ รอโอน
+                  </button>
+                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'deposit_50')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'deposit_50' ? 'bg-sky-500/30 text-sky-200 border-sky-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                    <span>${st === 'deposit_50' ? '☑️' : '☐'}</span> 💳 มัดจำ 50%
+                  </button>
+                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'paid_full')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'paid_full' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                    <span>${st === 'paid_full' ? '☑️' : '☐'}</span> ✅ โอนเต็ม
+                  </button>
+                </div>
+                <div class="flex justify-end pt-0.5">
+                  <button onclick="openOrderFromHistory(${idx})" class="w-full py-1 px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs transition text-center">
+                    🧾 เปิดบิล / แก้ไข / ออกใบเสร็จรับเงิน
                   </button>
                 </div>
               </div>
@@ -1863,11 +2048,33 @@
       }
 
       const st = h.status || "deposit_50";
-      const docType = st === "paid_full" ? "paid" : (st === "deposit_50" ? "deposit" : "quote");
+      setActivePaymentStatus(st, true);
       renderOrderItems();
-      setReceiptDocType(docType);
+      calculate();
       switchTab('bill');
       showToast(`🧾 เปิดบิล ${h.ordNo} (${h.customerName}) พร้อมปริ้น/แก้ไขแล้ว!`);
+    }
+
+    function setOrderHistoryStatus(index, newStatus) {
+      const item = orderHistory[index];
+      if (!item) return;
+      item.status = newStatus;
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      if (document.getElementById("input-order-no")?.value === item.ordNo) {
+        setActivePaymentStatus(newStatus, true);
+      }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+      const labelMap = { pending: "⏳ รอโอน", deposit_50: "💳 มัดจำ 50%", paid_full: "✅ โอนเต็ม 100%" };
+      showToast(`📌 อัปเดตสถานะบิล ${item.ordNo}: ${labelMap[newStatus] || newStatus}`);
+    }
+
+    function setOrderStatusByOrdNo(ordNo, newStatus) {
+      setActivePaymentStatus(newStatus);
+      const idx = orderHistory.findIndex(h => h.ordNo === ordNo);
+      if (idx >= 0) {
+        setOrderHistoryStatus(idx, newStatus);
+      }
     }
 
     function cycleOrderStatus(index) {
@@ -1875,15 +2082,7 @@
       if (!item) return;
       const order = ["pending", "deposit_50", "paid_full"];
       const nextIdx = (order.indexOf(item.status || "deposit_50") + 1) % order.length;
-      item.status = order[nextIdx];
-      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
-      syncStateToCloud();
-      renderAccumulatedDashboard();
-      if (document.getElementById("input-order-no")?.value === item.ordNo) {
-        const docType = item.status === "paid_full" ? "paid" : (item.status === "deposit_50" ? "deposit" : "quote");
-        setReceiptDocType(docType);
-      }
-      showToast("🔄 อัปเดตสถานะการชำระเงินแล้ว");
+      setOrderHistoryStatus(index, order[nextIdx]);
     }
 
     function deleteOrderHistoryItem(index) {
@@ -1904,7 +2103,7 @@
         const uMat = it.prodId === 0 ? (parseFloat(it.customUnitMat) || 0) : (p ? p.mat : 0);
         return {
           prodId: it.prodId,
-          name: it.prodId === 0 ? (it.customName || "✨ สินค้าพิเศษ") : (p ? p.name : ""),
+          name: (it.customName && it.customName.trim()) ? it.customName.trim() : (it.prodId === 0 ? "✨ สินค้าพิเศษ" : (p ? p.name : "")),
           qty: it.qty,
           unitSell: uSell,
           unitMat: uMat,
@@ -1912,7 +2111,7 @@
         };
       });
 
-      const statusFromDoc = currentReceiptDocType === 'paid' ? 'paid_full' : (currentReceiptDocType === 'deposit' ? 'deposit_50' : 'deposit_50');
+      const statusFromDoc = activePaymentStatus || (currentReceiptDocType === 'paid' ? 'paid_full' : (currentReceiptDocType === 'deposit' ? 'deposit_50' : 'pending'));
       const existingIdx = orderHistory.findIndex(h => h.ordNo === ordNo);
       const record = {
         ordNo,
@@ -1928,7 +2127,7 @@
         wage: summary.wage,
         house: summary.house,
         vehicle: summary.vehicle,
-        status: existingIdx >= 0 ? (currentReceiptDocType === 'paid' ? 'paid_full' : (orderHistory[existingIdx].status || statusFromDoc)) : statusFromDoc,
+        status: statusFromDoc,
         items: serializedItems
       };
 
@@ -1983,16 +2182,17 @@
       showToast("🗑️ ล้างประวัติยอดสะสมแล้ว");
     }
 
-    // 4. Render Order Items (รองรับทั้งสินค้าในแคตตาล็อก และสินค้าพิเศษนอกแคตตาล็อก + แก้ราคาขายต่อชิ้นได้ทันที)
+    // 4. Render Order Items (รองรับทั้งสินค้าในแคตตาล็อก ซองการ์ดสีอื่นๆ และสินค้าพิเศษนอกแคตตาล็อก + แก้ราคาขายต่อชิ้นได้ทันที)
     function renderOrderItems() {
       const list = document.getElementById("order-items-list");
       list.innerHTML = "";
 
       orderItems.forEach((item, index) => {
         const isCustom = item.prodId === 0;
+        const isOtherEnvelope = item.prodId === 107 || item.prodId === 108;
         const prod = isCustom ? null : (catalog.find(p => p.id === item.prodId) || catalog[0]);
         const unitSell = isCustom ? (parseFloat(item.customUnitSell) || 0) : getSellingUnitPrice(prod, item.qty, item.customUnitSell);
-        const unitMat = isCustom ? (parseFloat(item.customUnitMat) || 0) : (prod ? prod.mat : 0);
+        const unitMat = isCustom ? (parseFloat(item.customUnitMat) || 0) : ((item.customUnitMat !== undefined && item.customUnitMat !== null) ? parseFloat(item.customUnitMat) : (prod ? prod.mat : 0));
         const row = document.createElement("div");
         row.className = "p-3 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2.5";
 
@@ -2010,9 +2210,9 @@
               <button onclick="removeOrderItem(${index})" class="text-xs text-rose-500 hover:text-rose-700 px-2 py-1">✕</button>
             ` : ''}
           </div>
-          ${isCustom ? `
+          ${(isCustom || isOtherEnvelope || (item.customName && item.customName.trim())) ? `
           <div>
-            <input type="text" value="${(item.customName || '✨ สินค้าพิเศษ').replace(/"/g, '&quot;')}" oninput="updateCustomItemName(${index}, this.value)" placeholder="ระบุชื่อสินค้าพิเศษ เช่น ค่าบล็อกฟอยล์ / ป้ายแท็ก" class="w-full px-2.5 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50 border border-amber-200 rounded-lg outline-none">
+            <input type="text" value="${(item.customName || (isOtherEnvelope ? (prod?.name || '✉️ ซองการ์ดสีอื่นๆ') : '✨ สินค้าพิเศษ')).replace(/"/g, '&quot;')}" oninput="updateCustomItemName(${index}, this.value)" placeholder="${isOtherEnvelope ? 'ระบุสีซองการ์ด เช่น ✉️ ซองการ์ดสีไวน์แดง 5x7' : 'ระบุชื่อสินค้าพิเศษ เช่น ค่าบล็อกฟอยล์ / ป้ายแท็ก'}" class="w-full px-2.5 py-1.5 text-xs font-semibold ${isOtherEnvelope ? 'text-emerald-900 bg-emerald-50 border-emerald-200' : 'text-amber-900 bg-amber-50 border-amber-200'} border rounded-lg outline-none">
           </div>
           ` : ''}
           <div class="grid grid-cols-3 gap-2 text-xs">
@@ -2056,8 +2256,10 @@
 
     function updateProdCostLive(prodId, rowIndex, val) {
       const numVal = parseFloat(val) || 0;
-      if (prodId === 0 && orderItems[rowIndex]) {
+      if (orderItems[rowIndex]) {
         orderItems[rowIndex].customUnitMat = numVal;
+      }
+      if (prodId === 0 && orderItems[rowIndex]) {
         const qty = orderItems[rowIndex]?.qty || 0;
         const matEl = document.getElementById(`item-mat-${rowIndex}`);
         if (matEl) matEl.innerText = `ทุนรวม: ฿${(numVal * qty).toLocaleString()}`;
@@ -2110,8 +2312,15 @@
         orderItems[index].customName = orderItems[index].customName || "✨ สินค้าพิเศษ / บริการเสริม";
         orderItems[index].customUnitSell = orderItems[index].customUnitSell ?? 10;
         orderItems[index].customUnitMat = orderItems[index].customUnitMat ?? 0;
+      } else if (orderItems[index].prodId === 107 || orderItems[index].prodId === 108) {
+        const szLabel = orderItems[index].prodId === 108 ? "5x7 นิ้ว" : "4x6 นิ้ว";
+        orderItems[index].customName = `✉️ ซองการ์ดสีอื่นๆ (ขนาด ${szLabel})`;
+        orderItems[index].customUnitMat = 2.5;
+        orderItems[index].customUnitSell = orderItems[index].customUnitSell ?? 3;
       } else {
+        orderItems[index].customName = "";
         orderItems[index].customUnitSell = null;
+        orderItems[index].customUnitMat = null;
       }
       renderOrderItems();
       calculate();
@@ -2123,7 +2332,7 @@
       const isCustom = orderItems[index].prodId === 0;
       const prod = isCustom ? null : (catalog.find(p => p.id === orderItems[index].prodId) || catalog[0]);
       const unitSell = isCustom ? (parseFloat(orderItems[index].customUnitSell) || 0) : getSellingUnitPrice(prod, qty, orderItems[index].customUnitSell);
-      const unitMat = isCustom ? (parseFloat(orderItems[index].customUnitMat) || 0) : (prod ? prod.mat : 0);
+      const unitMat = isCustom ? (parseFloat(orderItems[index].customUnitMat) || 0) : ((orderItems[index].customUnitMat !== undefined && orderItems[index].customUnitMat !== null) ? parseFloat(orderItems[index].customUnitMat) : (prod ? prod.mat : 0));
       const sellInput = document.getElementById(`item-sell-input-${index}`);
       if (sellInput && !isCustom && orderItems[index].customUnitSell === null) {
         sellInput.value = unitSell;
@@ -2170,16 +2379,17 @@
         const prod = catalog.find(p => p.id === item.prodId);
         if (prod) {
           const unitSell = getSellingUnitPrice(prod, item.qty, item.customUnitSell);
+          const unitMat = (item.customUnitMat !== undefined && item.customUnitMat !== null) ? parseFloat(item.customUnitMat) : prod.mat;
           const lineTotal = item.qty * unitSell;
           totalQty += item.qty;
-          totalMaterial += item.qty * prod.mat;
+          totalMaterial += item.qty * unitMat;
           autoSubtotal += lineTotal;
           if (prod.category === "ของชำร่วย") {
             souvenirQty += item.qty;
             souvenirSubtotal += lineTotal;
           }
           billLines.push({
-            name: prod.name,
+            name: (item.customName && item.customName.trim()) ? item.customName.trim() : prod.name,
             qty: item.qty,
             unitSell,
             lineTotal
@@ -2328,6 +2538,9 @@
             : "py-1.5 px-2 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition";
         }
       });
+      const mappedStatus = type === 'paid' ? 'paid_full' : (type === 'deposit' ? 'deposit_50' : 'pending');
+      activePaymentStatus = mappedStatus;
+      updatePaymentStatusSelectorUI(mappedStatus);
       calculate();
     }
 
@@ -2406,7 +2619,8 @@
         if (prod) {
           const unitSell = getSellingUnitPrice(prod, item.qty, item.customUnitSell);
           const lineTotal = item.qty * unitSell;
-          itemsText += `${idx + 1}. ${prod.name}\n   จำนวน ${item.qty.toLocaleString()} ชิ้น × ${unitSell}฿ = ${lineTotal.toLocaleString()} บาท\n`;
+          const displayName = (item.customName && item.customName.trim()) ? item.customName.trim() : prod.name;
+          itemsText += `${idx + 1}. ${displayName}\n   จำนวน ${item.qty.toLocaleString()} ชิ้น × ${unitSell}฿ = ${lineTotal.toLocaleString()} บาท\n`;
         }
       });
 
@@ -2612,6 +2826,7 @@ ${leadText}
     if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
     if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
     if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
+    updatePaymentStatusSelectorUI(activePaymentStatus);
     applyShopSettingsToUI();
     renderRecentLineCustomers();
     renderCatalog();
