@@ -964,6 +964,22 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
                     "line_mat": round(qty * mat_cost, 1),
                 })
 
+    # บังคับให้ขนาดการ์ด (4x6 หรือ 5x7) และขนาดซองการ์ด (107=4x6, 108=5x7) ในบิลเดียวกันเป็นขนาดเดียวกันเสมอ
+    card_ids_in_order = [it["id"] for it in detected if it["id"] in (101, 102, 103, 104)]
+    target_env_size = None
+    if any(cid in (103, 104) for cid in card_ids_in_order):
+        target_env_size = "5x7"
+    elif any(cid in (101, 102) for cid in card_ids_in_order):
+        target_env_size = "4x6"
+
+    if target_env_size:
+        for it in detected:
+            if it["id"] in (107, 108):
+                it["id"] = 108 if target_env_size == "5x7" else 107
+                base_label = re.sub(r'\s*\((?:ขนาด\s*)?(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?\)', '', it["name"], flags=re.IGNORECASE).strip()
+                base_label = re.sub(r'\s*(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?', '', base_label, flags=re.IGNORECASE).strip()
+                it["name"] = f"{base_label} (ขนาด {target_env_size} นิ้ว)"
+
     return detected
 
 

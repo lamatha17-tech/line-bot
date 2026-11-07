@@ -1812,6 +1812,28 @@
           }
         }
       }
+
+      // บังคับให้ขนาดการ์ด (4x6 หรือ 5x7) และขนาดซองการ์ด (107=4x6, 108=5x7) ในบิลเดียวกันเป็นขนาดเดียวกันเสมอ
+      const cardIdsInOrder = detectedItems.filter(it => [101, 102, 103, 104].includes(it.prodId)).map(it => it.prodId);
+      let targetEnvSize = null;
+      if (cardIdsInOrder.some(cid => cid === 103 || cid === 104)) {
+        targetEnvSize = "5x7";
+      } else if (cardIdsInOrder.some(cid => cid === 101 || cid === 102)) {
+        targetEnvSize = "4x6";
+      }
+      if (targetEnvSize) {
+        detectedItems.forEach(it => {
+          if (it.prodId === 107 || it.prodId === 108) {
+            it.prodId = targetEnvSize === "5x7" ? 108 : 107;
+            let baseLabel = (it.customName || "✉️ ซองการ์ดสีอื่นๆ")
+              .replace(/\s*\((?:ขนาด\s*)?(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?\)/gi, "")
+              .replace(/\s*(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?/gi, "")
+              .trim();
+            it.customName = `${baseLabel} (ขนาด ${targetEnvSize} นิ้ว)`;
+          }
+        });
+      }
+
       return detectedItems;
     }
 
@@ -2360,19 +2382,48 @@
     function updateOrderItemProd(index, val) {
       const pid = parseInt(val);
       orderItems[index].prodId = isNaN(pid) ? 0 : pid;
-      if (orderItems[index].prodId === 0) {
+      const curPid = orderItems[index].prodId;
+
+      if (curPid === 0) {
         orderItems[index].customName = orderItems[index].customName || "✨ สินค้าพิเศษ / บริการเสริม";
         orderItems[index].customUnitSell = orderItems[index].customUnitSell ?? 10;
         orderItems[index].customUnitMat = orderItems[index].customUnitMat ?? 0;
-      } else if (orderItems[index].prodId === 107 || orderItems[index].prodId === 108) {
+      } else if (curPid === 107 || curPid === 108) {
+        // หากในออเดอร์มีการ์ดอยู่แล้ว ให้ซองปรับขนาดและจำนวนตรงกับการ์ดอัตโนมัติ
+        const cardItem = orderItems.find(it => [101, 102, 103, 104].includes(it.prodId));
+        if (cardItem) {
+          const isCard5x7 = cardItem.prodId === 103 || cardItem.prodId === 104;
+          orderItems[index].prodId = isCard5x7 ? 108 : 107;
+          if (cardItem.qty > 0) orderItems[index].qty = cardItem.qty;
+        }
         const szLabel = orderItems[index].prodId === 108 ? "5x7 นิ้ว" : "4x6 นิ้ว";
-        orderItems[index].customName = `✉️ ซองการ์ดสีอื่นๆ (ขนาด ${szLabel})`;
+        const baseEnv = (orderItems[index].customName || "✉️ ซองการ์ดสีอื่นๆ")
+          .replace(/\s*\((?:ขนาด\s*)?(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?\)/gi, "")
+          .replace(/\s*(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?/gi, "")
+          .trim();
+        orderItems[index].customName = `${baseEnv || '✉️ ซองการ์ดสีอื่นๆ'} (ขนาด ${szLabel})`;
         orderItems[index].customUnitMat = 2.5;
         orderItems[index].customUnitSell = orderItems[index].customUnitSell ?? 3;
       } else {
         orderItems[index].customName = "";
         orderItems[index].customUnitSell = null;
         orderItems[index].customUnitMat = null;
+
+        // หากเปลี่ยนขนาดการ์ด (4x6 <-> 5x7) ให้ปรับขนาดซองการ์ดสีอื่นๆ ในบิลเดียวกันให้ตรงกับการ์ดทันที
+        if ([101, 102, 103, 104].includes(curPid)) {
+          const isCard5x7 = curPid === 103 || curPid === 104;
+          const szLabel = isCard5x7 ? "5x7 นิ้ว" : "4x6 นิ้ว";
+          orderItems.forEach((it, idx) => {
+            if (idx !== index && (it.prodId === 107 || it.prodId === 108)) {
+              it.prodId = isCard5x7 ? 108 : 107;
+              const baseEnv = (it.customName || "✉️ ซองการ์ดสีอื่นๆ")
+                .replace(/\s*\((?:ขนาด\s*)?(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?\)/gi, "")
+                .replace(/\s*(?:4\s*[\*x×]\s*6|5\s*[\*x×]\s*7)\s*(?:นิ้ว)?/gi, "")
+                .trim();
+              it.customName = `${baseEnv || '✉️ ซองการ์ดสีอื่นๆ'} (ขนาด ${szLabel})`;
+            }
+          });
+        }
       }
       renderOrderItems();
       calculate();
