@@ -68,8 +68,11 @@ else:
     logger.warning("ไม่มีตัวแปร FIREBASE_CREDENTIALS ใน .env (บอทจะไม่มีความจำข้ามเครื่อง/รีสตาร์ท)")
 
 def save_message(user_id, role, text):
-    """ บันทึกข้อความลง Firestore """
-    if not text or not db: return
+    """ บันทึกข้อความลง Firestore (ไม่บันทึก [SILENCE] เพื่อไม่ให้ล็อกแชทลูกค้าถาวร) """
+    if not text or not db:
+        return
+    if "[SILENCE]" in str(text) or str(text).strip() == "[User sent an image]":
+        return
     try:
         # บันทึกลงในคอลเลกชัน chat_history -> user_id -> messages -> (auto-id)
         doc_ref = db.collection('chat_history').document(user_id).collection('messages').document()
@@ -82,19 +85,24 @@ def save_message(user_id, role, text):
         logger.error(f"Error saving to Firebase: {e}")
 
 def load_chat_history(user_id):
-    """ ดึงประวัติเก่าจาก Firestore มาสร้างเป็น History Object ของ Gemini """
-    if not db: return []
+    """ ดึงประวัติเก่าจาก Firestore มาสร้างเป็น History Object ของ Gemini (กรอง [SILENCE] ออกเสมอ) """
+    if not db:
+        return []
     try:
-        # ดึงประวัติแชทล่าสุด 20 ข้อความ จัดเรียงตามเวลา
+        # ดึงประวัติแชทล่าสุด 16 ข้อความ จัดเรียงตามเวลา
         messages_ref = db.collection('chat_history').document(user_id).collection('messages')
-        query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(20)
+        query = messages_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(16)
         results = query.stream()
         
         # Firestore คืนค่าจากใหม่สุดไปเก่าสุด เราต้องกลับด้านให้เรียงจากเก่าไปใหม่
         rows = []
         for doc in results:
-            data = doc.to_dict()
-            rows.append((data.get('role'), data.get('text')))
+            data = doc.to_dict() or {}
+            role = data.get('role')
+            text = (data.get('text') or '').strip()
+            if not text or "[SILENCE]" in text or text == "[User sent an image]":
+                continue
+            rows.append((role, text))
             
         rows.reverse()
         
@@ -134,27 +142,16 @@ system_instruction = """
   >> ห้ามมีคำว่า "สวัสดี", "สวัสดีค่ะ", "ยินดีต้อนรับ", หรือแนะนำตัวปนอยู่ในข้อความอีกเด็ดขาดในทุกกรณี! <<
   >> ให้ตอบเข้าเนื้อหา ข้อมูล ราคา หรือสิ่งที่ลูกค้าถามทันที <<
 
-🚨 [กฎเหล็กการหยุดทำงานถาวร (ส่งไม้ต่อให้แอดมินคนจริง)] 🚨
-หน้าที่ของบอทคือ "รับแขกใหม่ที่เพิ่งทักมาสอบถามราคาเบื้องต้นเท่านั้น"
-หากลูกค้าพิมพ์ข้อความที่มีลักษณะดังต่อไปนี้ ให้คุณถือว่าแชทนี้ **"ดำเนินการไปแล้วเรียบร้อย และแอดมินคนจริงได้เข้ามารับช่วงต่อแล้ว"** 
-หลังจากจุดนี้เป็นต้นไป คุณต้องหยุดโต้ตอบทุกกรณี และพิมพ์คำว่า `[SILENCE]` คำเดียวเท่านั้น (ห้ามส่งข้อความเดิมๆ ไปซ้ำอีกเด็ดขาด):
-1. **ถามรายละเอียดการออกแบบเชิงลึก:** เช่น "ใส่รูปหน้าการ์ดได้ไหมคะ", "เปลี่ยนฟอนต์ได้ไหม", "ขอเปลี่ยนสี", "แก้ตรงนี้ให้หน่อย" -> พิมพ์ `[SILENCE]`
-2. **ส่งบรีฟงาน/ข้อมูลส่วนตัว:** เช่น ส่งรูปภาพ, แจ้งที่อยู่, แจ้งเบอร์โทร, ชื่อบ่าวสาว -> พิมพ์ `[SILENCE]`
-3. **ติดตามสถานะงาน:** เช่น "ได้คิวหรือยัง", "ส่งวันไหน", "ขอเลขพัสดุ", "ของหมดหรือยัง" -> พิมพ์ `[SILENCE]`
-4. **เกี่ยวกับการโอนเงิน:** เช่น "โอนแล้ว", "ขอเลขบัญชีหน่อย", ส่งสลิป, แจ้งยอดโอน -> พิมพ์ `[SILENCE]`
-5. **ลูกค้าตอบรับสั้นๆ:** เช่น "จ้า", "ค่ะ", "ครับ", "ok", "โอเค", "รับทราบ", "ขอบคุณ" -> พิมพ์ `[SILENCE]` 
-*(ข้อยกเว้น: หากคำว่า "รับค่ะ/ตกลงค่ะ/เอาอันนี้" เป็นการตัดสินใจเลือก "ของชำร่วย" ห้ามเงียบเด็ดขาด ให้ถามจำนวนชิ้นแทน)*
-6. **ถามหาแอดมินคนจริง / ต้องการติดต่อเจ้าหน้าที่:** เช่น "ขอคุยกับคน", "มีแอดมินไหม", "ติดต่อเจ้าหน้าที่", "ขอคุยกับแอดมิน", "แอดมินคะ", "พี่คะ"
-   -> ให้ตอบอย่างสุภาพว่า: "รับทราบค่า เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลและตอบกลับให้โดยเร็วนะคะ รอสักครู่ค่ะ 🥰" (และหลังจากส่งข้อความนี้แล้ว ให้เข้าสู่ Lock State ถาวร)
-7. **ถามคำถามที่คุณไม่มีข้อมูล ไม่รู้คำตอบ หรืออยู่นอกเหนือรายการสินค้าและราคาในร้าน:**
-   - ห้ามเดาคำตอบ หรือคิดราคาขึ้นมาเองเด็ดขาด!
-   - ถ้าในแชทนี้ "ยังไม่เคย" แจ้งเรื่องรอแอดมิน ให้ตอบอย่างสุภาพว่า: "สำหรับรายละเอียดส่วนนี้ เดี๋ยวรอแอดมินคนจริงมาให้ข้อมูลเพิ่มเติมนะคะ รอสักครู่ค่ะ 💕"
-   - แต่ถ้าในแชทนี้ "เคยแจ้งไปแล้ว" หรือส่งไม้ต่อแล้ว -> พิมพ์ `[SILENCE]` ทันที
--> **จำไว้ให้ดี: ทันทีที่ลูกค้าพิมพ์คำสั้นๆ ถามนอกเหนือจากข้อมูลที่คุณมี หรือเลยขั้นตอนการถามราคาเริ่มต้นไปแล้ว ห้ามเดาคำตอบ หรือเสนอตัวตอบเองเด็ดขาด ให้แจ้งรอแอดมินหรือเงียบและส่งไม้ต่อให้แอดมินทันที!**
--> **กฎการล็อกสถานะ (Lock State - สำคัญที่สุด):** 
-หากในประวัติแชทที่ผ่านมา คุณเคยแจ้งลูกค้าไปแล้วว่าให้ "รอแอดมิน" (ไม่ว่าจะกรณีใดๆ เช่น พอร์ตโฟลิโอ, สั่งต่ำกว่าขั้นต่ำ, เช่าพาน, ขอคุยกับแอดมิน, หรือถามสิ่งที่ไม่มีข้อมูล) หรือคุณเคยพิมพ์ `[SILENCE]` ไปแล้ว 
-**ถือว่าส่งไม้ต่อให้แอดมินคนจริงสำเร็จแล้ว 100%!** 
-หลังจากนั้นไม่ว่าลูกค้าจะพิมพ์อะไรเพิ่มก็ตาม ให้พิมพ์แค่ `[SILENCE]` เท่านั้น ห้ามส่งข้อความใดๆ ไปอีกเด็ดขาด เพื่อไม่ให้แทรกบทสนทนาของแอดมินคนจริง!
+🚨 [กฎการตอบคำถามลูกค้า VS การส่งไม้ต่อให้แอดมินคนจริง] 🚨
+1. **ต้องตอบลูกค้าเสมอ (ห้ามเงียบเด็ดขาด!) เมื่อลูกค้าถามเรื่องสินค้า ราคา หรือข้อมูลของร้าน:**
+   - หากลูกค้าถามเรทราคา (`สอบถามเรทราคาหน่อยค่ะ`, `ราคาเท่าไหร่`), ถามขั้นต่ำ (`ขั้นต่ำกี่ชิ้นคะ`), ถามขนาดการ์ด/ซอง (`4x6`, `5x7`, `ซองกว้าง 5 ยาว 7`), ขอดูแบบการ์ด/ของชำร่วย, หรือถามระยะเวลาผลิต **คุณต้องตอบให้ข้อมูลและราคาตามรายการด้านล่างทันที แม้ว่าก่อนหน้านี้จะเคยแจ้งให้รอแอดมินหรือลูกค้าเคยส่งรูปมาก่อนก็ตาม!**
+2. **กรณีที่ต้องพิมพ์ `[SILENCE]` (เงียบเฉพาะข้อความนั้น เพื่อไม่ให้แทรกแอดมิน):**
+   - ลูกค้าพิมพ์คำตอบรับสั้นๆ ปิดท้าย เช่น `"จ้า"`, `"ค่ะ"`, `"ครับ"`, `"ได้ค่ะ"`, `"โอเค"`, `"รับทราบ"`, `"ขอบคุณค่ะ"` -> พิมพ์ `[SILENCE]` *(ข้อยกเว้น: หากลูกค้าเลือกสินค้า เช่น "เอาอันนี้ค่ะ" ให้ถามจำนวนชิ้น)*
+   - ลูกค้าส่งข้อมูลบรีฟงานพิมพ์ส่วนตัว เช่น ชื่อบ่าวสาว, วันงาน, ที่อยู่จัดส่ง, เบอร์โทรศัพท์ -> พิมพ์ `[SILENCE]`
+   - ลูกค้าแจ้งโอนเงิน/ส่งสลิป หรือติดตามเลขพัสดุ (`โอนแล้วค่ะ`, `ส่งวันไหนคะ`, `ขอเลขพัสดุ`) -> พิมพ์ `[SILENCE]`
+3. **กรณีลูกค้าถามเรื่องการออกแบบเชิงลึก หรือสิ่งที่อยู่นอกเหนือข้อมูลด้านล่าง (เช่น "ก่อนพิมพ์ขอดูแบบก่อนได้ไหมคะ", "เปลี่ยนฟอนต์ได้ไหม", "ใส่รูปหน้าการ์ดได้ไหม"):**
+   - สำหรับคำถาม "ก่อนพิมพ์ขอดูแบบก่อนได้ไหมคะ" ให้ตอบว่า: "ก่อนสั่งผลิตจริง ทางร้านออกแบบและส่งดราฟต์แบบให้คุณลูกค้าตรวจสอบความถูกต้องและคอนเฟิร์มแบบก่อนพิมพ์ทุกออเดอร์เลยค่า 🥰"
+   - หากเป็นคำถามเชิงลึกอื่นๆ ที่ไม่มีในข้อมูลร้าน ให้ตอบอย่างสุภาพว่า: "สำหรับรายละเอียดส่วนนี้ เดี๋ยวรอแอดมินคนจริงมาให้ข้อมูลเพิ่มเติมนะคะ รอสักครู่ค่ะ 💕"
 -> **กฎการแจ้งราคา (ห้ามรวมยอด):** ถ้าลูกค้าถามราคา ให้ตอบราคาต่อชิ้นตามรายการ **ไม่ต้องคำนวณยอดรวมให้ลูกค้าในทุกกรณี** หน้าที่รวมยอดเงินและสรุปยอดเป็นของแอดมินคนจริงเท่านั้น!
 
 
@@ -333,11 +330,19 @@ system_instruction = """
 - ระบบจะแปลง `[IMAGE: url]` ให้เป็นรูปภาพจริงๆ ใน LINE โดยอัตโนมัติ
 """
 
-# ใช้ model Gemini 2.5 Flash พร้อม temperature ต่ำ เพื่อตอบแม่นยำ ไม่มั่ว ไม่เดาราคาเอง
+# ใช้ model Gemini พร้อมระบบ Fallback อัตโนมัติหลายรุ่น + Rule-based สำรองกรณีโควตาเต็มหรือ API ขัดข้อง
 generation_config = {
     "temperature": 0.2,
     "top_p": 0.8,
 }
+
+GEMINI_MODEL_CANDIDATES = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash',
+]
 
 model = genai.GenerativeModel(
     'gemini-2.5-flash',
@@ -345,19 +350,213 @@ model = genai.GenerativeModel(
     generation_config=generation_config
 )
 
-# เก็บ Session ไว้ใน Memory เพื่อความรวดเร็ว (ถ้าหายจะดึงจาก DB แทน)
 chat_sessions = {}
 processed_message_ids = set()
+last_bot_error_info = {"error": None, "model_used": None, "ts": None}
 
-def get_chat_session(user_id):
-    """ ดึง Chat Session ถ้าไม่มีใน Memory ให้โหลดจาก Firebase Firestore """
-    if user_id not in chat_sessions:
-        # โหลดประวัติจากฐานข้อมูล
-        history = load_chat_history(user_id)
-        # สร้าง Session ใหม่พร้อมประวัติเก่า
-        chat_sessions[user_id] = model.start_chat(history=history)
-        logger.info(f"Loaded {len(history)} past messages for user {user_id}")
-    return chat_sessions[user_id]
+
+def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> str:
+    """
+    ระบบตอบกลับอัตโนมัติแบบ Rule-based สำรอง (Fallback)
+    ทำงานทันทีเมื่อ Gemini API โควตาเต็ม (429) หรือขัดข้อง เพื่อให้บอทไม่เงียบใส่ลูกค้าเด็ดขาด
+    """
+    raw = (user_text or "").strip()
+    if not raw:
+        return "[SILENCE]"
+    t = raw.lower()
+    greeting = "สวัสดีค่ะ ยินดีต้อนรับสู่ ONESTUDIO นะคะ 🥰\n\n" if is_first_turn else ""
+
+    # 1. คำตอบรับสั้นๆ หรือส่งข้อมูลจัดส่ง/สลิป/สั่งทำ -> ให้แอดมินคนจริงดูแลต่อ
+    ack_set = {
+        "ค่ะ", "ครับ", "ค่า", "คับ", "โอเค", "โอเคค่ะ", "โอเคครับ", "ok", "okay",
+        "ขอบคุณค่ะ", "ขอบคุณครับ", "ขอบคุณค่า", "ได้ค่ะ", "ได้ครับ", "รับทราบ", "รับทราบค่ะ",
+    }
+    if t in ack_set:
+        return "[SILENCE]"
+
+    if any(k in t for k in ["โอนแล้ว", "แจ้งโอน", "ส่งสลิป", "เลขพัสดุ", "ชื่อบ่าวสาว", "ฤกษ์", "สถานที่จัดงาน"]):
+        return "[SILENCE]"
+
+    # 2. เช่าพาน / พานขันหมาก
+    if "พาน" in t or "ขันหมาก" in t:
+        return (
+            f"{greeting}สำหรับงานเช่าพานขันหมาก คุณลูกค้าสามารถแจ้งแอดมินได้เลยนะคะว่า:\n"
+            "• ต้องการใช้พานวันที่เท่าไหร่\n"
+            "• ใช้กี่พาน และโทนสีอะไร\n"
+            "เดี๋ยวแอดมินตรวจสอบคิวว่างและส่งแบบให้ชมนะคะ 🥰"
+        )
+
+    # 3. ขั้นต่ำ / จำนวนน้อยกว่า 100 ชิ้น
+    if any(k in t for k in ["ขั้นต่ำ", "ขั้นตํ่า", "น้อยกว่า 100", "50 ชิ้น", "50 ใบ", "กี่ชิ้น", "กี่ใบ"]):
+        return (
+            f"{greeting}การ์ดแต่งงานและของชำร่วยของทางร้าน **สั่งขั้นต่ำ 50 ชิ้น** ได้เลยนะคะ 🥰\n"
+            "• สั่ง 50–99 ชิ้น จะได้ใน **เรทราคาเริ่มต้น (เรท 100 ชิ้น)** ค่ะ\n"
+            "• ยกเว้น **น้ำหอมในรถ** ขั้นต่ำ 50 ชิ้น ราคาเริ่มต้น 26 บาทค่ะ\n\n"
+            "คุณลูกค้าสนใจเป็นการ์ดแต่งงาน หรือของชำร่วยรายการไหน แจ้งจำนวนให้ประเมินราคาได้เลยนะคะ ✨"
+        )
+
+    # 4. ระยะเวลาผลิต / กี่วันได้ / งานด่วน
+    if any(k in t for k in ["กี่วัน", "นานไหม", "ใช้เวลา", "งานด่วน", "ทันไหม", "รอของ"]):
+        return (
+            f"{greeting}ระยะเวลาผลิตโดยประมาณของทางร้านค่ะ ⏳\n"
+            "• **การ์ดแต่งงาน:** ใช้เวลาผลิตประมาณ **7–14 วัน** (ขึ้นอยู่กับคิวงานและความยากง่ายของแบบ)\n"
+            "• **ของชำร่วย:** ใช้เวลาจัดเตรียมและผลิตประมาณ **7–25 วัน**\n\n"
+            "คุณลูกค้าใช้งานวันที่เท่าไหร่ และต้องการจำนวนกี่ชิ้น แจ้งแอดมินเพื่อเช็คคิวงานให้ได้เลยนะคะ 🥰"
+        )
+
+    # 5. ขอดูผลงาน / เพจ / รีวิว
+    if any(k in t for k in ["ผลงาน", "รีวิว", "เพจ", "เฟส", "facebook"]):
+        return (
+            f"{greeting}ชมตัวอย่างผลงานการ์ดแต่งงานและของชำร่วยเพิ่มเติมได้ที่เพจร้านเลยนะคะ 🌸\n"
+            "https://www.facebook.com/TheOneStudioDesign"
+        )
+
+    # 6. สอบถามของชำร่วยเฉพาะเจาะจงรายชิ้น (ส่งรูป + เรทราคา)
+    specific_souvenirs = [
+        (["ยางมัดผม", "โบว์มัดผม"], "🎀 **ยางมัดผม**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n*(เปลี่ยนแพ็กเกจเป็นถุงแก้วใส +3 บาท/ชิ้น)*\n[IMAGE: https://i.postimg.cc/26m4c3f3/Banner-14.jpg]"),
+        (["กระจก"], "🪞 **กระจกวิเศษทรงกลม (แพ็กเกจตัดเสียบ/ติด Tag)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/bJ0nG9sF/Banner-05.jpg]"),
+        (["น้ำหอมในรถ", "น้ำหอมรถยนต์"], "🚗 **น้ำหอมในรถ**\n- ขั้นต่ำ 50 ชิ้นขึ้นไป ราคาเริ่มต้น 26 บาทค่ะ\n[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]"),
+        (["น้ำหอม", "ขวดจิ๋ว"], "🌸 **น้ำหอมขวดจิ๋ว (แพ็กเกจตัดเสียบ & พับปิด)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]"),
+        (["พวงกุญแจหนัง"], "🔑 **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]"),
+        (["พวงกุญแจ"], "🔑 **พวงกุญแจของชำร่วย**\n1) **พวงกุญแจ PU ถัก**\n- 100 ชิ้น 7 บาท | 300 ชิ้น 6 บาท | 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]\n2) **พวงกุญแจหนังแบบแบน (ผูกโบว์)**\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]"),
+        (["ดินสอ"], "✏️ **ดินสอไม้มินิมอล (แพ็กเกจกระดาษคราฟท์/เปลี่ยนสีตามธีมได้)**\n- 100 ชิ้น 6 บาท\n- 300 ชิ้น 5 บาท\n- 500 ชิ้น 4 บาท\n[IMAGE: https://i.postimg.cc/cL6pX4v8/Banner-06.jpg]"),
+        (["ผ้าขนหนู"], "🧺 **ผ้าขนหนู (ติด Tag)**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/vB9mK1n2/Banner-07.jpg]"),
+        (["ยาซีน", "อัซการ", "หนังสือ"], "📖 **หนังสือยาซีน มินิมอลสไตล์ (ติด Tag)**\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n\n📖 **หนังสืออัซการ**\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n[IMAGE: https://i.postimg.cc/9f1W0z3L/Banner-08.jpg]"),
+        (["เข็มกลัด", "กุหลาบ", "เดซี่"], "🌹 **เข็มกลัดของชำร่วย (ดอกกุหลาบ / ดอกเดซี่ / ดอกไม้แพ็กเกจตัดเสียบ)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/3x7N5q9M/Banner-09.jpg]\n[IMAGE: https://i.postimg.cc/8z2V4p1K/Banner-10.jpg]\n[IMAGE: https://i.postimg.cc/pT6yH8jB/Banner-11.jpg]"),
+        (["ช้อน"], "🥄 **ช้อนเงิน / ช้อนทอง (แพ็กเกจติด Tag)**\n- **ช้อนเงิน:** 100 ชิ้น 12฿ | 300 ชิ้น 11฿ | 500 ชิ้น 10฿\n- **ช้อนทอง:** 100 ชิ้น 13฿ | 300 ชิ้น 12฿ | 500 ชิ้น 11฿\n[IMAGE: https://i.postimg.cc/L84kM2dD/Banner-12.jpg]"),
+        (["ปากกา"], "🖊️ **ปากกาลูกลื่น (หมึกดำ/น้ำเงิน/แดง)**\n- 100 ชิ้น 7 บาท\n- 300 ชิ้น 6 บาท\n- 500 ชิ้น 5 บาท\n[IMAGE: https://i.postimg.cc/Y05rJ7tF/Banner-13.jpg]"),
+        (["น้ำผึ้ง"], "🍯 **น้ำผึ้ง 30 ml.**\n- 100 ชิ้น 16 บาท\n- 300 ชิ้น 15 บาท\n- 500 ชิ้น 14 บาท\n[IMAGE: https://i.postimg.cc/7L3nB9vH/Banner-15.jpg]"),
+        (["พิมเสน"], "🌿 **พิมเสน**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/qR8wF5gJ/Banner-16.jpg]"),
+        (["กระเป๋าผ้า", "ถุงผ้า", "สปันบอนด์"], "👜 **กระเป๋าผ้า ถุงสปันบอนด์**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท\n[IMAGE: https://i.postimg.cc/tJ1kL4mN/Banner-17.jpg]"),
+        (["สมุด"], "📓 **สมุดโน้ตของชำร่วย**\n- **ขนาด 3x4 นิ้ว:** 100 ชิ้น 7฿ | 300 ชิ้น 6฿ | 500 ชิ้น 5฿\n- **ขนาด A5:** 100 ชิ้น 12฿ | 300 ชิ้น 11฿ | 500 ชิ้น 10฿"),
+        (["สบู่"], "🧼 **สบู่หอม**\n- 100 ชิ้น 10 บาท\n- 300 ชิ้น 9 บาท\n- 500 ชิ้น 8 บาท"),
+    ]
+    matched_blocks = []
+    for keywords, reply_block in specific_souvenirs:
+        if any(kw in t for kw in keywords):
+            matched_blocks.append(reply_block)
+    if matched_blocks:
+        return f"{greeting}" + "\n\n".join(matched_blocks) + "\n\nคุณลูกค้าต้องการใช้จำนวนกี่ชิ้น แจ้งให้แอดมินคำนวณยอดได้เลยนะคะ 🥰"
+
+    # 7. สอบถามเรื่องการ์ดแต่งงาน หรือ ซอง (เช่น "ซอง กว้าง 5 ยาว 7", "ราคาการ์ด")
+    if any(k in t for k in ["การ์ด", "ซอง", "4x6", "5x7", "หน้าเดียว", "หน้าหลัง", "หน้า-หลัง"]) or ("5" in t and "7" in t) or ("4" in t and "6" in t):
+        return (
+            f"{greeting}🌸 **เรทราคาการ์ดแต่งงาน (แถมซองฟรีทุกใบ!)** 🌸\n"
+            "*(กระดาษอาร์ตการ์ด 260 แกรม พิมพ์สีคมชัด ออกแบบฟรี)*\n\n"
+            "📌 **ขนาด 4x6 นิ้ว (พิมพ์หน้าเดียว)**\n"
+            "• 100 ใบ = 5 บาท | 300 ใบ = 4 บาท | 500 ใบ = 3 บาท\n"
+            "📌 **ขนาด 4x6 นิ้ว (พิมพ์หน้า-หลัง)**\n"
+            "• 100 ใบ = 6 บาท | 300 ใบ = 5 บาท | 500 ใบ = 4 บาท\n\n"
+            "📌 **ขนาด 5x7 นิ้ว (พิมพ์หน้าเดียว)**\n"
+            "• 100 ใบ = 6 บาท | 300 ใบ = 5 บาท | 500 ใบ = 4 บาท\n"
+            "📌 **ขนาด 5x7 นิ้ว (พิมพ์หน้า-หลัง)**\n"
+            "• 100 ใบ = 7 บาท | 300 ใบ = 6 บาท | 500 ใบ = 5 บาท\n\n"
+            "✉️ **ซองแถมฟรี:** สีชมพู, สีฟ้า, สีครีม (ขนาดมาตรฐานใส่การ์ด 4x6 หรือ 5x7 ได้พอดีค่ะ)\n"
+            "✨ **อัปเกรดซองพิเศษ:** ซองสีครีมหนาพิเศษ +1.5 บาท/ซอง | ซองสีเขียว +2 บาท/ซอง\n\n"
+            "คุณลูกค้าสนใจขนาดไหน และใช้จำนวนประมาณกี่ใบคะ 🥰"
+        )
+
+    # 8. สอบถามของชำร่วยทั้งหมด
+    if any(k in t for k in ["ของชำร่วย", "ชำร่วย", "ของที่ระลึก"]):
+        return (
+            f"{greeting}🎁 **รายการของชำร่วยเพิ่มเติมของทางร้านค่ะ**\n"
+            "1. สมุดโน้ต (ขนาด 3x4 นิ้ว)\n- 100 ชิ้น 7 บาท | 300 ชิ้น 6 บาท | 500 ชิ้น 5 บาท\n"
+            "2. สมุดโน้ต (ขนาด A5)\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n"
+            "3. หนังสืออัซการ\n- 100 ชิ้น 12 บาท | 300 ชิ้น 11 บาท | 500 ชิ้น 10 บาท\n"
+            "4. สบู่หอม\n- 100 ชิ้น 10 บาท | 300 ชิ้น 9 บาท | 500 ชิ้น 8 บาท\n"
+            "5. น้ำหอมในรถ\n- ขั้นต่ำ 50 ชิ้นขึ้นไป ราคาเริ่มต้น 26 บาท\n\n"
+            "📌 *หากต้องการเปลี่ยนแพ็กเกจเป็นถุงแก้วใส มีค่าใช้จ่ายเพิ่มเติม +3 บาท/ชิ้น ค่ะ*\n"
+            "[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/k47g9x6R/Banner-02.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/G2h50m7W/Banner-04.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/bJ0nG9sF/Banner-05.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/cL6pX4v8/Banner-06.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/vB9mK1n2/Banner-07.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/9f1W0z3L/Banner-08.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/3x7N5q9M/Banner-09.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/8z2V4p1K/Banner-10.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/pT6yH8jB/Banner-11.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/L84kM2dD/Banner-12.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/Y05rJ7tF/Banner-13.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/26m4c3f3/Banner-14.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/7L3nB9vH/Banner-15.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/qR8wF5gJ/Banner-16.jpg]\n"
+            "[IMAGE: https://i.postimg.cc/tJ1kL4mN/Banner-17.jpg]"
+        )
+
+    # 9. สอบถามเรทราคาทั่วไป / ทักทาย / สอบถามข้อมูลเบื้องต้น
+    if any(k in t for k in [
+        "ราคา", "เรท", "สอบถาม", "สนใจ", "สวัสดี", "ทัก", "มีอะไรบ้าง", "รายละเอียด", "กี่บาท", "เท่าไหร่"
+    ]):
+        return (
+            f"{greeting}ทางร้าน **ONESTUDIO** บริการรับทำการ์ดแต่งงาน ของชำร่วย และเช่าพานขันหมากค่ะ 🌸🎁\n\n"
+            "📌 **เรทราคาเริ่มต้น (สั่งขั้นต่ำได้ตั้งแต่ 50 ชิ้นค่ะ):**\n"
+            "• **การ์ดแต่งงาน 4x6 นิ้ว (แถมซองฟรี):** เริ่มต้น 3–6 บาท/ใบ\n"
+            "• **การ์ดแต่งงาน 5x7 นิ้ว (แถมซองฟรี):** เริ่มต้น 4–7 บาท/ใบ\n"
+            "• **ของชำร่วยยอดนิยม (21 รายการ):** เริ่มต้น 4–16 บาท/ชิ้น (เช่น ดินสอไม้, พวงกุญแจ, กระจก, น้ำหอมขวดจิ๋ว, ยางมัดผม, กระเป๋าผ้า, น้ำผึ้ง ฯลฯ)\n\n"
+            "คุณลูกค้าสนใจดูรายละเอียด **การ์ดแต่งงาน** หรือ **ของชำร่วย** (หรือต้องการใช้จำนวนกี่ชิ้น) แจ้งให้แอดมินส่งแบบและประเมินราคาได้เลยนะคะ 🥰"
+        )
+
+    # 10. กรณีเป็นข้อความทั่วไปสั้นๆ หรือคำถามอื่นๆ
+    if is_first_turn:
+        return (
+            "สวัสดีค่ะ ยินดีต้อนรับสู่ ONESTUDIO นะคะ 🥰\n"
+            "คุณลูกค้าสนใจสอบถาม **การ์ดแต่งงาน**, **ของชำร่วย** หรือ **เช่าพานขันหมาก** แจ้งรายละเอียดหรือจำนวนที่ต้องการได้เลยนะคะ 🌸"
+        )
+
+    return "[SILENCE]"
+
+
+def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_obj=None):
+    """
+    ประมวลผลคำตอบด้วย Gemini พร้อมสลับรุ่นโมเดลอัตโนมัติ (Multi-model Fallback)
+    และหาก Gemini API โควตาเต็มหรือมีปัญหา จะสลับมาใช้ Rule-based ตอบลูกค้าทันทีโดยไม่เงียบหาย
+    คืนค่า: (bot_reply, history_list, model_used)
+    """
+    history = load_chat_history(user_id)
+    last_err = None
+
+    for candidate_model in GEMINI_MODEL_CANDIDATES:
+        try:
+            candidate = genai.GenerativeModel(
+                candidate_model,
+                system_instruction=system_instruction,
+                generation_config=generation_config
+            )
+            chat = candidate.start_chat(history=history)
+            if image_obj is not None:
+                prompt = (
+                    "ลูกค้าส่งรูปภาพมาให้ กรุณาวิเคราะห์ว่าเป็นสินค้าอะไรในการ์ดแต่งงานหรือของชำร่วยร้านเรา "
+                    "และตอบลูกค้าอย่างสุภาพ อิงตามกฎและราคาที่ตั้งไว้ "
+                    "(ถ้าไม่ใช่สินค้าในร้าน หรือเป็นบรีฟงานส่วนตัว/สลิปโอนเงิน ให้พิมพ์ [SILENCE])"
+                )
+                resp = chat.send_message([prompt, image_obj])
+            else:
+                resp = chat.send_message(user_text)
+
+            if resp and getattr(resp, "text", None):
+                reply_txt = resp.text.strip()
+                last_bot_error_info["error"] = None
+                last_bot_error_info["model_used"] = candidate_model
+                last_bot_error_info["ts"] = int(time.time() * 1000)
+                return reply_txt, history, candidate_model
+        except Exception as err:
+            last_err = str(err)
+            logger.warning(f"Gemini model '{candidate_model}' failed for user {user_id}: {err}")
+            continue
+
+    # หากทุกโมเดลของ Gemini ล้มเหลว (เช่น โควตารายวันเต็ม 429 หรือ API Key มีปัญหา)
+    last_bot_error_info["error"] = last_err
+    last_bot_error_info["model_used"] = "rule_based_fallback"
+    last_bot_error_info["ts"] = int(time.time() * 1000)
+    logger.error(f"All Gemini models failed for user {user_id}. Falling back to rule-based responder. Last error: {last_err}")
+
+    if image_obj is not None:
+        return "[SILENCE]", history, "rule_based_fallback"
+
+    fallback_reply = rule_based_customer_reply(user_text, is_first_turn=(len(history) == 0))
+    return fallback_reply, history, "rule_based_fallback"
+
 
 # สร้าง FastAPI App
 app = FastAPI(title="Line OA Gemini Agent")
@@ -1180,9 +1379,6 @@ def handle_text_message(event):
             logger.error(f"Error processing #order command: {ord_err}")
             return
 
-    # บันทึกชื่อจริงจาก LINE Profile ของลูกค้าที่ทักแชทเข้ามาล่าสุด
-    record_recent_line_customer(user_id, user_text)
-
     # -------------------------------------------------------------
     # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)
     # -------------------------------------------------------------
@@ -1204,8 +1400,8 @@ def handle_text_message(event):
             action_id = None
         
         if action_id:
-            # รอ 1.0 วินาที เพื่อดูว่าลูกค้ากำลังพิมพ์ข้อความถัดไปเข้ามาติดๆ กันหรือไม่ (ลดจาก 2.0s เพื่อป้องกัน LINE timeout)
-            time.sleep(1.0)
+            # รอ 0.8 วินาที เพื่อดูว่าลูกค้ากำลังพิมพ์ข้อความถัดไปเข้ามาติดๆ กันหรือไม่ (ลดเวลาเพื่อป้องกัน LINE reply_token timeout)
+            time.sleep(0.8)
             
             try:
                 doc = buffer_ref.get()
@@ -1239,22 +1435,17 @@ def handle_text_message(event):
                 logger.error(f"Error checking message buffer: {e}")
     
     try:
-        # ดึง Session (ดึงจากความจำหรือสร้างใหม่จาก DB)
-        chat_session = get_chat_session(user_id)
+        # ส่งข้อความไปประมวลผลผ่านระบบ Multi-model + Rule-based Fallback
+        bot_reply, history_list, model_used = generate_bot_reply_with_fallback(user_id, user_text=user_text)
+        logger.info(f"Generated reply for {user_id} via {model_used}")
         
-        # ส่งข้อความไปประมวลผล
-        response = chat_session.send_message(user_text)
-        
-        # ดึงข้อความตอบกลับอย่างปลอดภัย (ป้องกัน Exception หาก Gemini ส่งค่าว่างหรือโดน Safety Block)
-        bot_reply = ""
-        try:
-            if response and response.text:
-                bot_reply = response.text
-        except Exception as text_err:
-            logger.warning(f"Could not extract response text: {text_err}")
-            return # เงียบสนิท
-        
-        # บันทึกสิ่งที่ user พิมพ์ และสิ่งที่บอทตอบ ลง DB พร้อมกันเมื่อประมวลผลสำเร็จเท่านั้น
+        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่ (ไม่บันทึก [SILENCE] ลง DB เพื่อไม่ให้ล็อกแชทลูกค้าถาวร)
+        if not bot_reply or "[SILENCE]" in bot_reply:
+            logger.info(f"Bot chose to stay silent for user {user_id}")
+            record_recent_line_customer(user_id, user_text)
+            return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
+
+        # บันทึกสิ่งที่ user พิมพ์ และสิ่งที่บอทตอบ ลง DB เฉพาะเมื่อเป็นคำตอบจริงเท่านั้น
         save_message(user_id, "user", user_text)
         time.sleep(0.01)
         save_message(user_id, "model", bot_reply)
@@ -1267,29 +1458,20 @@ def handle_text_message(event):
         # ลบ whitespace บนบรรทัดว่างๆ และยุบรวม \n ที่ติดกันเกิน 2 ตัวให้เหลือแค่ 2 ตัว (เว้นพารากราฟเดียว)
         clean_text = re.sub(r'^[ \t]+$', '', clean_text, flags=re.MULTILINE)
         clean_text = re.sub(r'\n{3,}', '\n\n', clean_text).strip()
-        
-        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
-        if "[SILENCE]" in bot_reply:
-            logger.info(f"Bot chose to stay silent for user {user_id}")
-            return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
 
         # ตรวจสอบประวัติการคุยก่อนหน้ารอบนี้ เพื่อป้องกัน:
         # 1. บอทเผลอทักทาย "สวัสดี" ซ้ำในรอบที่ไม่ใช่รอบแรกสุด
         # 2. ป้องกันการส่งรูปสินค้าเดิมซ้ำ หากเคยส่งไปแล้วในแชทนี้ (ส่งเฉพาะที่ยังไม่เคยส่ง)
-        is_subsequent_turn = False
+        is_subsequent_turn = len(history_list) > 0
         past_image_urls = set()
         try:
-            if chat_session and chat_session.history:
-                # ถ้า session มีประวัติมากกว่า 2 messages แสดงว่าเป็นรอบที่ 2 ขึ้นไป
-                if len(chat_session.history) > 2:
-                    is_subsequent_turn = True
-                
-                # ดึงรูปทั้งหมดที่เคยส่งในรอบก่อนๆ (ไม่รวมรอบปัจจุบัน index -1)
-                for h in chat_session.history[:-1]:
-                    if getattr(h, 'role', '') == "model":
-                        for part in getattr(h, 'parts', []):
-                            part_text = getattr(part, 'text', '') if hasattr(part, 'text') else str(part)
-                            past_image_urls.update(re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', part_text))
+            for h in history_list:
+                role = h.get("role", "") if isinstance(h, dict) else getattr(h, "role", "")
+                if role == "model":
+                    parts = h.get("parts", []) if isinstance(h, dict) else getattr(h, "parts", [])
+                    for part in parts:
+                        part_text = part if isinstance(part, str) else getattr(part, "text", str(part))
+                        past_image_urls.update(re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', part_text))
         except Exception as hist_err:
             logger.warning(f"Error inspecting chat history: {hist_err}")
 
@@ -1325,6 +1507,7 @@ def handle_text_message(event):
             
         if not clean_text and not image_urls:
             logger.info(f"No content to send for user {user_id}")
+            record_recent_line_customer(user_id, user_text)
             return
             
         messages = []
@@ -1363,10 +1546,13 @@ def handle_text_message(event):
                     logger.info(f"Pushed batch {i//5 + 1}: {len(push_msgs)} images to user {user_id}.")
             except Exception as push_err:
                 logger.warning(f"LINE push_message limit reached or failed: {push_err}")
+
+        # บันทึกชื่อจริงจาก LINE Profile ของลูกค้าหลังจากส่งข้อความตอบกลับแล้ว เพื่อไม่ให้หน่วงเวลา reply_token
+        record_recent_line_customer(user_id, user_text)
         
     except Exception as e:
         logger.error(f"Error generating content or replying: {e}")
-        # ถ้าระบบขัดข้อง ให้เงียบสนิท ไม่ส่งข้อความใดๆ ให้ลูกค้ารำคาญหรือสับสนเด็ดขาด
+        record_recent_line_customer(user_id, user_text)
         return
 
 @handler.add(MessageEvent, message=ImageMessage)
@@ -1381,9 +1567,6 @@ def handle_image_message(event):
     logger.info(f"Received image message from user {user_id}")
     
     try:
-        # ดึง Session
-        chat_session = get_chat_session(user_id)
-        
         # ดึงข้อมูลรูปภาพจาก Line Server
         message_content = line_bot_api.get_message_content(message_id)
         image_bytes = b""
@@ -1393,31 +1576,53 @@ def handle_image_message(event):
         # เปิดรูปภาพด้วย Pillow เพื่อส่งให้ Gemini
         image = PIL.Image.open(io.BytesIO(image_bytes))
         
-        # เราจะไม่บันทึกรูปภาพลงฐานข้อมูลเพื่อประหยัดพื้นที่ แต่บันทึกเป็น text ว่า "User sent an image" ก็ได้
-        save_message(user_id, "user", "[User sent an image]")
+        bot_reply, _, model_used = generate_bot_reply_with_fallback(user_id, image_obj=image)
+        logger.info(f"Generated image reply for {user_id} via {model_used}")
         
-        # ส่งรูปภาพให้ Gemini พร้อมคำสั่งกำกับ
-        prompt = "ลูกค้าส่งรูปภาพมาให้ กรุณาวิเคราะห์ว่าเป็นสินค้าอะไรในการ์ดแต่งงานหรือของชำร่วยร้านเรา และตอบลูกค้าอย่างสุภาพ อิงตามกฎและราคาที่ตั้งไว้ (ถ้าไม่ใช่สินค้าในร้าน หรือเป็นบรีฟงานส่วนตัว ให้พิมพ์ [SILENCE])"
-        response = chat_session.send_message([prompt, image])
-        
-        bot_reply = response.text.strip()
-        
-        # บันทึกการตอบกลับลง DB
-        save_message(user_id, "model", bot_reply)
-        
-        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่
-        if "[SILENCE]" in bot_reply or bot_reply == "":
+        # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่ (ไม่บันทึก [User sent an image] หรือ [SILENCE] ลง DB เพื่อไม่ให้ประวัติแชทรวน)
+        if not bot_reply or "[SILENCE]" in bot_reply:
             logger.info(f"Bot chose to stay silent for image from user {user_id}")
             return
+            
+        clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply).strip()
+        if not clean_text:
+            return
+
+        # บันทึกการตอบกลับลง DB เฉพาะกรณีที่บอทตอบจริง
+        save_message(user_id, "user", "ลูกค้าส่งรูปภาพสอบถามสินค้า")
+        time.sleep(0.01)
+        save_message(user_id, "model", clean_text)
             
         # ส่งข้อความกลับไปยัง Line
         line_bot_api.reply_message(
             reply_token,
-            TextSendMessage(text=bot_reply)
+            TextSendMessage(text=clean_text)
         )
         logger.info(f"Replied to user {user_id} regarding their image.")
         
     except Exception as e:
         logger.error(f"Error processing image or replying: {e}")
-        # ถ้าระบบขัดข้อง ให้เงียบสนิท ไม่ส่งข้อความใดๆ ให้ลูกค้า
         return
+
+
+@app.get("/api/bot-health")
+async def get_bot_health(probe: bool = False):
+    """ตรวจสอบสถานะการทำงานของ LINE Bot, Gemini API และระบบ Fallback"""
+    probe_result = {}
+    if probe:
+        for m_name in GEMINI_MODEL_CANDIDATES:
+            try:
+                m = genai.GenerativeModel(m_name)
+                r = m.generate_content("ตอบสั้นๆ ว่า OK")
+                probe_result[m_name] = {"ok": True, "reply": (r.text or "").strip()[:40]}
+                break
+            except Exception as err:
+                probe_result[m_name] = {"ok": False, "error": str(err)[:200]}
+    return {
+        "ok": True,
+        "candidates": GEMINI_MODEL_CANDIDATES,
+        "ruleBasedFallbackEnabled": True,
+        "lastBotInfo": last_bot_error_info,
+        "probe": probe_result if probe else None,
+    }
+
