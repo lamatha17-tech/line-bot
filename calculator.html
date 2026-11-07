@@ -146,7 +146,8 @@
         </div>
 
         <p class="text-xs text-slate-500">แตะเลือกชื่อลูกค้าจริงจาก LINE ด้านบนเพื่อดูข้อความแชทล่าสุด แล้วพิมพ์
-          <b>#order รายการสินค้า จำนวน ค่าส่ง...</b> ด้านล่างได้เลย</p>
+          <b>#order รายการสินค้า จำนวน ค่าส่ง...</b> ด้านล่างได้เลย
+        </p>
       </div>
 
       <!-- หน้าจอห้องแชท LINE จริง & ออกบิล #order -->
@@ -529,7 +530,8 @@
             <div class="flex items-center gap-2">
               <span class="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs">👤</span>
               <div>
-                <div id="label-fund-wage" class="text-xs font-semibold text-emerald-900">ค่าแรงตัวเอง (30% อัตโนมัติ)</div>
+                <div id="label-fund-wage" class="text-xs font-semibold text-emerald-900">ค่าแรงตัวเอง (30% อัตโนมัติ)
+                </div>
                 <div class="text-xs text-emerald-600">เงินเดือน/ค่าแรงผลิตของเจ้าของร้าน</div>
               </div>
             </div>
@@ -677,7 +679,8 @@
               <span>📌</span> รายละเอียดการผลิต & การรับเงิน (ONESTUDIO)
             </div>
             <p class="text-slate-500">• ออกแบบให้ฟรี และปรับโทนสีแพ็คเกจตามธีมงานได้ค่ะ</p>
-            <p id="bill-leadtime-text" class="text-slate-700 font-medium">• ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ดแต่งงาน 7–15 วัน)
+            <p id="bill-leadtime-text" class="text-slate-700 font-medium">• ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ดแต่งงาน
+              7–15 วัน)
               หลังคอนเฟิร์มแบบ</p>
             <p class="text-emerald-700 font-medium">💕 ขอบพระคุณที่ไว้วางใจ ONESTUDIO ในวันสำคัญนะคะ</p>
           </div>
@@ -732,11 +735,13 @@
             💾 บันทึกตั้งค่าร้าน
           </button>
         </div>
-        <p class="text-xs text-slate-500">ปรับแก้เลขบัญชีธนาคาร ข้อความท้ายบิล และสัดส่วน % กองทุนได้ตลอดเวลา ระบบจะซิงค์กับ LINE Bot อัตโนมัติ</p>
+        <p class="text-xs text-slate-500">ปรับแก้เลขบัญชีธนาคาร ข้อความท้ายบิล และสัดส่วน % กองทุนได้ตลอดเวลา
+          ระบบจะซิงค์กับ LINE Bot อัตโนมัติ</p>
 
         <div class="space-y-2.5 text-xs">
           <div>
-            <label class="text-xs font-semibold text-slate-700 block">🏦 ช่องทางชำระเงิน / เลขบัญชีธนาคาร (แสดงในบิลและข้อความส่งลูกค้า)</label>
+            <label class="text-xs font-semibold text-slate-700 block">🏦 ช่องทางชำระเงิน / เลขบัญชีธนาคาร
+              (แสดงในบิลและข้อความส่งลูกค้า)</label>
             <textarea id="setting-bank-info" rows="2"
               placeholder="เช่น ธ.กสิกรไทย 123-4-56789-0 ชื่อบัญชี วันสตูดิโอ (พร้อมเพย์ 089-xxx-xxxx)"
               class="w-full mt-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
@@ -784,7 +789,8 @@
             คืนค่าเริ่มต้น
           </button>
         </div>
-        <p class="text-xs text-slate-500">ปรับแก้ได้ทั้ง <b>ต้นทุนค่าของ (฿)</b>, <b>ชื่อสินค้า</b> และ <b>เรทราคาขาย (100/300/500 ชิ้น)</b> เผื่อปรับราคาในอนาคตได้ทันที</p>
+        <p class="text-xs text-slate-500">ปรับแก้ได้ทั้ง <b>ต้นทุนค่าของ (฿)</b>, <b>ชื่อสินค้า</b> และ <b>เรทราคาขาย
+            (100/300/500 ชิ้น)</b> เผื่อปรับราคาในอนาคตได้ทันที</p>
 
         <div class="grid grid-cols-2 gap-2">
           <button onclick="manualSaveAll()"
@@ -1524,16 +1530,13 @@
 
     function fillSampleFormatOrder() {
       const sampleText = `#order
-1. ยางมัดผม 100*10฿=฿1,000.00
-2. กระจก 150*7฿=฿1,050.00
-3. กระเป๋าผ้า 100*10฿=฿1,000.00
-4. พวงกุญแจ 100*7฿=฿700.00
-5. น้ำหอม 100*8฿=฿800.00
+ยอดการ์ด 5*7 พิมพ์หน้าหลัง 7.5฿*100=฿750.00
+ซองสีฟ้าคราม 3฿*100=฿300.00
+น้ำผึ้ง 100*18฿=฿1,800.00
+กระจก 100*7฿=฿700.00
+ค่าส่ง 100฿
 
-ค่าส่ง 130฿
-ยอดรวม 1,000+1,050+1,000+700+800+130=4,680
-
-ยอดโอน 4,680฿`;
+ยอดโอน 3,650฿`;
       document.getElementById("chat-command-input").value = sampleText;
       sendChatOrderCommand();
     }
@@ -1664,13 +1667,44 @@
       return null;
     }
 
+    function parseMulOperandsJS(val1Str, u1, val2Str, u2) {
+      const v1 = parseFloat((val1Str || "0").replace(/,/g, ""));
+      const v2 = parseFloat((val2Str || "0").replace(/,/g, ""));
+      const u1Clean = (u1 || "").trim().toLowerCase();
+      const u2Clean = (u2 || "").trim().toLowerCase();
+      const priceUnits = ["฿", "บาท"];
+      const qtyUnits = ["ชิ้น", "ใบ", "ซอง", "อัน", "ขวด", "เล่ม", "ชุด"];
+
+      if (priceUnits.includes(u1Clean) || qtyUnits.includes(u2Clean)) {
+        return { qty: Math.round(v2), unitSell: v1 };
+      }
+      if (priceUnits.includes(u2Clean) || qtyUnits.includes(u1Clean)) {
+        return { qty: Math.round(v1), unitSell: v2 };
+      }
+      if (val1Str.includes(".") && !val2Str.includes(".")) {
+        return { qty: Math.round(v2), unitSell: v1 };
+      }
+      if (val2Str.includes(".") && !val1Str.includes(".")) {
+        return { qty: Math.round(v1), unitSell: v2 };
+      }
+      if (v1 < 30 && v2 >= 30) {
+        return { qty: Math.round(v2), unitSell: v1 };
+      }
+      return { qty: Math.round(v1), unitSell: v2 };
+    }
+
     function extractOrderItemsFromTextJS(rawText) {
       const detectedItems = [];
       const lines = rawText.split(/\r?\n/);
+      const rawLowerAll = rawText.toLowerCase();
+      const orderHas5x7Card = /5\s*[\*x×]\s*7/i.test(rawLowerAll);
+      const orderHas4x6Card = /4\s*[\*x×]\s*6/i.test(rawLowerAll);
+      const mulRegexGlobal = /(\d[\d,]*(?:\.\d+)?)\s*(฿|บาท|ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d[\d,]*(?:\.\d+)?)\s*(฿|บาท|ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?)\s*(?:฿|บาท)?)?/gi;
 
       for (const rawLine of lines) {
         let lineStr = rawLine.trim();
         if (!lineStr) continue;
+        // ข้ามบรรทัดหัวคำสั่งหรือบรรทัดสรุปยอดท้ายบิล (แต่ไม่ข้าม "ยอดการ์ด...")
         if (/^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด|สถานะ|รอโอน|โอนเต็ม|จ่ายเต็ม|ชำระเต็ม)/i.test(lineStr)) {
           continue;
         }
@@ -1697,13 +1731,24 @@
 
           let qty = null;
           let explicitUnit = null;
+          let mulMatch = null;
 
-          const mulMatch = segClean.match(/(\d[\d,]*)\s*(?:ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?/i);
+          // ค้นหาตัวคูณราคา/จำนวน ทั้งแบบ 100*18฿=฿1,800 และ 7.5฿*100=฿750 โดยข้ามขนาดการ์ด เช่น 5*7 หรือ 4*6
+          const allMatches = [...segClean.matchAll(mulRegexGlobal)];
+          for (const cand of allMatches) {
+            const g1 = cand[1], u1 = cand[2], g2 = cand[3], u2 = cand[4], gTot = cand[5];
+            const isDim = (["3", "4", "5"].includes(g1) && ["4", "6", "7"].includes(g2) && !u1 && !u2 && !gTot);
+            if (isDim) continue;
+            mulMatch = cand;
+            if (gTot || u1 || u2) break;
+          }
+
           if (mulMatch) {
-            qty = parseInt(mulMatch[1].replace(/,/g, ""));
-            explicitUnit = parseFloat(mulMatch[2]);
+            const parsed = parseMulOperandsJS(mulMatch[1], mulMatch[2], mulMatch[3], mulMatch[4]);
+            qty = parsed.qty;
+            explicitUnit = parsed.unitSell;
           } else {
-            const forNum = segClean.replace(/(4x6|5x7|3x4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)/gi, " ");
+            const forNum = segClean.replace(/(4\s*[\*x×]\s*6|5\s*[\*x×]\s*7|3\s*[\*x×]\s*4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)/gi, " ");
             const numMatch = forNum.match(/(\d[\d,]*)/);
             if (numMatch) {
               const val = parseInt(numMatch[1].replace(/,/g, ""));
@@ -1711,8 +1756,13 @@
             }
           }
 
-          const prod = matchCatalogProductSmartJS(segClean.toLowerCase(), explicitUnit);
+          let prod = matchCatalogProductSmartJS(segClean.toLowerCase(), explicitUnit);
           if (prod) {
+            // กรณีซองการ์ดสีอื่นๆ ที่ในบรรทัดไม่ได้ระบุขนาดซ้ำ แต่ในออเดอร์เดียวกันมีการ์ด 5x7 ให้ผูกเป็นซอง 5x7 (108) อัตโนมัติ (ต้นทุน 2.5฿ เท่ากันทั้งสองขนาด)
+            if (prod.id === 107 && orderHas5x7Card && !orderHas4x6Card && !/4\s*[\*x×]\s*6/i.test(segClean)) {
+              prod = matchCatalogProductSmartJS(segClean.toLowerCase() + " 5x7", explicitUnit) || prod;
+            }
+
             let itemCustomName = "";
             let finalMat = explicitMat !== null ? explicitMat : prod.mat;
             if (explicitMat !== null) {
@@ -1730,9 +1780,11 @@
                 rawEnvLabel = segClean.replace(new RegExp(`\\b${qty}\\s*(?:ชิ้น|ใบ|ซอง|อัน)?\\b`), "").replace(/^[\s\-•:=]+|[\s\-•:=]+$/g, "");
               }
               if (rawEnvLabel) {
-                const sizeSuffix = (prod.id === 108 && !/5\s*[x\*]\s*7/i.test(rawEnvLabel))
+                const has5x7Label = /5\s*[\*x×]\s*7/i.test(rawEnvLabel);
+                const has4x6Label = /4\s*[\*x×]\s*6/i.test(rawEnvLabel);
+                const sizeSuffix = (prod.id === 108 && !has5x7Label)
                   ? " (5x7 นิ้ว)"
-                  : ((prod.id === 107 && !/4\s*[x\*]\s*6/i.test(rawEnvLabel)) ? " (4x6 นิ้ว)" : "");
+                  : ((prod.id === 107 && !has4x6Label && orderHas4x6Card) ? " (4x6 นิ้ว)" : "");
                 const prefix = rawEnvLabel.startsWith("✉️") ? "" : "✉️ ";
                 itemCustomName = `${prefix}${rawEnvLabel}${sizeSuffix}`;
               }
@@ -1746,7 +1798,7 @@
               customUnitMat: finalMat
             });
           } else if (mulMatch && qty && explicitUnit !== null) {
-            // สินค้าพิเศษ / นอกแคตตาล็อกที่พิมพ์มาในรูปแบบ จำนวน*ราคา=ยอดรวม
+            // สินค้าพิเศษ / นอกแคตตาล็อกที่พิมพ์มาในรูปแบบ จำนวน*ราคา=ยอดรวม หรือ ราคา*จำนวน=ยอดรวม
             const rawCustomName = (segClean.slice(0, mulMatch.index) + " " + segClean.slice(mulMatch.index + mulMatch[0].length)).replace(/^[\s\-•:=]+|[\s\-•:=]+$/g, "");
             const customName = rawCustomName ? `✨ ${rawCustomName}` : "✨ สินค้าพิเศษ (นอกแคตตาล็อก)";
             detectedItems.push({

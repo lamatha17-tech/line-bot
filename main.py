@@ -802,16 +802,50 @@ def match_catalog_product_smart(seg_lower: str, explicit_unit: float = None, cus
     return None
 
 
+def _parse_mul_operands(val1_str: str, u1: str, val2_str: str, u2: str, total_str: str = None):
+    """แยกแยะทั้งรูปแบบ จำนวน*ราคา฿ (100*18฿=฿1,800.00) และ ราคา฿*จำนวน (7.5฿*100=฿750.00 หรือ 3฿*100=฿300.00)"""
+    v1 = float(val1_str.replace(',', ''))
+    v2 = float(val2_str.replace(',', ''))
+    u1_clean = (u1 or '').strip().lower()
+    u2_clean = (u2 or '').strip().lower()
+    price_units = {'฿', 'บาท'}
+    qty_units = {'ชิ้น', 'ใบ', 'ซอง', 'อัน', 'ขวด', 'เล่ม', 'ชุด'}
+
+    if u1_clean in price_units or u2_clean in qty_units:
+        unit_sell, qty = v1, int(round(v2))
+    elif u2_clean in price_units or u1_clean in qty_units:
+        qty, unit_sell = int(round(v1)), v2
+    elif '.' in val1_str and '.' not in val2_str:
+        unit_sell, qty = v1, int(round(v2))
+    elif '.' in val2_str and '.' not in val1_str:
+        qty, unit_sell = int(round(v1)), v2
+    elif v1 < 30 and v2 >= 30:
+        unit_sell, qty = v1, int(round(v2))
+    else:
+        qty, unit_sell = int(round(v1)), v2
+
+    explicit_total = float(total_str.replace(',', '')) if total_str else None
+    return qty, unit_sell, explicit_total
+
+
 def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_catalog: list = None) -> list:
-    """สกัดรายการสินค้าทั้งรูปแบบหลายบรรทัด (เช่น 1. ยางมัดผม 100*10฿=฿1,000.00) รูปแบบบรรทัดเดียว และสินค้าพิเศษนอกแคตตาล็อก"""
+    """สกัดรายการสินค้าทั้งรูปแบบ จำนวน*ราคา฿ (100*18฿=฿1,800) และ ราคา฿*จำนวน (7.5฿*100=฿750, 3฿*100=฿300) รวมถึงขนาด 5*7 / 4*6"""
     detected = []
     lines = raw_text.splitlines()
+    raw_lower_all = raw_text.lower()
+    order_has_5x7_card = bool(re.search(r'5\s*[\*x×]\s*7', raw_lower_all))
+    order_has_4x6_card = bool(re.search(r'4\s*[\*x×]\s*6', raw_lower_all))
+
+    mul_pattern = re.compile(
+        r'(\d[\d,]*(?:\.\d+)?)\s*(฿|บาท|ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d[\d,]*(?:\.\d+)?)\s*(฿|บาท|ชิ้น|ใบ|ซอง|อัน|ขวด|เล่ม|ชุด)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?)\s*(?:฿|บาท)?)?',
+        flags=re.IGNORECASE,
+    )
 
     for raw_line in lines:
         line_str = raw_line.strip()
         if not line_str:
             continue
-        # ข้ามบรรทัดหัวคำสั่งหรือบรรทัดสรุปยอดท้ายบิล
+        # ข้ามบรรทัดหัวคำสั่งหรือบรรทัดสรุปยอดท้ายบิล (แต่ไม่ข้าม "ยอดการ์ด...")
         if re.match(r'^(?:#\s*(?:order|oder|ออเดอร์|บิล)\s*$|ค่าส่ง|ส่งจริง|ยอดรวม|ยอดโอน|รวมทั้งสิ้น|มัดจำ|ส่วนลด|สถานะ|รอโอน|โอนเต็ม|จ่ายเต็ม|ชำระเต็ม)', line_str, flags=re.IGNORECASE):
             continue
         # ลบคำว่า #order / #oder ที่อยู่ต้นบรรทัด (กรณีพิมพ์บรรทัดเดียวกัน)
@@ -842,21 +876,27 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
             qty = None
             explicit_unit = None
             explicit_total = None
+            mul_m = None
 
-            # ตรวจจับรูปแบบ "100*10฿=฿1,000.00" หรือ "150 x 7 = 1,050"
-            mul_m = re.search(
-                r'(\d[\d,]*)\s*(?:ชิ้น|ใบ|อัน|ขวด|เล่ม|ชุด)?\s*[\*x×]\s*(\d+(?:\.\d+)?)\s*(?:฿|บาท)?(?:\s*=\s*฿?\s*([\d,]+(?:\.\d+)?))?',
-                seg_clean,
-                flags=re.IGNORECASE,
-            )
+            # ค้นหาตัวคูณราคา/จำนวน โดยข้ามตัวเลขขนาดการ์ด/สมุด เช่น 4*6, 5*7, 3*4 ที่ไม่มีหน่วยเงินหรือเครื่องหมาย =
+            all_mul_matches = list(mul_pattern.finditer(seg_clean))
+            for cand in all_mul_matches:
+                g1, u1, g2, u2, g_tot = cand.group(1), cand.group(2), cand.group(3), cand.group(4), cand.group(5)
+                is_dim = (g1 in ('3', '4', '5') and g2 in ('4', '6', '7') and not u1 and not u2 and not g_tot)
+                if is_dim:
+                    continue
+                mul_m = cand
+                # หากเจอตัวที่มีเครื่องหมาย = หรือมีหน่วย ฿ ให้ใช้ตัวนั้นทันที
+                if g_tot or u1 or u2:
+                    break
+
             if mul_m:
-                qty = int(mul_m.group(1).replace(',', ''))
-                explicit_unit = float(mul_m.group(2))
-                if mul_m.group(3):
-                    explicit_total = float(mul_m.group(3).replace(',', ''))
+                qty, explicit_unit, explicit_total = _parse_mul_operands(
+                    mul_m.group(1), mul_m.group(2), mul_m.group(3), mul_m.group(4), mul_m.group(5)
+                )
             else:
-                # ตัดชื่อขนาดเช่น 4x6, 5x7, 3x4, 30ml, a5 ออกก่อนหาตัวเลขจำนวนชิ้น
-                for_num = re.sub(r'(4x6|5x7|3x4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)', ' ', seg_clean, flags=re.IGNORECASE)
+                # ตัดชื่อขนาดเช่น 4x6, 4*6, 5x7, 5*7, 3x4, 30ml, a5 ออกก่อนหาตัวเลขจำนวนชิ้น
+                for_num = re.sub(r'(4\s*[\*x×]\s*6|5\s*[\*x×]\s*7|3\s*[\*x×]\s*4|30\s*ml|a5|5\.1|5\.2|13\.1|13\.2|18\.1|18\.2)', ' ', seg_clean, flags=re.IGNORECASE)
                 num_m = re.search(r'(\d[\d,]*)', for_num)
                 if num_m:
                     val = int(num_m.group(1).replace(',', ''))
@@ -867,6 +907,10 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
             if prod:
                 if qty is None:
                     qty = 100
+                # กรณีซองการ์ดสีอื่นๆ ที่ในบรรทัดไม่ได้ระบุขนาดซ้ำ แต่ในออเดอร์เดียวกันมีการ์ด 5x7 ให้ผูกเป็นซอง 5x7 (108) อัตโนมัติ (ต้นทุน 2.5฿ เท่ากันทั้งสองขนาด)
+                if prod["id"] == 107 and order_has_5x7_card and not order_has_4x6_card and not re.search(r'4\s*[\*x×]\s*6', seg_clean):
+                    prod = match_catalog_product_smart(seg_clean.lower() + " 5x7", explicit_unit, custom_catalog) or prod
+
                 default_tier_sell = prod["tiers"][500] if qty >= 500 else (prod["tiers"][300] if qty >= 300 else prod["tiers"][100])
                 unit_sell = explicit_unit if explicit_unit is not None else default_tier_sell
                 line_total = round(explicit_total if explicit_total is not None else (qty * unit_sell), 1)
@@ -882,9 +926,14 @@ def extract_order_items_from_text(raw_text: str, custom_mat_map: dict, custom_ca
                     else:
                         raw_env_label = re.sub(r'\b' + str(qty) + r'\s*(?:ชิ้น|ใบ|ซอง|อัน)?\b', '', seg_clean, count=1).strip(" -•:=")
                     if raw_env_label:
-                        size_suffix = " (5x7 นิ้ว)" if (prod["id"] == 108 and "5x7" not in raw_env_label and "5*7" not in raw_env_label) else (
-                            " (4x6 นิ้ว)" if (prod["id"] == 107 and "4x6" not in raw_env_label and "4*6" not in raw_env_label) else ""
-                        )
+                        has_5x7_label = bool(re.search(r'5\s*[\*x×]\s*7', raw_env_label))
+                        has_4x6_label = bool(re.search(r'4\s*[\*x×]\s*6', raw_env_label))
+                        if prod["id"] == 108 and not has_5x7_label:
+                            size_suffix = " (5x7 นิ้ว)"
+                        elif prod["id"] == 107 and not has_4x6_label and order_has_4x6_card:
+                            size_suffix = " (4x6 นิ้ว)"
+                        else:
+                            size_suffix = ""
                         prefix = "" if raw_env_label.startswith("✉️") else "✉️ "
                         item_display_name = f"{prefix}{raw_env_label}{size_suffix}"
 
