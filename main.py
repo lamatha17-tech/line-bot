@@ -338,10 +338,9 @@ generation_config = {
 
 GEMINI_MODEL_CANDIDATES = [
     'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-2.5-pro',
 ]
 
 model = genai.GenerativeModel(
@@ -352,6 +351,7 @@ model = genai.GenerativeModel(
 
 chat_sessions = {}
 processed_message_ids = set()
+failed_model_cooldowns = {}
 last_bot_error_info = {"error": None, "model_used": None, "ts": None}
 
 
@@ -509,14 +509,18 @@ def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> st
 
 def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_obj=None):
     """
-    ประมวลผลคำตอบด้วย Gemini พร้อมสลับรุ่นโมเดลอัตโนมัติ (Multi-model Fallback)
+    ประมวลผลคำตอบด้วย Gemini พร้อมสลับรุ่นโมเดลอัตโนมัติ (Multi-model Fallback + Cooldown Cache)
     และหาก Gemini API โควตาเต็มหรือมีปัญหา จะสลับมาใช้ Rule-based ตอบลูกค้าทันทีโดยไม่เงียบหาย
     คืนค่า: (bot_reply, history_list, model_used)
     """
     history = load_chat_history(user_id)
     last_err = None
+    now_ts = time.time()
 
     for candidate_model in GEMINI_MODEL_CANDIDATES:
+        cooldown_until = failed_model_cooldowns.get(candidate_model, 0)
+        if now_ts < cooldown_until:
+            continue
         try:
             candidate = genai.GenerativeModel(
                 candidate_model,
@@ -536,12 +540,21 @@ def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_ob
 
             if resp and getattr(resp, "text", None):
                 reply_txt = resp.text.strip()
+                failed_model_cooldowns.pop(candidate_model, None)
                 last_bot_error_info["error"] = None
                 last_bot_error_info["model_used"] = candidate_model
                 last_bot_error_info["ts"] = int(time.time() * 1000)
                 return reply_txt, history, candidate_model
         except Exception as err:
-            last_err = str(err)
+            err_str = str(err)
+            last_err = err_str
+            # หากโมเดลไม่มีอยู่จริง (404) ให้พัก 12 ชม. หากโควตาเต็ม (429) ให้พัก 3 นาที เพื่อไม่ให้หน่วงเวลาตอบลูกค้า
+            if "404" in err_str or "not found" in err_str.lower() or "no longer available" in err_str.lower():
+                failed_model_cooldowns[candidate_model] = now_ts + 43200
+            elif "429" in err_str or "quota" in err_str.lower():
+                failed_model_cooldowns[candidate_model] = now_ts + 180
+            else:
+                failed_model_cooldowns[candidate_model] = now_ts + 60
             logger.warning(f"Gemini model '{candidate_model}' failed for user {user_id}: {err}")
             continue
 
