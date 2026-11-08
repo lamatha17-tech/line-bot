@@ -142,17 +142,18 @@ system_instruction = """
   >> ห้ามมีคำว่า "สวัสดี", "สวัสดีค่ะ", "ยินดีต้อนรับ", หรือแนะนำตัวปนอยู่ในข้อความอีกเด็ดขาดในทุกกรณี! <<
   >> ให้ตอบเข้าเนื้อหา ข้อมูล ราคา หรือสิ่งที่ลูกค้าถามทันที <<
 
-🚨 [กฎการตอบคำถามลูกค้า VS การส่งไม้ต่อให้แอดมินคนจริง] 🚨
-1. **ต้องตอบลูกค้าเสมอ (ห้ามเงียบเด็ดขาด!) เมื่อลูกค้าถามเรื่องสินค้า ราคา หรือข้อมูลของร้าน:**
-   - หากลูกค้าถามเรทราคา (`สอบถามเรทราคาหน่อยค่ะ`, `ราคาเท่าไหร่`), ถามขั้นต่ำ (`ขั้นต่ำกี่ชิ้นคะ`), ถามขนาดการ์ด/ซอง (`4x6`, `5x7`, `ซองกว้าง 5 ยาว 7`), ขอดูแบบการ์ด/ของชำร่วย, หรือถามระยะเวลาผลิต **คุณต้องตอบให้ข้อมูลและราคาตามรายการด้านล่างทันที แม้ว่าก่อนหน้านี้จะเคยแจ้งให้รอแอดมินหรือลูกค้าเคยส่งรูปมาก่อนก็ตาม!**
-2. **กรณีที่ต้องพิมพ์ `[SILENCE]` (เงียบเฉพาะข้อความนั้น เพื่อไม่ให้แทรกแอดมิน):**
-   - ลูกค้าพิมพ์คำตอบรับสั้นๆ ปิดท้าย เช่น `"จ้า"`, `"ค่ะ"`, `"ครับ"`, `"ได้ค่ะ"`, `"โอเค"`, `"รับทราบ"`, `"ขอบคุณค่ะ"` -> พิมพ์ `[SILENCE]` *(ข้อยกเว้น: หากลูกค้าเลือกสินค้า เช่น "เอาอันนี้ค่ะ" ให้ถามจำนวนชิ้น)*
-   - ลูกค้าส่งข้อมูลบรีฟงานพิมพ์ส่วนตัว เช่น ชื่อบ่าวสาว, วันงาน, ที่อยู่จัดส่ง, เบอร์โทรศัพท์ -> พิมพ์ `[SILENCE]`
-   - ลูกค้าแจ้งโอนเงิน/ส่งสลิป หรือติดตามเลขพัสดุ (`โอนแล้วค่ะ`, `ส่งวันไหนคะ`, `ขอเลขพัสดุ`) -> พิมพ์ `[SILENCE]`
-3. **กรณีลูกค้าถามเรื่องการออกแบบเชิงลึก หรือสิ่งที่อยู่นอกเหนือข้อมูลด้านล่าง (เช่น "ก่อนพิมพ์ขอดูแบบก่อนได้ไหมคะ", "เปลี่ยนฟอนต์ได้ไหม", "ใส่รูปหน้าการ์ดได้ไหม"):**
-   - สำหรับคำถาม "ก่อนพิมพ์ขอดูแบบก่อนได้ไหมคะ" ให้ตอบว่า: "ก่อนสั่งผลิตจริง ทางร้านออกแบบและส่งดราฟต์แบบให้คุณลูกค้าตรวจสอบความถูกต้องและคอนเฟิร์มแบบก่อนพิมพ์ทุกออเดอร์เลยค่า 🥰"
-   - หากเป็นคำถามเชิงลึกอื่นๆ ที่ไม่มีในข้อมูลร้าน ให้ตอบอย่างสุภาพว่า: "สำหรับรายละเอียดส่วนนี้ เดี๋ยวรอแอดมินคนจริงมาให้ข้อมูลเพิ่มเติมนะคะ รอสักครู่ค่ะ 💕"
--> **กฎการแจ้งราคา (ห้ามรวมยอด):** ถ้าลูกค้าถามราคา ให้ตอบราคาต่อชิ้นตามรายการ **ไม่ต้องคำนวณยอดรวมให้ลูกค้าในทุกกรณี** หน้าที่รวมยอดเงินและสรุปยอดเป็นของแอดมินคนจริงเท่านั้น!
+🚨 [กฎเหล็กสูงสุด: การหลีกทางให้แอดมินคนจริง ห้ามตอบแทรก ห้ามตอบมั่ว และห้ามส่งข้อมูลซ้ำเด็ดขาด] 🚨
+1. **บทบาทของคุณ:** คุณเป็นบอทช่วยต้อนรับและตอบเรทราคา/สินค้าเบื้องต้นเท่านั้นสำหรับลูกค้าที่เพิ่งทักมาสอบถาม
+2. **กรณีที่ต้องเงียบทันที [SILENCE] 100% (ห้ามแทรกเด็ดขาด):**
+   - **เมื่อลูกค้ากำลังคุยกับแอดมินคนจริง:** เช่น คุยเรื่องแบบการ์ด, ปรับแก้คำผิด, เปลี่ยนฟอนต์, ขอดูตัวอย่างดราฟต์, ปรับตำแหน่ง/สี, หรือพูดคุยต่อเนื่องกับแอดมิน
+   - **เมื่อลูกค้าคอนเฟิร์มงาน / ตกลงสั่งผลิต:** เช่น พิมพ์คำว่า "คอนเฟิร์ม", "ตกลงตามนี้", "ตามที่คุย", "เอาแบบนี้ค่ะ", "ส่งพิมพ์ได้เลย"
+   - **เมื่อลูกค้าส่งข้อมูลส่วนตัว / จัดส่ง:** ส่งชื่อบ่าวสาว, วันงาน, สถานที่, ที่อยู่จัดส่ง, เบอร์โทร
+   - **เมื่อลูกค้าแจ้งโอนเงิน / ขอเลขพัสดุ:** พิมพ์ "โอนแล้ว", ส่งสลิป, ถามเลขบัญชี, ถามเลขพัสดุ
+   - **เมื่อลูกค้าขอคุยกับคน:** เช่น "ขอคุยกับแอดมิน", "ขอคุยกับคน", "ไม่ใช่บอท", "บอทหยุดตอบ"
+   - **คำตอบรับสั้นๆ:** เช่น "ค่ะ", "ครับ", "โอเค", "ได้ค่ะ", "รับทราบ", "ขอบคุณค่ะ", "จ้า"
+   >> ในทุกกรณีด้านบนนี้ คุณต้องพิมพ์ [SILENCE] ทันที ห้ามส่งราคาซ้ำ ห้ามส่งรูปซ้ำ ห้ามทักทายใหม่ และห้ามตอบเด็ดขาด! <<
+3. **หากไม่แน่ใจ:** หากบทสนทนามีความต่อเนื่องจากการคุยค้างไว้ หรือไม่แน่ใจว่าลูกค้ากำลังคุยกับคนจริงอยู่หรือไม่ >> ให้พิมพ์ [SILENCE] เสมอ << ปลอดภัยกว่าการตอบมั่วที่จะทำให้ลูกค้าสับสน!
+4. **กฎการแจ้งราคา (ห้ามรวมยอด):** ถ้าลูกค้าถามราคา ให้ตอบราคาต่อชิ้นตามรายการ **ไม่ต้องคำนวณยอดรวมให้ลูกค้าในทุกกรณี** หน้าที่รวมยอดเงินและสรุปยอดเป็นของแอดมินคนจริงเท่านั้น!
 
 
 [ข้อมูลราคาการ์ดแต่งงาน]
@@ -358,13 +359,102 @@ failed_model_cooldowns = {}
 last_bot_error_info = {"error": None, "model_used": None, "ts": None}
 
 
+def is_user_bot_muted(user_id: str) -> bool:
+    """ตรวจสอบว่าแอดมินคนจริงสั่งปิด/พักบอทสำหรับลูกค้ารายนี้ไว้หรือไม่"""
+    if not db or not user_id:
+        return False
+    try:
+        doc = db.collection("bot_mutes").document(user_id).get()
+        if doc.exists:
+            data = doc.to_dict() or {}
+            return bool(data.get("muted", False))
+    except Exception as e:
+        logger.warning(f"Error checking bot mute for {user_id}: {e}")
+    return False
+
+
+def set_user_bot_muted(user_id: str, muted: bool, reason: str = ""):
+    """สั่งเปิด/ปิดบอทสำหรับลูกค้ารายนี้"""
+    if not db or not user_id:
+        return
+    try:
+        db.collection("bot_mutes").document(user_id).set({
+            "muted": muted,
+            "reason": reason,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        }, merge=True)
+        logger.info(f"Set bot mute={muted} for {user_id} (reason: {reason})")
+    except Exception as e:
+        logger.warning(f"Error setting bot mute for {user_id}: {e}")
+
+
+def should_bot_stay_silent_for_human_admin(text: str) -> bool:
+    """
+    ตรวจสอบอย่างรัดกุมว่าลูกค้ากำลังคุยกับแอดมินคนจริงอยู่หรือไม่
+    หากพบว่าลูกค้ากำลังคุยเรื่องแบบ ตรวจดราฟต์ ส่งข้อมูลส่วนตัว ยืนยันงาน หรือคุยต่อเนื่องกับคนจริง
+    บอทต้องเงียบทันที (ห้ามตอบแทรก ห้ามตอบมั่ว และห้ามส่งราคาซ้ำเด็ดขาด)
+    """
+    if not text:
+        return True
+    t = text.lower().strip()
+
+    # 1. คำขอคุยกับคนจริง / หยุดบอท
+    admin_call_keywords = [
+        "ขอคุยกับแอดมิน", "ขอคุยกับคน", "แอดมินอยู่ไหม", "มีคนไหม", "มีคนอยู่ไหม",
+        "ไม่ใช่บอท", "คุยกับคน", "คุยกับคนจริง", "แอดมินคนจริง", "ติดต่อแอดมิน",
+        "คนตอบหน่อย", "อย่าส่งซ้ำ", "บอทหยุด", "หยุดส่ง", "รบกวนแอดมิน", "ติดต่อเจ้าหน้าที่",
+    ]
+    if any(k in t for k in admin_call_keywords):
+        return True
+
+    # 2. การตรวจแบบ / ดราฟต์ / แก้ไขแบบการ์ด / รายละเอียดงานพิมพ์
+    design_keywords = [
+        "ส่งแบบ", "ดูแบบ", "แก้แบบ", "แก้คำผิด", "เปลี่ยนชื่อ", "แก้ชื่อ",
+        "เปลี่ยนฟอนต์", "ฟอนต์", "ดราฟต์", "draft", "ตัวอย่างการ์ด", "ปรับสี",
+        "ขยับ", "จัดหน้า", "พิมพ์ผิด", "แก้ตรงนี้", "แก้ไขตรงนี้", "แบบที่",
+        "ตัวอย่างแบบ", "ขอแก้", "เว้นวรรค", "ตกหล่น", "สะกดผิด", "แบบการ์ด",
+    ]
+    if any(k in t for k in design_keywords):
+        return True
+
+    # 3. การคอนเฟิร์มแบบ / ตกลงพิมพ์ / ตกลงสั่งผลิต
+    confirm_keywords = [
+        "คอนเฟิร์ม", "confirm", "ตกลงตามนี้", "เอาตามนี้", "ตามที่คุย", "ตามนี้ค่ะ",
+        "ตามนี้ครับ", "ส่งพิมพ์ได้เลย", "พิมพ์ได้เลย", "ส่งพิมพ์", "สรุปตามนี้",
+        "เอาแบบนี้", "ชอบแบบนี้", "ตกลงค่ะ", "ตกลงครับ", "อนุมัติ", "สั่งตามนี้",
+    ]
+    if any(k in t for k in confirm_keywords):
+        return True
+
+    # 4. การชำระเงิน / ส่งสลิป / แจ้งที่อยู่ / ข้อมูลจัดงานแต่งงาน
+    payment_and_shipping = [
+        "โอนแล้ว", "แจ้งโอน", "ส่งสลิป", "แนบสลิป", "สลิปค่ะ", "สลิปครับ", "สลิป",
+        "เลขบัญชี", "ขอเลขบัญชี", "ที่อยู่จัดส่ง", "ส่งที่อยู่", "จัดส่งที่",
+        "เบอร์โทร", "เบอร์ติดต่อ", "ขอเลขพัสดุ", "เลขแทรค", "ส่งวันไหน", "ชื่อบ่าวสาว",
+        "ฤกษ์งาน", "วันจัดงาน", "สถานที่จัดงาน", "ยอดนี้ใช่ไหม", "บัญชีธนาคาร",
+    ]
+    if any(k in t for k in payment_and_shipping):
+        return True
+
+    # 5. คำตอบรับสั้นๆ ปิดบทสนทนา (ห้ามบอทพิมพ์ตอบซ้ำ)
+    ack_keywords = {
+        "ค่ะ", "ครับ", "ค่า", "คับ", "โอเค", "โอเคค่ะ", "โอเคครับ", "ok", "okay",
+        "ขอบคุณค่ะ", "ขอบคุณครับ", "ขอบคุณค่า", "ได้ค่ะ", "ได้ครับ", "รับทราบ",
+        "รับทราบค่ะ", "รับทราบครับ", "จ้า", "จ้าา", "เคค่ะ", "เคครับ",
+    }
+    if t in ack_keywords:
+        return True
+
+    return False
+
+
 def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> str:
     """
     ระบบตอบกลับอัตโนมัติแบบ Rule-based สำรอง (Fallback)
     ทำงานทันทีเมื่อ Gemini API โควตาเต็ม (429) หรือขัดข้อง เพื่อให้บอทไม่เงียบใส่ลูกค้าเด็ดขาด
     """
     raw = (user_text or "").strip()
-    if not raw:
+    if not raw or should_bot_stay_silent_for_human_admin(raw):
         return "[SILENCE]"
     t = raw.lower()
     greeting = "สวัสดีค่ะ ยินดีต้อนรับสู่ ONESTUDIO นะคะ 🥰\n\n" if is_first_turn else ""
@@ -1190,6 +1280,10 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 },
                 merge=True,
             )
+            # เมื่อออกบิลออเดอร์แล้ว ให้พักบอทสำหรับลูกค้ารายนี้อัตโนมัติ เพื่อให้แอดมินคนจริงเข้าดูแลต่อ
+            target_mute_uid = user_id or latest_cust_uid
+            if target_mute_uid:
+                set_user_bot_muted(target_mute_uid, True, reason=f"order_{ord_no}")
         except Exception as e:
             logger.warning(f"Failed to save #order to Firestore: {e}")
 
@@ -1407,6 +1501,31 @@ def get_line_customer_messages(userId: str = ""):
         return JSONResponse({"ok": False, "messages": []})
 
 
+@app.get("/api/bot-mute-status")
+def get_bot_mute_status(userId: str = ""):
+    """ตรวจสอบสถานะพักบอท (แอดมินคนจริงคุยเอง) สำหรับลูกค้ารายนี้"""
+    if not userId:
+        return JSONResponse({"ok": False, "reason": "missing_userId"})
+    muted = is_user_bot_muted(userId)
+    return JSONResponse({"ok": True, "userId": userId, "muted": muted})
+
+
+@app.post("/api/toggle-bot-mute")
+async def toggle_bot_mute_api(request: Request):
+    """สั่งเปิด/พักบอทสำหรับลูกค้ารายนี้จากหน้าแดชบอร์ด"""
+    try:
+        data = await request.json()
+        user_id = str(data.get("userId") or "").strip()
+        muted = bool(data.get("muted", False))
+        if not user_id:
+            return JSONResponse({"ok": False, "reason": "missing_userId"}, status_code=400)
+        set_user_bot_muted(user_id, muted, reason="admin_dashboard_toggle")
+        return JSONResponse({"ok": True, "userId": user_id, "muted": muted})
+    except Exception as e:
+        logger.error(f"Error toggling bot mute: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 @app.post("/api/calculator-state")
 async def save_calculator_state(request: Request):
     """บันทึกข้อมูลต้นทุนสินค้า ยอดสะสม และเป้าหมายรายเดือนลง Firebase Firestore"""
@@ -1500,7 +1619,27 @@ def handle_text_message(event):
             logger.warning(f"Deduplication check error: {dedup_err}")
 
     # -------------------------------------------------------------
-    # ระบบคำสั่งพิเศษ #oder / #order / #ออเดอร์ / #บิล สำหรับแอดมินสรุปบิลและคำนวณกำไร 4 กองทุนอัตโนมัติ
+    # 0. คำสั่งพักบอท / เปิดบอท สำหรับแอดมินคนจริง (#pause, #mute, #พักบอท, #ปิดบอท, #unpause, #เปิดบอท)
+    # -------------------------------------------------------------
+    clean_cmd = user_text.strip().lower()
+    if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
+        set_user_bot_muted(user_id, True, reason="admin_command_mute")
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้แล้วค่ะ\n(เมื่อคุยจบ สามารถพิมพ์ #เปิดบอท หรือ #unpause เพื่อให้บอทกลับมาตอบตามปกติได้นะคะ)")
+        )
+        return
+
+    if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
+        set_user_bot_muted(user_id, False, reason="admin_command_unmute")
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
+        )
+        return
+
+    # -------------------------------------------------------------
+    # 1. ระบบคำสั่งพิเศษ #oder / #order / #ออเดอร์ / #บิล สำหรับแอดมินสรุปบิลและคำนวณกำไร 4 กองทุนอัตโนมัติ
     # -------------------------------------------------------------
     if re.match(r'^#\s*(?:order|oder|ออเดอร์|บิล)\b', user_text.strip(), flags=re.IGNORECASE):
         try:
@@ -1532,6 +1671,21 @@ def handle_text_message(event):
         except Exception as ord_err:
             logger.error(f"Error processing #order command: {ord_err}")
             return
+
+    # -------------------------------------------------------------
+    # 2. ตรวจสอบว่าลูกค้ารายนี้ถูกพักบอทไว้ หรือกำลังคุยกับแอดมินคนจริงหรือไม่
+    # -------------------------------------------------------------
+    if is_user_bot_muted(user_id):
+        logger.info(f"Bot is currently MUTED for user {user_id}. Admin is handling this chat.")
+        record_recent_line_customer(user_id, user_text)
+        save_message(user_id, "user", user_text)
+        return
+
+    if should_bot_stay_silent_for_human_admin(user_text):
+        logger.info(f"Customer {user_id} is talking with human admin. Bot stays silent.")
+        record_recent_line_customer(user_id, user_text)
+        save_message(user_id, "user", user_text)
+        return
 
     # -------------------------------------------------------------
     # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)

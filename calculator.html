@@ -153,12 +153,22 @@
       <!-- หน้าจอห้องแชท LINE จริง & ออกบิล #order -->
       <div class="rounded-3xl overflow-hidden shadow-md border border-slate-300 bg-[#8CABD9]">
         <!-- แถบหัวห้องแชท LINE -->
-        <div class="bg-[#2B3648] text-white px-4 py-2.5 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-[#06C755]"></span>
-            <span id="chat-room-header-title" class="text-xs font-bold">แชทจริงจาก LINE OA (ONESTUDIO)</span>
+        <div class="bg-[#2B3648] text-white px-3 py-2 flex items-center justify-between">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#06C755] shrink-0"></span>
+            <span id="chat-room-header-title" class="text-xs font-bold truncate">แชทจริงจาก LINE OA (ONESTUDIO)</span>
           </div>
-          <span id="chat-sync-status" class="text-xs text-emerald-300">● เชื่อมต่อ LINE Bot แล้ว</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btn-bot-mute-toggle" onclick="toggleActiveCustomerBotMute()"
+              class="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-2xs"
+              title="คลิกเพื่อพักบอทเมื่อแอดมินคนจริงเข้าคุย หรือเปิดบอทกลับมา">
+              <span id="bot-mute-icon">🤖</span> <span id="bot-mute-text">บอทเปิดอยู่</span>
+            </button>
+            <span id="chat-sync-status" class="text-xs text-emerald-300">● เชื่อมต่อแล้ว</span>
+          </div>
+        </div>
+        <div id="bot-muted-banner" class="hidden bg-rose-600 text-white px-3 py-1 text-center text-xs font-semibold flex items-center justify-center gap-1">
+          <span>⏸️</span> แอดมินคุยอยู่: บอทหยุดตอบลูกค้ารายนี้แล้ว เพื่อไม่ให้ตอบแทรกหรือส่งราคาซ้ำ (คลิกปุ่มด้านบนเพื่อเปิดบอท)
         </div>
 
         <!-- พื้นที่แสดงข้อความแชท -->
@@ -1296,8 +1306,66 @@
       showToast(`⚡ ดึงออเดอร์ ${lo.ordNo} (${lo.customerName}) จาก LINE OA คำนวณอัตโนมัติแล้ว!`);
     }
 
+    let activeCustomerMuted = false;
+
+    async function checkActiveCustomerBotMute(userId) {
+      if (!userId) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/bot-mute-status?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.ok) {
+          updateBotMuteUI(Boolean(data.muted));
+        }
+      } catch (e) { }
+    }
+
+    function updateBotMuteUI(isMuted) {
+      activeCustomerMuted = isMuted;
+      const btn = document.getElementById("btn-bot-mute-toggle");
+      const icon = document.getElementById("bot-mute-icon");
+      const text = document.getElementById("bot-mute-text");
+      const banner = document.getElementById("bot-muted-banner");
+      if (btn && icon && text) {
+        if (isMuted) {
+          btn.className = "px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center gap-1 shadow-2xs";
+          icon.innerText = "⏸️";
+          text.innerText = "พักบอทอยู่ (แอดมินคุย)";
+          banner?.classList.remove("hidden");
+        } else {
+          btn.className = "px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow-2xs";
+          icon.innerText = "🤖";
+          text.innerText = "บอทเปิดอยู่";
+          banner?.classList.add("hidden");
+        }
+      }
+    }
+
+    async function toggleActiveCustomerBotMute() {
+      if (!activeLineUserId) {
+        showToast("⚠️ กรุณาเลือกลูกค้าในรายการก่อนค่ะ");
+        return;
+      }
+      const newStatus = !activeCustomerMuted;
+      try {
+        const res = await fetch(`${API_BASE}/api/toggle-bot-mute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: activeLineUserId, muted: newStatus })
+        });
+        const data = await res.json();
+        if (data && data.ok) {
+          updateBotMuteUI(data.muted);
+          showToast(data.muted ? "⏸️ พักบอทแล้ว: แอดมินคุยเอง (บอทจะไม่ตอบแทรก)" : "🟢 เปิดบอทตอบอัตโนมัติแล้ว");
+        }
+      } catch (e) {
+        showToast("❌ ไม่สามารถเปลี่ยนสถานะบอทได้");
+      }
+    }
+
     async function loadLineCustomerChat(userId, displayName) {
       if (!userId) return;
+      checkActiveCustomerBotMute(userId);
       const chatBox = document.getElementById("line-chat-messages");
       const headerTitle = document.getElementById("chat-room-header-title");
       if (headerTitle && displayName) {
