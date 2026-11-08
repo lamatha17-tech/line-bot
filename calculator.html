@@ -150,6 +150,9 @@
         </p>
       </div>
 
+      <!-- กล่องแจ้งเตือนด่วนสำหรับแอดมิน (สลิป / ขอคุยกับคน / ตรวจแบบ) -->
+      <div id="admin-alerts-container" class="hidden space-y-2"></div>
+
       <!-- หน้าจอห้องแชท LINE จริง & ออกบิล #order -->
       <div class="rounded-3xl overflow-hidden shadow-md border border-slate-300 bg-[#8CABD9]">
         <!-- แถบหัวห้องแชท LINE -->
@@ -340,12 +343,28 @@
           </div>
         </div>
 
-        <!-- รายการออเดอร์สะสม & ติดตามสถานะมัดจำ 50% -->
+        <!-- รายการออเดอร์สะสม & ติดตามสถานะมัดจำ 50% & สถานะผลิต -->
         <div class="pt-2 border-t border-slate-800 space-y-2">
           <div class="flex items-center justify-between text-xs">
-            <span class="font-semibold text-slate-300">📋 รายการออเดอร์ & เช็กมัดจำ 50% (กดเปลี่ยนสถานะได้)</span>
+            <span class="font-semibold text-slate-300">📋 รายการออเดอร์ & สถานะผลิต (คลิกสลับสถานะได้)</span>
+            <button onclick="exportOrderHistoryCSV()" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
+              📥 ดาวน์โหลด Excel (CSV)
+            </button>
           </div>
-          <div id="order-history-list" class="space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+          <!-- แท็บฟิลเตอร์สถานะผลิตและชำระเงิน -->
+          <div class="flex gap-1 overflow-x-auto pb-0.5 text-xs">
+            <button type="button" onclick="setHistoryFilter('all')" id="hist-filter-all"
+              class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600 text-white whitespace-nowrap">ทั้งหมด</button>
+            <button type="button" onclick="setHistoryFilter('draft')" id="hist-filter-draft"
+              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🎨 รอคอนเฟิร์ม</button>
+            <button type="button" onclick="setHistoryFilter('production')" id="hist-filter-production"
+              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🖨️ กำลังผลิต</button>
+            <button type="button" onclick="setHistoryFilter('shipped')" id="hist-filter-shipped"
+              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🚚 จัดส่งแล้ว</button>
+            <button type="button" onclick="setHistoryFilter('unpaid')" id="hist-filter-unpaid"
+              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-amber-300 border border-slate-700 whitespace-nowrap">⏳ ค้างชำระ</button>
+          </div>
+          <div id="order-history-list" class="space-y-2 max-h-72 overflow-y-auto pr-0.5"></div>
         </div>
       </div>
 
@@ -375,7 +394,7 @@
         </div>
 
         <div class="space-y-3">
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div>
               <label class="text-xs text-slate-500 font-medium">ชื่อลูกค้า / บ่าวสาว</label>
               <input type="text" id="input-customer" value="" placeholder="ดึงจาก LINE อัตโนมัติ" oninput="calculate()"
@@ -387,9 +406,14 @@
                 class="w-full mt-1 px-2.5 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div>
-              <label class="text-xs text-slate-500 font-medium">วันที่เอกสาร</label>
+              <label class="text-xs text-slate-500 font-medium">วันที่ออกบิล</label>
               <input type="text" id="input-order-date" value="" placeholder="วว/ดด/ปปปป" oninput="calculate()"
                 class="w-full mt-1 px-2.5 py-1.5 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="text-xs text-rose-700 font-semibold block">📅 กำหนดส่ง / วันงาน</label>
+              <input type="text" id="input-due-date" value="" placeholder="เช่น 25/11/69" oninput="calculate()"
+                class="w-full mt-1 px-2.5 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50/50 border border-rose-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-400 outline-none">
             </div>
           </div>
 
@@ -449,6 +473,55 @@
               <button type="button" onclick="setActivePaymentStatus('paid_full')" id="calc-pay-status-paid_full"
                 class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
                 <span id="calc-pay-check-paid_full">☐</span> ✅ โอนเต็ม
+              </button>
+            </div>
+          </div>
+
+          <!-- สถานะการผลิต (รอคอนเฟิร์มแบบ / กำลังผลิต / จัดส่งแล้ว) & จัดการเลขพัสดุ -->
+          <div class="p-3 bg-purple-50/70 border border-purple-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-purple-900 block">🎨 สถานะการผลิต (Production):</span>
+              <span id="calc-prod-badge"
+                class="text-[11px] font-bold text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs">🎨 รอคอนเฟิร์มแบบ</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" onclick="setActiveProdStatus('draft')" id="calc-prod-status-draft"
+                class="py-1.5 px-2 rounded-lg text-xs font-bold bg-purple-700 text-white border border-purple-700 shadow-2xs transition flex items-center justify-center gap-1">
+                <span id="calc-prod-check-draft">☑️</span> 🎨 รอคอนเฟิร์ม
+              </button>
+              <button type="button" onclick="setActiveProdStatus('production')" id="calc-prod-status-production"
+                class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="calc-prod-check-production">☐</span> 🖨️ กำลังผลิต
+              </button>
+              <button type="button" onclick="setActiveProdStatus('shipped')" id="calc-prod-status-shipped"
+                class="py-1.5 px-2 rounded-lg text-xs font-medium bg-white text-slate-600 border border-slate-200 transition flex items-center justify-center gap-1">
+                <span id="calc-prod-check-shipped">☐</span> 🚚 จัดส่งแล้ว
+              </button>
+            </div>
+
+            <!-- ขนส่ง & เลขพัสดุ พร้อมปุ่มคัดลอกข้อความแจ้งลูกค้า -->
+            <div class="pt-2 border-t border-purple-200/80 space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-xs text-purple-900 font-semibold block">บริษัทขนส่ง</label>
+                  <select id="input-courier" onchange="calculate()"
+                    class="w-full mt-1 px-2.5 py-1.5 text-xs bg-white border border-purple-200 rounded-lg outline-none font-medium">
+                    <option value="Flash Express">⚡ Flash Express</option>
+                    <option value="Kerry Express (KEX)">📦 Kerry Express (KEX)</option>
+                    <option value="ไปรษณีย์ไทย (EMS)">📮 ไปรษณีย์ไทย (EMS)</option>
+                    <option value="J&T Express">🚚 J&T Express</option>
+                    <option value="ขนส่งอื่นๆ">🚗 ขนส่งอื่นๆ</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-purple-900 font-semibold block">เลขพัสดุ (Tracking No.)</label>
+                  <input type="text" id="input-tracking-no" placeholder="เช่น TH0123456789" oninput="calculate()"
+                    class="w-full mt-1 px-2.5 py-1.5 text-xs bg-white border border-purple-200 rounded-lg outline-none font-bold text-slate-800">
+                </div>
+              </div>
+              <button type="button" onclick="copyCurrentTrackingMessage()"
+                class="w-full py-2 px-3 bg-purple-700 hover:bg-purple-800 active:scale-98 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs">
+                <span>📦</span> คัดลอกข้อความแจ้งเลขพัสดุ (คลิกเดียวพร้อมลิงก์เช็คสถานะ)
               </button>
             </div>
           </div>
@@ -633,6 +706,17 @@
           </div>
         </div>
 
+        <!-- แถบแสดงสถานะผลิต กำหนดส่ง และเลขพัสดุบนบิล -->
+        <div id="bill-status-subbar" class="px-5 py-2 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span id="bill-prod-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800">🎨 รอคอนเฟิร์มแบบ</span>
+            <span id="bill-due-badge" class="text-rose-700 font-semibold text-[11px]">📅 นัดส่ง: <span id="bill-due-val">-</span></span>
+          </div>
+          <div id="bill-track-badge" class="text-slate-600 text-[11px] font-medium hidden">
+            🚚 <span id="bill-courier-val">Flash</span>: <span id="bill-track-val" class="font-bold text-slate-800">-</span>
+          </div>
+        </div>
+
         <div class="p-5 space-y-3">
           <div class="text-xs font-semibold text-slate-400 border-b border-slate-100 pb-1.5 flex justify-between">
             <span>รายการสินค้า (จำนวน x ราคา/หน่วย)</span>
@@ -761,6 +845,13 @@
             <input type="text" id="setting-lead-time"
               value="✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ"
               class="w-full mt-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block">🔔 LINE User ID ของแอดมิน (รับแจ้งเตือนสลิป/ลูกค้าขอคุย)</label>
+            <input type="text" id="setting-admin-line-uid"
+              placeholder="เช่น U1234567890abcdef... (ดูได้จาก Webhook หรือ LINE Developers)"
+              class="w-full mt-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500">
+            <span class="text-[11px] text-slate-400">เมื่อระบุ LINE User ID บอทจะส่งข้อความแจ้งเตือนเข้า LINE แอดมินทันทีเมื่อมีลูกค้าส่งสลิปหรือขอคุยกับแอดมิน</span>
           </div>
           <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
             <div class="font-semibold text-slate-700">🎯 สัดส่วนการแบ่งกำไร 4 กองทุน (รวม 100%)</div>
@@ -967,6 +1058,9 @@
     let latestOrderPayload = null;
     let editingCatalogId = null;
     let activePaymentStatus = "deposit_50";
+    let activeProdStatus = "draft"; // draft, production, shipped
+    let historyFilter = "all"; // all, draft, production, shipped, unpaid
+    let unreadAdminAlerts = [];
 
     try {
       // ล้างประวัติตัวอย่างเก่า (v1) ออกทั้งหมด
@@ -1069,11 +1163,68 @@
       calculate();
     }
 
+    function updateProdStatusSelectorUI(status) {
+      activeProdStatus = status || "draft";
+      const statuses = ["draft", "production", "shipped"];
+      const activeStyles = {
+        draft: "bg-purple-700 text-white border-purple-700 font-bold shadow-2xs",
+        production: "bg-blue-600 text-white border-blue-600 font-bold shadow-2xs",
+        shipped: "bg-emerald-600 text-white border-emerald-600 font-bold shadow-2xs"
+      };
+      const inactiveStyle = "bg-white text-slate-600 border-slate-200 font-medium";
+
+      statuses.forEach(st => {
+        const isSelected = st === activeProdStatus;
+        const btn = document.getElementById(`calc-prod-status-${st}`);
+        const chk = document.getElementById(`calc-prod-check-${st}`);
+        if (btn) {
+          btn.className = `py-1.5 px-2 rounded-lg text-xs transition flex items-center justify-center gap-1 ${isSelected ? activeStyles[st] : inactiveStyle}`;
+        }
+        if (chk) {
+          chk.innerText = isSelected ? "☑️" : "☐";
+        }
+      });
+
+      const badge = document.getElementById("calc-prod-badge");
+      if (badge) {
+        const labelMap = { draft: "🎨 รอคอนเฟิร์มแบบ", production: "🖨️ กำลังผลิต", shipped: "🚚 จัดส่งแล้ว" };
+        const colorMap = {
+          draft: "text-purple-700 border-purple-200 bg-purple-50",
+          production: "text-blue-700 border-blue-200 bg-blue-50",
+          shipped: "text-emerald-700 border-emerald-200 bg-emerald-50"
+        };
+        badge.innerText = labelMap[activeProdStatus] || "🎨 รอคอนเฟิร์มแบบ";
+        badge.className = `text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs ${colorMap[activeProdStatus] || colorMap.draft}`;
+      }
+    }
+
+    function setActiveProdStatus(status, skipSync = false) {
+      updateProdStatusSelectorUI(status);
+      if (!skipSync) {
+        const currentOrdNo = document.getElementById("input-order-no")?.value;
+        if (currentOrdNo && orderHistory.length > 0) {
+          const idx = orderHistory.findIndex(h => h.ordNo === currentOrdNo);
+          if (idx !== -1) {
+            orderHistory[idx].prodStatus = status;
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+            syncStateToCloud();
+            renderAccumulatedDashboard();
+          }
+        }
+        if (latestOrderPayload) {
+          latestOrderPayload.prodStatus = status;
+        }
+      }
+      calculate();
+    }
+
     function applyShopSettingsToUI() {
       const bankInput = document.getElementById("setting-bank-info");
       if (bankInput) bankInput.value = shopSettings.bankInfo || "";
       const leadInput = document.getElementById("setting-lead-time");
       if (leadInput) leadInput.value = shopSettings.leadTimeText || "✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ";
+      const adminUidInput = document.getElementById("setting-admin-line-uid");
+      if (adminUidInput) adminUidInput.value = shopSettings.adminLineUserId || "";
       const sPct = document.getElementById("setting-pct-supplies");
       if (sPct) sPct.value = shopSettings.suppliesPct ?? 10;
       const wPct = document.getElementById("setting-pct-wage");
@@ -1087,6 +1238,7 @@
     function saveShopSettings() {
       shopSettings.bankInfo = (document.getElementById("setting-bank-info")?.value || "").trim();
       shopSettings.leadTimeText = (document.getElementById("setting-lead-time")?.value || "").trim() || "✨ ออกแบบฟรี! ของชำร่วยใช้เวลาผลิต 7–25 วัน (การ์ด 7–15 วัน) หลังคอนเฟิร์มแบบนะคะ";
+      shopSettings.adminLineUserId = (document.getElementById("setting-admin-line-uid")?.value || "").trim();
       shopSettings.suppliesPct = parseFloat(document.getElementById("setting-pct-supplies")?.value) || 10;
       shopSettings.wagePct = parseFloat(document.getElementById("setting-pct-wage")?.value) || 30;
       shopSettings.housePct = parseFloat(document.getElementById("setting-pct-house")?.value) || 30;
@@ -1282,6 +1434,12 @@
       if (sCostInput) sCostInput.value = lo.shipCost || 0;
       const discInput = document.getElementById("input-discount");
       if (discInput) discInput.value = lo.discount || 0;
+      const dueInput = document.getElementById("input-due-date");
+      if (dueInput) dueInput.value = lo.dueDate || "";
+      const courierInput = document.getElementById("input-courier");
+      if (courierInput && lo.courier) courierInput.value = lo.courier;
+      const trackInput = document.getElementById("input-tracking-no");
+      if (trackInput) trackInput.value = lo.trackingNo || "";
       const autoToggle = document.getElementById("auto-price-toggle");
       if (autoToggle) autoToggle.checked = true;
 
@@ -1300,6 +1458,7 @@
       }
 
       setActivePaymentStatus(lo.status || "deposit_50", true);
+      setActiveProdStatus(lo.prodStatus || "draft", true);
       renderOrderItems();
       const summary = calculate(lo.discount || 0);
       renderBotOrderBubbleInChat(lo.rawCommand || `#order (${lo.ordNo})`, lo.ordNo, lo.customerName || "คุณลูกค้า", summary);
@@ -1410,6 +1569,78 @@
       } catch (e) { }
     }
 
+    async function fetchAdminAlerts() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin-alerts`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.ok && Array.isArray(data.alerts)) {
+          unreadAdminAlerts = data.alerts;
+          renderAdminAlertsBanner();
+        }
+      } catch (e) { }
+    }
+
+    function renderAdminAlertsBanner() {
+      const container = document.getElementById("admin-alerts-container");
+      if (!container) return;
+      if (!unreadAdminAlerts || unreadAdminAlerts.length === 0) {
+        container.classList.add("hidden");
+        container.innerHTML = "";
+        return;
+      }
+      container.classList.remove("hidden");
+      container.innerHTML = unreadAdminAlerts.slice(0, 3).map(a => {
+        const safeName = (a.customerName || "คุณลูกค้า").replace(/'/g, "\\'");
+        const safeUid = (a.userId || "").replace(/'/g, "\\'");
+        const safeAid = (a.alertId || "").replace(/'/g, "\\'");
+        return `
+          <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white p-3 rounded-2xl shadow-md flex items-start justify-between gap-2.5">
+            <div class="space-y-1 min-w-0">
+              <div class="flex items-center gap-1.5 text-xs font-bold">
+                <span class="bg-white text-rose-600 text-[10px] px-1.5 py-0.2 rounded-full uppercase font-black animate-pulse">ด่วน</span>
+                <span class="truncate">${a.title}</span>
+                <span class="text-amber-100 font-semibold truncate">• ${a.customerName}</span>
+              </div>
+              <div class="text-[11px] bg-black/20 px-2 py-1 rounded-lg text-white/95 line-clamp-2">
+                "${a.text || 'ลูกค้าส่งรูปภาพ/สลิปเข้ามา'}"
+              </div>
+            </div>
+            <div class="flex flex-col gap-1 shrink-0">
+              <button onclick="handleAlertClick('${safeUid}', '${safeAid}', '${safeName}')"
+                class="bg-white hover:bg-amber-50 text-slate-900 text-xs font-bold px-2.5 py-1.5 rounded-xl shadow-xs active:scale-95 transition">
+                👀 ดูแชททันที
+              </button>
+              <button onclick="dismissAlert('${safeAid}')"
+                class="text-[10px] text-white/80 hover:text-white underline text-center">
+                ปิดการเตือน
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function dismissAlert(alertId) {
+      unreadAdminAlerts = unreadAdminAlerts.filter(a => a.alertId !== alertId);
+      renderAdminAlertsBanner();
+      try {
+        await fetch(`${API_BASE}/api/dismiss-alert`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alertId })
+        });
+      } catch (e) { }
+    }
+
+    async function handleAlertClick(userId, alertId, customerName) {
+      dismissAlert(alertId);
+      if (userId) {
+        selectLineCustomer(customerName || "คุณลูกค้า", userId);
+        switchTab('linechat');
+      }
+    }
+
     function selectLineCustomer(rawName, userId = "") {
       if (!rawName) return;
       activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
@@ -1517,6 +1748,7 @@
             calculate();
           }
           renderAccumulatedDashboard();
+          fetchAdminAlerts();
           if (forceRefresh) {
             showToast(activeLineCustomerName ? `🟢 ซิงค์ข้อมูลจริงจาก LINE ล่าสุด: ${activeLineCustomerName}` : "✅ ซิงค์ข้อมูลจริงจาก LINE Bot เรียบร้อยแล้ว");
           }
@@ -1952,6 +2184,36 @@
       document.getElementById("input-ship-charge").value = shipCharge;
       document.getElementById("input-ship-cost").value = shipCost;
 
+      // สกัดวันนัดส่งมอบ / วันงาน
+      const dueMatch = rawText.match(/(?:กำหนดส่ง|วันนัดส่ง|นัดส่ง|วันงาน|ส่งก่อน|ส่งวันที่|นัดรับ)\s*[:=]?\s*([0-9]{1,2}[/-][0-9]{1,2}(?:[/-][0-9]{2,4})?|[^\n,]+)/i);
+      const dueDate = dueMatch ? dueMatch[1].trim() : (document.getElementById("input-due-date")?.value || "");
+      if (dueDate && document.getElementById("input-due-date")) {
+        document.getElementById("input-due-date").value = dueDate;
+      }
+
+      // สกัดสถานะการผลิต
+      if (/(ส่งแล้ว|จัดส่งแล้ว|จัดส่งเรียบร้อย|shipped)/i.test(rawText)) {
+        setActiveProdStatus("shipped", true);
+      } else if (/(กำลังผลิต|ส่งพิมพ์|พิมพ์แล้ว|สั่งพิมพ์แล้ว|ผลิตอยู่|in production)/i.test(rawText)) {
+        setActiveProdStatus("production", true);
+      } else if (/(รอคอนเฟิร์ม|รอแบบ|ดราฟต์|draft|แก้แบบ)/i.test(rawText)) {
+        setActiveProdStatus("draft", true);
+      }
+
+      // สกัดขนส่ง และเลขพัสดุ
+      const trackMatch = rawText.match(/(?:เลขพัสดุ|tracking|track|เลขแทรค|แทรค)\s*[:=]?\s*([A-Za-z0-9_-]{8,30})/i);
+      const trackingNo = trackMatch ? trackMatch[1].trim() : (document.getElementById("input-tracking-no")?.value || "").trim();
+      if (trackMatch && document.getElementById("input-tracking-no")) {
+        document.getElementById("input-tracking-no").value = trackingNo;
+      }
+      for (const cName of ["Flash Express", "Kerry Express (KEX)", "ไปรษณีย์ไทย (EMS)", "J&T Express"]) {
+        if (new RegExp(cName.replace(/[\(\)]/g, ''), 'i').test(rawText)) {
+          if (document.getElementById("input-courier")) document.getElementById("input-courier").value = cName;
+          break;
+        }
+      }
+      const courierName = document.getElementById("input-courier")?.value || "Flash Express";
+
       const detectedItems = extractOrderItemsFromTextJS(rawText);
 
       if (detectedItems.length > 0) {
@@ -2000,6 +2262,7 @@
         latestOrderPayload = {
           ordNo,
           orderDate,
+          dueDate,
           customerName,
           rawCommand: rawText,
           shipCharge: summary.shipCharge,
@@ -2014,6 +2277,9 @@
           house: summary.house,
           vehicle: summary.vehicle,
           status: chosenStatus,
+          prodStatus: activeProdStatus || "draft",
+          courier: courierName,
+          trackingNo,
           items: serializedItems,
           updatedAt: Math.floor(Date.now() / 1000)
         };
@@ -2022,6 +2288,7 @@
         orderHistory.unshift({
           ordNo,
           orderDate,
+          dueDate,
           customerName,
           shipCharge: summary.shipCharge,
           shipCost: summary.shipCost,
@@ -2034,6 +2301,9 @@
           house: summary.house,
           vehicle: summary.vehicle,
           status: chosenStatus,
+          prodStatus: activeProdStatus || "draft",
+          courier: courierName,
+          trackingNo,
           items: serializedItems
         });
         try {
@@ -2125,39 +2395,93 @@
       updateBar("vehicle", accVehicle, monthlyTargets.vehicle || 10000);
       updateBar("wage", accWage, monthlyTargets.wage || 15000);
 
-      // แสดงรายการออเดอร์สะสม & ปุ่มติ๊กเลือก 3 สถานะ (รอโอน / มัดจำ 50% / โอนเต็ม) + ปุ่มเปิดบิล/ออกใบเสร็จ
+      // อัปเดตฟิลเตอร์แท็บสถานะในแดชบอร์ด
+      const filters = ["all", "draft", "production", "shipped", "unpaid"];
+      filters.forEach(f => {
+        const btn = document.getElementById(`hist-filter-${f}`);
+        if (btn) {
+          if (f === historyFilter) {
+            btn.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600 text-white whitespace-nowrap shadow-2xs";
+          } else {
+            btn.className = "px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap hover:text-white";
+          }
+        }
+      });
+
+      // แสดงรายการออเดอร์สะสม & ปุ่มติ๊กเลือก 3 สถานะ + สถานะผลิต + คัดลอกเลขพัสดุ
       const histList = document.getElementById("order-history-list");
       if (histList) {
-        if (orderHistory.length === 0) {
-          histList.innerHTML = `<div class="text-xs text-slate-500 text-center py-2">ยังไม่มีออเดอร์สะสม ลองกดส่งคำสั่ง #order ด้านบนได้เลยค่ะ</div>`;
+        let filteredOrders = orderHistory;
+        if (historyFilter === 'draft') filteredOrders = orderHistory.filter(h => (h.prodStatus || 'draft') === 'draft');
+        else if (historyFilter === 'production') filteredOrders = orderHistory.filter(h => h.prodStatus === 'production');
+        else if (historyFilter === 'shipped') filteredOrders = orderHistory.filter(h => h.prodStatus === 'shipped');
+        else if (historyFilter === 'unpaid') filteredOrders = orderHistory.filter(h => (h.status || 'deposit_50') !== 'paid_full');
+
+        if (filteredOrders.length === 0) {
+          histList.innerHTML = `<div class="text-xs text-slate-500 text-center py-3">ไม่พบรายการออเดอร์ในหมวดนี้ค่ะ</div>`;
         } else {
-          histList.innerHTML = orderHistory.map((h, idx) => {
+          histList.innerHTML = filteredOrders.map(h => {
+            const origIdx = orderHistory.indexOf(h);
             const st = h.status || "deposit_50";
+            const pst = h.prodStatus || "draft";
             const half = Math.round((h.netRevenue || 0) / 2);
             const dateTag = h.orderDate ? ` • ${h.orderDate}` : "";
+            const dueTag = h.dueDate ? `<span class="bg-rose-500/25 text-rose-300 px-2 py-0.5 rounded-md text-[10px] font-bold">📅 นัดส่ง: ${h.dueDate}</span>` : "";
+            const trackText = h.trackingNo
+              ? `<span class="text-sky-300 font-semibold truncate">🚚 ${h.courier || 'ขนส่ง'}: ${h.trackingNo}</span>`
+              : `<span class="text-slate-400 font-normal">+ ใส่เลขพัสดุ</span>`;
+
             return `
               <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-2.5 space-y-2 text-xs">
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <div class="font-bold text-white truncate">${h.customerName} <span class="text-slate-400 font-normal">(${h.ordNo}${dateTag})</span></div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="font-bold text-white truncate">${h.customerName}</span>
+                      <span class="text-slate-400 font-normal">(${h.ordNo}${dateTag})</span>
+                      ${dueTag}
+                    </div>
                     <div class="text-slate-400 mt-0.5">ยอดสุทธิ <b class="text-emerald-400">฿${(h.netRevenue || 0).toLocaleString()}</b> • มัดจำ 50% ฿${half.toLocaleString()} • กำไร ฿${Math.round(h.grossProfit || 0).toLocaleString()}</div>
                   </div>
-                  <button onclick="deleteOrderHistoryItem(${idx})" class="text-slate-500 hover:text-rose-400 px-1 shrink-0">✕</button>
+                  <button onclick="deleteOrderHistoryItem(${origIdx})" class="text-slate-500 hover:text-rose-400 px-1 shrink-0" title="ลบออเดอร์นี้">✕</button>
                 </div>
+
+                <!-- 1. สถานะการผลิต (รอแบบ / กำลังผลิต / ส่งแล้ว) -->
+                <div class="space-y-1 pt-1 border-t border-slate-700/60">
+                  <div class="flex items-center justify-between text-[11px] text-slate-400">
+                    <span>🎨 สถานะการผลิต:</span>
+                    <button onclick="copyTrackingMessageFromHistory(${origIdx})" class="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 underline" title="คลิกเพื่อคัดลอกข้อความแจ้งเลขพัสดุให้ลูกค้า">
+                      ${trackText}
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1">
+                    <button type="button" onclick="setOrderHistoryProdStatus(${origIdx}, 'draft')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${pst === 'draft' ? 'bg-purple-600/40 text-purple-200 border-purple-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                      <span>${pst === 'draft' ? '☑️' : '☐'}</span> 🎨 รอคอนเฟิร์ม
+                    </button>
+                    <button type="button" onclick="setOrderHistoryProdStatus(${origIdx}, 'production')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${pst === 'production' ? 'bg-blue-600/40 text-blue-200 border-blue-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                      <span>${pst === 'production' ? '☑️' : '☐'}</span> 🖨️ กำลังผลิต
+                    </button>
+                    <button type="button" onclick="setOrderHistoryProdStatus(${origIdx}, 'shipped')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${pst === 'shipped' ? 'bg-emerald-600/40 text-emerald-200 border-emerald-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                      <span>${pst === 'shipped' ? '☑️' : '☐'}</span> 🚚 จัดส่งแล้ว
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 2. สถานะชำระเงิน (รอโอน / มัดจำ 50% / โอนเต็ม) -->
                 <div class="grid grid-cols-3 gap-1 pt-1 border-t border-slate-700/60">
-                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'pending')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'pending' ? 'bg-amber-500/30 text-amber-200 border-amber-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                  <button type="button" onclick="setOrderHistoryStatus(${origIdx}, 'pending')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'pending' ? 'bg-amber-500/30 text-amber-200 border-amber-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
                     <span>${st === 'pending' ? '☑️' : '☐'}</span> ⏳ รอโอน
                   </button>
-                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'deposit_50')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'deposit_50' ? 'bg-sky-500/30 text-sky-200 border-sky-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                  <button type="button" onclick="setOrderHistoryStatus(${origIdx}, 'deposit_50')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'deposit_50' ? 'bg-sky-500/30 text-sky-200 border-sky-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
                     <span>${st === 'deposit_50' ? '☑️' : '☐'}</span> 💳 มัดจำ 50%
                   </button>
-                  <button type="button" onclick="setOrderHistoryStatus(${idx}, 'paid_full')" class="py-1 px-1.5 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'paid_full' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
+                  <button type="button" onclick="setOrderHistoryStatus(${origIdx}, 'paid_full')" class="py-1 px-1 rounded-lg text-[11px] border transition flex items-center justify-center gap-1 ${st === 'paid_full' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400 font-bold' : 'bg-slate-900/60 text-slate-400 border-slate-700 hover:text-slate-200'}">
                     <span>${st === 'paid_full' ? '☑️' : '☐'}</span> ✅ โอนเต็ม
                   </button>
                 </div>
+
                 <div class="flex justify-end pt-0.5">
-                  <button onclick="openOrderFromHistory(${idx})" class="w-full py-1 px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs transition text-center">
-                    🧾 เปิดบิล / แก้ไข / ออกใบเสร็จรับเงิน
+                  <button onclick="openOrderFromHistory(${origIdx})" class="w-full py-1.5 px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs transition text-center">
+                    🧾 เปิดบิล / จัดการเลขพัสดุ / ออกใบเสร็จรับเงิน
                   </button>
                 </div>
               </div>
@@ -2167,12 +2491,34 @@
       }
     }
 
+    function setHistoryFilter(f) {
+      historyFilter = f;
+      renderAccumulatedDashboard();
+    }
+
+    function setOrderHistoryProdStatus(index, newProdStatus) {
+      const item = orderHistory[index];
+      if (!item) return;
+      item.prodStatus = newProdStatus;
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      if (document.getElementById("input-order-no")?.value === item.ordNo) {
+        setActiveProdStatus(newProdStatus, true);
+      }
+      syncStateToCloud();
+      renderAccumulatedDashboard();
+      const labelMap = { draft: "🎨 รอคอนเฟิร์มแบบ", production: "🖨️ กำลังผลิต", shipped: "🚚 จัดส่งแล้ว" };
+      showToast(`📦 อัปเดตสถานะผลิต ${item.ordNo}: ${labelMap[newProdStatus] || newProdStatus}`);
+    }
+
     function openOrderFromHistory(index) {
       const h = orderHistory[index];
       if (!h) return;
       document.getElementById("input-customer").value = h.customerName || "คุณลูกค้า";
       document.getElementById("input-order-no").value = h.ordNo || "ORD-0001";
       document.getElementById("input-order-date").value = h.orderDate || getTodayDateStr();
+      document.getElementById("input-due-date").value = h.dueDate || "";
+      if (h.courier && document.getElementById("input-courier")) document.getElementById("input-courier").value = h.courier;
+      if (document.getElementById("input-tracking-no")) document.getElementById("input-tracking-no").value = h.trackingNo || "";
       document.getElementById("input-ship-charge").value = h.shipCharge ?? 0;
       document.getElementById("input-ship-cost").value = h.shipCost ?? 0;
       document.getElementById("input-discount").value = h.discount ?? 0;
@@ -2197,6 +2543,7 @@
 
       const st = h.status || "deposit_50";
       setActivePaymentStatus(st, true);
+      setActiveProdStatus(h.prodStatus || "draft", true);
       renderOrderItems();
       calculate();
       switchTab('bill');
@@ -2244,6 +2591,9 @@
       const summary = calculate();
       const ordNo = document.getElementById("input-order-no").value || ("ORD-" + Math.floor(100000 + Math.random() * 900000));
       const orderDate = document.getElementById("input-order-date")?.value || getTodayDateStr();
+      const dueDate = (document.getElementById("input-due-date")?.value || "").trim();
+      const courier = document.getElementById("input-courier")?.value || "Flash Express";
+      const trackingNo = (document.getElementById("input-tracking-no")?.value || "").trim();
       const customerName = document.getElementById("input-customer").value || "คุณลูกค้า";
       const serializedItems = orderItems.map(it => {
         const p = catalog.find(c => c.id === it.prodId);
@@ -2264,6 +2614,7 @@
       const record = {
         ordNo,
         orderDate,
+        dueDate,
         customerName,
         shipCharge: summary.shipCharge,
         shipCost: summary.shipCost,
@@ -2276,6 +2627,9 @@
         house: summary.house,
         vehicle: summary.vehicle,
         status: statusFromDoc,
+        prodStatus: activeProdStatus || "draft",
+        courier,
+        trackingNo,
         items: serializedItems
       };
 
@@ -2291,35 +2645,132 @@
       renderAccumulatedDashboard();
     }
 
+    function getCourierTrackingUrl(courier, trackingNo) {
+      const cleanNo = (trackingNo || "").trim();
+      const c = (courier || "").toLowerCase();
+      if (c.includes("flash")) {
+        return `https://www.flashexpress.co.th/tracking/?se=${cleanNo}`;
+      } else if (c.includes("kerry") || c.includes("kex")) {
+        return `https://th.kerryexpress.com/th/track/?track=${cleanNo}`;
+      } else if (c.includes("ไปรษณีย์") || c.includes("ems")) {
+        return `https://track.thailandpost.co.th/?trackNumber=${cleanNo}`;
+      } else if (c.includes("j&t") || c.includes("jt")) {
+        return `https://www.jtexpress.co.th/service/track?bills=${cleanNo}`;
+      }
+      return `https://www.google.com/search?q=${encodeURIComponent(courier + ' ' + cleanNo)}`;
+    }
+
+    function generateTrackingMessage(customerName, ordNo, courier, trackingNo) {
+      const url = getCourierTrackingUrl(courier, trackingNo);
+      return `🌸 ONESTUDIO แจ้งเลขพัสดุจัดส่งสินค้าค่ะ 🌸\n` +
+        `ลูกค้า: ${customerName}\n` +
+        `เลขที่ออเดอร์: ${ordNo}\n` +
+        `━━━━━━━━━━━━━━\n` +
+        `🚚 ขนส่ง: ${courier || 'Flash Express'}\n` +
+        `📦 เลขพัสดุ: ${trackingNo}\n` +
+        `🔗 เช็คสถานะพัสดุ: ${url}\n` +
+        `━━━━━━━━━━━━━━\n` +
+        `ได้รับสินค้าแล้ว รบกวนถ่ายวิดีโอขณะแกะกล่องพัสดุไว้เป็นหลักฐานด้วยนะคะ 💕\n` +
+        `ขอบพระคุณที่ไว้วางใจให้ ONESTUDIO ดูแลในวันสำคัญนะคะ 🙏`;
+    }
+
+    function copyCurrentTrackingMessage() {
+      const trackingNo = (document.getElementById("input-tracking-no")?.value || "").trim();
+      if (!trackingNo) {
+        showToast("⚠️ กรุณาระบุเลขพัสดุก่อนกดคัดลอกนะคะ");
+        document.getElementById("input-tracking-no")?.focus();
+        return;
+      }
+      const courier = document.getElementById("input-courier")?.value || "Flash Express";
+      const customerName = document.getElementById("input-customer")?.value || "คุณลูกค้า";
+      const ordNo = document.getElementById("input-order-no")?.value || "ORD-0001";
+      const msg = generateTrackingMessage(customerName, ordNo, courier, trackingNo);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(msg);
+        showToast("📦 คัดลอกข้อความแจ้งเลขพัสดุแล้ว สามารถนำไปวางส่งให้ลูกค้าใน LINE ได้ทันที!");
+      }
+    }
+
+    function copyTrackingMessageFromHistory(idx) {
+      const h = orderHistory[idx];
+      if (!h) return;
+      let trackingNo = (h.trackingNo || "").trim();
+      if (!trackingNo) {
+        const promptNo = prompt(`ระบุเลขพัสดุสำหรับออเดอร์ ${h.ordNo} (${h.customerName}):`, "");
+        if (promptNo && promptNo.trim()) {
+          trackingNo = promptNo.trim();
+          h.trackingNo = trackingNo;
+          h.prodStatus = "shipped";
+          try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+          syncStateToCloud();
+          renderAccumulatedDashboard();
+        } else {
+          return;
+        }
+      }
+      const msg = generateTrackingMessage(h.customerName || "คุณลูกค้า", h.ordNo, h.courier || "Flash Express", trackingNo);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(msg);
+        showToast(`📦 คัดลอกข้อความแจ้งเลขพัสดุ ${h.ordNo} เรียบร้อย!`);
+      }
+    }
+
     function exportOrderHistoryCSV() {
       if (orderHistory.length === 0) {
         showToast("⚠️ ยังไม่มีข้อมูลออเดอร์ให้ Export");
         return;
       }
-      const headers = ["เลขที่บิล", "วันที่", "ชื่อลูกค้า", "สถานะชำระเงิน", "ยอดสุทธิ(บาท)", "ต้นทุนของ+ส่งจริง(บาท)", "กำไรสุทธิ(บาท)", "ซื้อของอื่น(บาท)", "ค่าแรงตัวเอง(บาท)", "ค่างวดบ้าน(บาท)", "ค่างวดรถ(บาท)"];
-      const statusMap = { pending: "รอโอนมัดจำ", deposit_50: "มัดจำ 50% แล้ว", paid_full: "จ่ายครบ/ส่งแล้ว" };
-      const rows = orderHistory.map(h => [
-        h.ordNo,
-        `"${(h.orderDate || "").replace(/"/g, '""')}"`,
-        `"${(h.customerName || "").replace(/"/g, '""')}"`,
-        statusMap[h.status || "deposit_50"],
-        h.netRevenue || 0,
-        (h.totalMaterial || 0).toFixed(1),
-        (h.grossProfit || 0).toFixed(1),
-        (h.supplies || 0).toFixed(1),
-        (h.wage || 0).toFixed(1),
-        (h.house || 0).toFixed(1),
-        (h.vehicle || 0).toFixed(1)
-      ]);
+      const headers = [
+        "เลขที่บิล", "วันที่สั่ง", "กำหนดส่ง/วันงาน", "ชื่อลูกค้า", "สถานะการผลิต",
+        "สถานะชำระเงิน", "รายการสินค้า", "ยอดสุทธิ(บาท)", "ค่าส่งเก็บลูกค้า(บาท)", "ต้นทุนของ(บาท)",
+        "ค่าส่งจ่ายจริง(บาท)", "ต้นทุนรวม(บาท)", "กำไรสุทธิ(บาท)", "ซื้อของอื่น(บาท)",
+        "ค่าแรงตัวเอง(บาท)", "ค่างวดบ้าน(บาท)", "ค่างวดรถ(บาท)", "ขนส่ง", "เลขพัสดุ"
+      ];
+      const statusMap = { pending: "รอโอนมัดจำ", deposit_50: "มัดจำ 50% แล้ว", paid_full: "ชำระเต็มจำนวน" };
+      const prodMap = { draft: "🎨 รอคอนเฟิร์มแบบ", production: "🖨️ กำลังผลิต", shipped: "🚚 จัดส่งแล้ว" };
+
+      let listToExport = orderHistory;
+      if (historyFilter === 'draft') listToExport = orderHistory.filter(h => (h.prodStatus || 'draft') === 'draft');
+      else if (historyFilter === 'production') listToExport = orderHistory.filter(h => h.prodStatus === 'production');
+      else if (historyFilter === 'shipped') listToExport = orderHistory.filter(h => h.prodStatus === 'shipped');
+      else if (historyFilter === 'unpaid') listToExport = orderHistory.filter(h => (h.status || 'deposit_50') !== 'paid_full');
+
+      const rows = listToExport.map(h => {
+        const itemsStr = Array.isArray(h.items)
+          ? h.items.map(it => `${it.name} (${it.qty}ชิ้น)`).join("; ")
+          : "";
+        return [
+          h.ordNo,
+          `"${(h.orderDate || "").replace(/"/g, '""')}"`,
+          `"${(h.dueDate || "-").replace(/"/g, '""')}"`,
+          `"${(h.customerName || "").replace(/"/g, '""')}"`,
+          `"${prodMap[h.prodStatus || 'draft'] || h.prodStatus || '🎨 รอคอนเฟิร์มแบบ'}"`,
+          `"${statusMap[h.status || 'deposit_50'] || h.status || 'มัดจำ 50%'}"`,
+          `"${itemsStr.replace(/"/g, '""')}"`,
+          h.netRevenue || 0,
+          h.shipCharge || 0,
+          ((h.totalMaterial || 0) - (h.shipCost || 0)).toFixed(1),
+          h.shipCost || 0,
+          (h.totalMaterial || 0).toFixed(1),
+          (h.grossProfit || 0).toFixed(1),
+          (h.supplies || 0).toFixed(1),
+          (h.wage || 0).toFixed(1),
+          (h.house || 0).toFixed(1),
+          (h.vehicle || 0).toFixed(1),
+          `"${(h.courier || "-").replace(/"/g, '""')}"`,
+          `"${(h.trackingNo || "-").replace(/"/g, '""')}"`
+        ];
+      });
+
       const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `ONESTUDIO_Orders_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `ONESTUDIO_Orders_Export_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("📥 ดาวน์โหลดไฟล์ CSV สำหรับเปิดใน Excel/Google Sheets แล้ว!");
+      showToast("📥 ดาวน์โหลดรายงานสรุปยอด Excel (CSV ภาษาไทย) เรียบร้อย!");
     }
 
     function clearOrderHistory() {
@@ -2656,6 +3107,47 @@
       document.getElementById("bill-date").innerText = dateVal;
       document.getElementById("bill-customer").innerText = document.getElementById("input-customer").value || "คุณลูกค้า";
       document.getElementById("bill-order-no").innerText = document.getElementById("input-order-no").value || "ORD-001";
+
+      // Update Due Date, Production Status, and Courier/Tracking on Bill Tab
+      const dueVal = (document.getElementById("input-due-date")?.value || "").trim();
+      const courierVal = document.getElementById("input-courier")?.value || "Flash Express";
+      const trackVal = (document.getElementById("input-tracking-no")?.value || "").trim();
+
+      const billDueVal = document.getElementById("bill-due-val");
+      const billDueBadge = document.getElementById("bill-due-badge");
+      if (billDueVal && billDueBadge) {
+        if (dueVal) {
+          billDueVal.innerText = dueVal;
+          billDueBadge.classList.remove("hidden");
+        } else {
+          billDueBadge.classList.add("hidden");
+        }
+      }
+
+      const billProdBadge = document.getElementById("bill-prod-badge");
+      if (billProdBadge) {
+        const pLabels = { draft: "🎨 รอคอนเฟิร์มแบบ", production: "🖨️ กำลังผลิต", shipped: "🚚 จัดส่งแล้ว" };
+        const pColors = {
+          draft: "bg-purple-100 text-purple-800",
+          production: "bg-blue-100 text-blue-800",
+          shipped: "bg-emerald-100 text-emerald-800"
+        };
+        billProdBadge.innerText = pLabels[activeProdStatus] || "🎨 รอคอนเฟิร์มแบบ";
+        billProdBadge.className = `px-2 py-0.5 rounded-full text-[11px] font-bold ${pColors[activeProdStatus] || pColors.draft}`;
+      }
+
+      const billTrackBadge = document.getElementById("bill-track-badge");
+      const billTrackVal = document.getElementById("bill-track-val");
+      const billCourierVal = document.getElementById("bill-courier-val");
+      if (billTrackBadge && billTrackVal && billCourierVal) {
+        if (trackVal) {
+          billCourierVal.innerText = courierVal;
+          billTrackVal.innerText = trackVal;
+          billTrackBadge.classList.remove("hidden");
+        } else {
+          billTrackBadge.classList.add("hidden");
+        }
+      }
 
       const bankBox = document.getElementById("bill-bank-info-box");
       const bankTxt = document.getElementById("bill-bank-info-text");
@@ -3004,6 +3496,7 @@ ${leadText}
     if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
     if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
     updatePaymentStatusSelectorUI(activePaymentStatus);
+    updateProdStatusSelectorUI(activeProdStatus);
     applyShopSettingsToUI();
     renderRecentLineCustomers();
     renderCatalog();

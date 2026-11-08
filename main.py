@@ -448,6 +448,107 @@ def should_bot_stay_silent_for_human_admin(text: str) -> bool:
     return False
 
 
+def classify_user_intent_for_admin_alert(text: str):
+    """
+    ตรวจจับข้อความสำคัญที่ต้องแจ้งเตือนแอดมินคนจริงทันที:
+    1. ลูกค้าส่งสลิป / แจ้งโอนเงิน (slip)
+    2. ลูกค้าขอคุยกับแอดมินคนจริง (human_request)
+    3. ลูกค้าตรวจแบบ / แก้ดราฟต์ / คอนเฟิร์มพิมพ์ (design_draft)
+    """
+    if not text:
+        return None
+    t = text.lower().strip()
+    payment_and_shipping = [
+        "โอนแล้ว", "แจ้งโอน", "ส่งสลิป", "แนบสลิป", "สลิปค่ะ", "สลิปครับ", "สลิป",
+        "เลขบัญชี", "ขอเลขบัญชี", "ยอดนี้ใช่ไหม", "ชำระเงินแล้ว", "จ่ายแล้ว",
+    ]
+    if any(k in t for k in payment_and_shipping):
+        return {
+            "type": "slip",
+            "title": "💵 ลูกค้าส่งสลิป / แจ้งโอนเงิน",
+        }
+    admin_call_keywords = [
+        "ขอคุยกับแอดมิน", "ขอคุยกับคน", "แอดมินอยู่ไหม", "มีคนไหม", "มีคนอยู่ไหม",
+        "ไม่ใช่บอท", "คุยกับคน", "คุยกับคนจริง", "แอดมินคนจริง", "ติดต่อแอดมิน",
+        "คนตอบหน่อย", "อย่าส่งซ้ำ", "บอทหยุด", "หยุดส่ง", "รบกวนแอดมิน", "ติดต่อเจ้าหน้าที่",
+    ]
+    if any(k in t for k in admin_call_keywords):
+        return {
+            "type": "human_request",
+            "title": "👤 ลูกค้าขอคุยกับแอดมินคนจริง",
+        }
+    design_keywords = [
+        "ส่งแบบ", "ดูแบบ", "แก้แบบ", "แก้คำผิด", "เปลี่ยนชื่อ", "แก้ชื่อ",
+        "เปลี่ยนฟอนต์", "ฟอนต์", "ดราฟต์", "draft", "ตัวอย่างการ์ด", "ปรับสี",
+        "ขยับ", "จัดหน้า", "พิมพ์ผิด", "แก้ตรงนี้", "แก้ไขตรงนี้", "แบบที่",
+        "ตัวอย่างแบบ", "ขอแก้", "เว้นวรรค", "ตกหล่น", "สะกดผิด", "แบบการ์ด",
+        "คอนเฟิร์ม", "confirm", "ตกลงตามนี้", "เอาตามนี้", "ตามที่คุย", "ตามนี้ค่ะ",
+        "ตามนี้ครับ", "ส่งพิมพ์ได้เลย", "พิมพ์ได้เลย", "ส่งพิมพ์", "สรุปตามนี้",
+        "เอาแบบนี้", "ชอบแบบนี้", "ตกลงค่ะ", "ตกลงครับ", "อนุมัติ", "สั่งตามนี้",
+    ]
+    if any(k in t for k in design_keywords):
+        return {
+            "type": "design_draft",
+            "title": "🎨 ลูกค้าตรวจแบบ / แก้ไขแบบ / คอนเฟิร์มงาน",
+        }
+    return None
+
+
+def create_admin_alert(user_id: str, alert_type: str, title: str, text: str):
+    """
+    สร้างการแจ้งเตือนแอดมิน:
+    1. บันทึกลง Firestore คอลเลกชัน admin_alerts (ให้แดชบอร์ดแจ้งเตือนแบบเรียลไทม์)
+    2. สั่งพักบอท (Mute) อัตโนมัติ เพื่อให้แอดมินคนจริงดูแลต่อ
+    3. หากมีการตั้ง adminLineUserId ใน shopSettings ให้ Push ข้อความเข้า LINE ส่วนตัวของแอดมิน
+    """
+    if not user_id:
+        return
+    customer_name = get_line_display_name(user_id) or "คุณลูกค้า"
+    clean_snippet = (text or "").strip()[:150]
+    
+    # 1. พักบอททันทีเพื่อไม่ให้บอทตอบแทรก
+    set_user_bot_muted(user_id, True, reason=f"alert_{alert_type}")
+    
+    # 2. บันทึกลง Firestore
+    if db:
+        try:
+            alert_id = f"alt_{int(time.time()*1000)}"
+            db.collection("admin_alerts").document(alert_id).set({
+                "alertId": alert_id,
+                "userId": user_id,
+                "customerName": customer_name,
+                "type": alert_type,
+                "title": title,
+                "text": clean_snippet,
+                "read": False,
+                "created_at": firestore.SERVER_TIMESTAMP,
+                "created_at_ts": time.time(),
+            })
+            logger.info(f"Created admin alert [{alert_type}] for user {customer_name} ({user_id})")
+        except Exception as e:
+            logger.warning(f"Failed to create admin alert in Firestore: {e}")
+
+    # 3. ส่ง LINE Push แจ้งเตือนแอดมินคนจริง (หากระบุ Admin LINE User ID ไว้ในตั้งค่าร้าน)
+    try:
+        saved_state = get_calculator_state()
+        shop_settings = saved_state.get("shopSettings") if isinstance(saved_state.get("shopSettings"), dict) else {}
+        admin_line_uid = str(shop_settings.get("adminLineUserId") or "").strip()
+        if admin_line_uid and line_bot_api:
+            push_text = (
+                f"🔔 [ONESTUDIO แจ้งเตือนแอดมิน]\n"
+                f"{title}\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"👤 ลูกค้า: {customer_name}\n"
+                f"💬 ข้อความ: {clean_snippet or '(ส่งรูปภาพ/สลิป)'}\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"📱 จัดการแชท/ออกบิล: https://line-bot-alpha-six.vercel.app/calculator"
+            )
+            line_bot_api.push_message(admin_line_uid, TextSendMessage(text=push_text))
+            logger.info(f"Pushed admin alert to adminLineUserId: {admin_line_uid}")
+    except Exception as push_err:
+        logger.warning(f"Failed to push alert to admin LINE: {push_err}")
+
+
 def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> str:
     """
     ระบบตอบกลับอัตโนมัติแบบ Rule-based สำรอง (Fallback)
@@ -1226,9 +1327,31 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         for i in detected
     ]
 
+    # 3) สกัดวันนัดส่งมอบ / วันจัดงาน / สถานะการผลิต / ขนส่ง / เลขพัสดุ จากข้อความ (ถ้ามี)
+    due_match = re.search(r'(?:กำหนดส่ง|วันนัดส่ง|นัดส่ง|วันงาน|ส่งก่อน|ส่งวันที่|นัดรับ)\s*[:=]?\s*([0-9]{1,2}[/-][0-9]{1,2}(?:[/-][0-9]{2,4})?|[^\n,]+)', raw_text, re.IGNORECASE)
+    due_date = due_match.group(1).strip() if due_match else ""
+
+    prod_status = "draft"
+    t_raw = raw_text.lower()
+    if any(k in t_raw for k in ["ส่งแล้ว", "จัดส่งแล้ว", "จัดส่งเรียบร้อย", "shipped"]):
+        prod_status = "shipped"
+    elif any(k in t_raw for k in ["กำลังผลิต", "ส่งพิมพ์", "พิมพ์แล้ว", "สั่งพิมพ์แล้ว", "ผลิตอยู่", "in production"]):
+        prod_status = "production"
+    elif any(k in t_raw for k in ["รอคอนเฟิร์ม", "รอแบบ", "ดราฟต์", "draft", "แก้แบบ"]):
+        prod_status = "draft"
+
+    courier = ""
+    for c_name in ["Flash Express", "Flash", "Kerry", "KEX", "ไปรษณีย์ไทย", "EMS", "J&T Express", "J&T"]:
+        if c_name.lower() in t_raw:
+            courier = c_name
+            break
+    track_match = re.search(r'(?:เลขพัสดุ|tracking|track|เลขแทรค|แทรค)\s*[:=]?\s*([A-Za-z0-9_-]{8,30})', raw_text, re.IGNORECASE)
+    tracking_no = track_match.group(1).strip() if track_match else ""
+
     latest_order_payload = {
         "ordNo": ord_no,
         "orderDate": order_date_str,
+        "dueDate": due_date,
         "customerName": customer,
         "rawCommand": raw_text,
         "shipCharge": ship_charge,
@@ -1243,6 +1366,9 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         "house": house,
         "vehicle": vehicle,
         "status": order_status,
+        "prodStatus": prod_status,
+        "courier": courier,
+        "trackingNo": tracking_no,
         "items": order_items_payload,
         "updatedAt": now_ts,
     }
@@ -1256,6 +1382,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
             history.insert(0, {
                 "ordNo": ord_no,
                 "orderDate": order_date_str,
+                "dueDate": due_date,
                 "customerName": customer,
                 "shipCharge": ship_charge,
                 "shipCost": ship_cost,
@@ -1266,8 +1393,11 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
                 "supplies": supplies,
                 "wage": wage,
                 "house": house,
-                "vehicle": house,
+                "vehicle": vehicle,
                 "status": order_status,
+                "prodStatus": prod_status,
+                "courier": courier,
+                "trackingNo": tracking_no,
                 "items": order_items_payload,
             })
             history[0]["vehicle"] = vehicle
@@ -1302,10 +1432,14 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
     else:
         payment_status_line = f"💳 สถานะ: มัดจำเริ่มงาน 50% ({deposit:,.0f} บาท) • คงเหลือ {remaining_amt:,.0f} บาท"
 
+    due_line = f"📅 กำหนดส่งมอบ / วันงาน: {due_date}\n" if due_date else ""
+    track_line = f"📦 เลขพัสดุ ({courier or 'จัดส่ง'}): {tracking_no}\n" if tracking_no else ""
+
     customer_bill = (
         f"🌸 ใบสรุปรายการคำสั่งซื้อ (ONESTUDIO) 🌸\n"
         f"เลขที่ออเดอร์: {ord_no} ({order_date_str})\n"
         f"ลูกค้า: {customer}\n"
+        f"{due_line}"
         f"━━━━━━━━━━━━━━\n"
         f"{items_str}\n"
         f"━━━━━━━━━━━━━━\n"
@@ -1313,6 +1447,7 @@ def parse_and_build_order_summary(raw_text: str, user_id: str = None):
         f"🚚 ค่าจัดส่ง: {ship_str}{disc_str}\n"
         f"💰 ยอดชำระสุทธิ: {net_rev:,.0f} บาท\n"
         f"{payment_status_line}\n"
+        f"{track_line}"
         f"{bank_block}"
         f"━━━━━━━━━━━━━━\n"
         f"{lead_time_text}\n"
@@ -1526,6 +1661,59 @@ async def toggle_bot_mute_api(request: Request):
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+@app.get("/api/admin-alerts")
+def get_admin_alerts():
+    """ดึงรายการแจ้งเตือนที่ยังไม่ได้อ่านสำหรับแสดงบนแดชบอร์ดแบบเรียลไทม์"""
+    if not db:
+        return JSONResponse({"ok": True, "alerts": []})
+    try:
+        docs = list(
+            db.collection("admin_alerts")
+            .where("read", "==", False)
+            .order_by("created_at_ts", direction=firestore.Query.DESCENDING)
+            .limit(20)
+            .stream()
+        )
+        alerts = [d.to_dict() for d in docs if d.to_dict()]
+        return JSONResponse({"ok": True, "alerts": alerts})
+    except Exception as e:
+        logger.warning(f"Error fetching admin alerts: {e}")
+        return JSONResponse({"ok": False, "alerts": []})
+
+
+@app.post("/api/dismiss-alert")
+async def dismiss_admin_alert(request: Request):
+    """ทำเครื่องหมายว่าอ่านหรือปิดการแจ้งเตือนแล้ว"""
+    if not db:
+        return JSONResponse({"ok": False, "reason": "no_db"})
+    try:
+        data = await request.json()
+        alert_id = str(data.get("alertId") or "").strip()
+        dismiss_all = bool(data.get("all", False))
+        user_id = str(data.get("userId") or "").strip()
+
+        if dismiss_all:
+            docs = list(db.collection("admin_alerts").where("read", "==", False).limit(50).stream())
+            for d in docs:
+                d.reference.update({"read": True, "read_at": firestore.SERVER_TIMESTAMP})
+            return JSONResponse({"ok": True, "dismissed": len(docs)})
+        elif alert_id:
+            db.collection("admin_alerts").document(alert_id).update({
+                "read": True,
+                "read_at": firestore.SERVER_TIMESTAMP
+            })
+            return JSONResponse({"ok": True, "alertId": alert_id})
+        elif user_id:
+            docs = list(db.collection("admin_alerts").where("userId", "==", user_id).where("read", "==", False).stream())
+            for d in docs:
+                d.reference.update({"read": True, "read_at": firestore.SERVER_TIMESTAMP})
+            return JSONResponse({"ok": True, "userId": user_id, "dismissed": len(docs)})
+        return JSONResponse({"ok": False, "reason": "invalid_params"}, status_code=400)
+    except Exception as e:
+        logger.error(f"Error dismissing alert: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 @app.post("/api/calculator-state")
 async def save_calculator_state(request: Request):
     """บันทึกข้อมูลต้นทุนสินค้า ยอดสะสม และเป้าหมายรายเดือนลง Firebase Firestore"""
@@ -1677,6 +1865,15 @@ def handle_text_message(event):
     # -------------------------------------------------------------
     if is_user_bot_muted(user_id):
         logger.info(f"Bot is currently MUTED for user {user_id}. Admin is handling this chat.")
+        record_recent_line_customer(user_id, user_text)
+        save_message(user_id, "user", user_text)
+        return
+
+    # ตรวจจับข้อความสำคัญสำหรับแจ้งเตือนแอดมิน (สลิปโอนเงิน / ขอคุยกับคน / ตรวจแบบ)
+    admin_alert_info = classify_user_intent_for_admin_alert(user_text)
+    if admin_alert_info:
+        logger.info(f"Triggered admin alert [{admin_alert_info['type']}] for user {user_id}")
+        create_admin_alert(user_id, admin_alert_info["type"], admin_alert_info["title"], user_text)
         record_recent_line_customer(user_id, user_text)
         save_message(user_id, "user", user_text)
         return
@@ -1873,7 +2070,12 @@ def handle_image_message(event):
     message_id = event.message.id
     
     logger.info(f"Received image message from user {user_id}")
-    
+
+    if is_user_bot_muted(user_id):
+        logger.info(f"Bot is MUTED for {user_id}. Image received, alerting admin.")
+        create_admin_alert(user_id, "image_sent", "🖼️ ลูกค้าส่งรูปภาพ (สลิป/ตัวอย่างแบบ)", "ลูกค้าส่งรูปภาพเข้ามาในแชท")
+        return
+
     try:
         # ดึงข้อมูลรูปภาพจาก Line Server
         message_content = line_bot_api.get_message_content(message_id)
@@ -1890,6 +2092,7 @@ def handle_image_message(event):
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่ (ไม่บันทึก [User sent an image] หรือ [SILENCE] ลง DB เพื่อไม่ให้ประวัติแชทรวน)
         if not bot_reply or "[SILENCE]" in bot_reply:
             logger.info(f"Bot chose to stay silent for image from user {user_id}")
+            create_admin_alert(user_id, "image_sent", "🖼️ ลูกค้าส่งรูปภาพ (สลิป/ตัวอย่างแบบ)", "ลูกค้าส่งรูปภาพเข้ามาในแชท")
             return
             
         clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply).strip()
