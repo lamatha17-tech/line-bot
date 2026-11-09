@@ -2137,3 +2137,67 @@ async def get_bot_health(probe: bool = False):
         "probe": probe_result if probe else None,
     }
 
+
+# ==========================================
+# TikTok to Facebook Reels Auto-Sync APIs
+# ==========================================
+@app.get("/api/tiktok-reels/status")
+async def get_tiktok_reels_status():
+    """ตรวจสอบความพร้อมของระบบเชื่อมโยง TikTok ไปยัง Facebook Reels"""
+    try:
+        from tiktok_to_reels import load_synced_ids, STATE_FILE
+        fb_page_id = os.getenv("FB_PAGE_ID", "")
+        fb_token = os.getenv("FB_PAGE_ACCESS_TOKEN", "")
+        tiktok_user = os.getenv("TIKTOK_USERNAME", "")
+        line_oa_link = os.getenv("LINE_OA_LINK", "https://lin.ee/xxxx")
+
+        synced_ids = load_synced_ids()
+        history = []
+        if STATE_FILE.exists():
+            try:
+                with open(STATE_FILE, "r", encoding="utf-8") as f:
+                    history = json.load(f).get("history", [])
+            except Exception:
+                pass
+
+        return JSONResponse({
+            "ok": True,
+            "configured": bool(fb_page_id and fb_token),
+            "tiktok_user": tiktok_user,
+            "fb_page_id": fb_page_id,
+            "fb_token_set": bool(fb_token),
+            "line_oa_link": line_oa_link,
+            "synced_count": len(synced_ids),
+            "history": history[:20]
+        })
+    except Exception as e:
+        logger.error(f"Error checking tiktok reels status: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/tiktok-reels/sync")
+async def trigger_tiktok_reels_sync(request: Request):
+    """สั่งซิงค์คลิปจาก TikTok ขึ้น Facebook Reels อัตโนมัติ (ไร้ลายน้ำ)"""
+    try:
+        data = {}
+        try:
+            data = await request.json()
+        except Exception:
+            pass
+
+        username = data.get("username") or os.getenv("TIKTOK_USERNAME")
+        video_url = data.get("video_url")
+        max_videos = int(data.get("max_videos", 1))
+
+        from tiktok_to_reels import sync_latest_tiktok_to_facebook
+        res = sync_latest_tiktok_to_facebook(
+            tiktok_username=username,
+            specific_video_url=video_url,
+            max_videos=max_videos
+        )
+        return JSONResponse(res)
+    except Exception as e:
+        logger.error(f"Error in tiktok reels sync API: {e}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+

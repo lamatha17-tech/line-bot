@@ -90,10 +90,16 @@
           <p class="text-emerald-50 text-xs">ออกบิล LINE + ค่าส่ง + แบ่งกำไร 4 กอง</p>
         </div>
       </div>
-      <button onclick="switchTab('products')"
-        class="text-xs bg-white text-[#06C755] hover:bg-emerald-50 font-semibold px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition flex items-center gap-1">
-        <span>⚙️</span> ตั้งค่าทุนของ
-      </button>
+      <div class="flex items-center gap-1.5">
+        <button onclick="openTikTokSyncModal()"
+          class="text-xs bg-slate-900 text-white hover:bg-slate-800 font-semibold px-2.5 py-1.5 rounded-full shadow-sm active:scale-95 transition flex items-center gap-1 border border-pink-400/40">
+          <span>🎬</span> <span class="hidden sm:inline">TikTok ➔</span> Reels
+        </button>
+        <button onclick="switchTab('products')"
+          class="text-xs bg-white text-[#06C755] hover:bg-emerald-50 font-semibold px-2.5 py-1.5 rounded-full shadow-sm active:scale-95 transition flex items-center gap-1">
+          <span>⚙️</span> ทุนของ
+        </button>
+      </div>
     </div>
   </header>
 
@@ -106,23 +112,27 @@
   <!-- Main Container -->
   <main class="max-w-md mx-auto p-4 space-y-4">
 
-    <!-- Top Segmented Menu (4 แท็บครบวงจร) -->
-    <div id="top-segmented-menu" class="bg-slate-200/90 p-1 rounded-xl grid grid-cols-4 gap-1 no-print">
+    <!-- Top Segmented Menu (5 แท็บครบวงจร: แชท, คำนวณ, ออเดอร์/สถานะ, บิล, ตั้งค่า) -->
+    <div id="top-segmented-menu" class="bg-slate-200/90 p-1 rounded-xl grid grid-cols-5 gap-1 no-print">
       <button onclick="switchTab('linechat')" id="top-tab-linechat"
-        class="py-2 px-1.5 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1">
-        <span>💬</span> แชท #order
+        class="py-2 px-1 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1">
+        <span>💬</span> แชท
       </button>
       <button onclick="switchTab('calculator')" id="top-tab-calculator"
-        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        class="py-2 px-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
         <span>🧮</span> คำนวณ
       </button>
+      <button onclick="switchTab('orders')" id="top-tab-orders"
+        class="py-2 px-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>📋</span> ออเดอร์
+      </button>
       <button onclick="switchTab('bill')" id="top-tab-bill"
-        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
-        <span>🧾</span> บิล LINE
+        class="py-2 px-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>🧾</span> บิล
       </button>
       <button onclick="switchTab('products')" id="top-tab-products"
-        class="py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
-        <span>⚙️</span> ทุนของ
+        class="py-2 px-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1">
+        <span>⚙️</span> ตั้งค่า
       </button>
     </div>
 
@@ -353,29 +363,73 @@
           </div>
         </div>
 
-        <!-- รายการออเดอร์สะสม & ติดตามสถานะมัดจำ 50% & สถานะผลิต -->
-        <div class="pt-2 border-t border-slate-800 space-y-2">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-semibold text-slate-300">📋 รายการออเดอร์ & สถานะผลิต (คลิกสลับสถานะได้)</span>
-            <button onclick="exportOrderHistoryCSV()" class="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
-              📥 ดาวน์โหลด Excel (CSV)
+        <!-- ปุ่มลัดไปแท็บออเดอร์ -->
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
+          <span class="text-slate-300">📋 ออเดอร์สะสม: <b id="chat-tab-order-count" class="text-emerald-400 font-bold">0</b> รายการ</span>
+          <button onclick="switchTab('orders')"
+            class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-xs active:scale-95">
+            <span>📋</span> ไปยังหน้ารายการออเดอร์ & สถานะ ➔
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB: รายการออเดอร์ & จัดการสถานะผลิต/ชำระเงิน  -->
+    <!-- ========================================== -->
+    <div id="tab-orders" class="space-y-4 hidden">
+      <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md border border-slate-800 space-y-3.5">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📋</span>
+            <div>
+              <h2 class="text-sm font-bold text-white flex items-center gap-1.5">
+                รายการออเดอร์ & สถานะ
+                <span id="orders-tab-count-badge" class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0 รายการ</span>
+              </h2>
+              <p class="text-[11px] text-slate-400">ติดตามคิวงาน นัดส่ง ดิวงาน และสถานะชำระเงิน</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="exportOrderHistoryCSV()"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1 transition shadow-xs">
+              <span>📥</span> Excel (CSV)
+            </button>
+            <button onclick="clearOrderHistory()" title="ล้างประวัติ"
+              class="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-slate-700 transition">
+              🗑️
             </button>
           </div>
-          <!-- แท็บฟิลเตอร์สถานะผลิตและชำระเงิน -->
-          <div class="flex gap-1 overflow-x-auto pb-0.5 text-xs">
-            <button type="button" onclick="setHistoryFilter('all')" id="hist-filter-all"
-              class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600 text-white whitespace-nowrap">ทั้งหมด</button>
-            <button type="button" onclick="setHistoryFilter('draft')" id="hist-filter-draft"
-              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🎨 รอคอนเฟิร์ม</button>
-            <button type="button" onclick="setHistoryFilter('production')" id="hist-filter-production"
-              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🖨️ กำลังผลิต</button>
-            <button type="button" onclick="setHistoryFilter('shipped')" id="hist-filter-shipped"
-              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">🚚 จัดส่งแล้ว</button>
-            <button type="button" onclick="setHistoryFilter('unpaid')" id="hist-filter-unpaid"
-              class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-amber-300 border border-slate-700 whitespace-nowrap">⏳ ค้างชำระ</button>
-          </div>
-          <div id="order-history-list" class="space-y-2 max-h-72 overflow-y-auto pr-0.5"></div>
         </div>
+
+        <!-- แท็บฟิลเตอร์สถานะผลิตและชำระเงิน -->
+        <div class="space-y-1.5 pt-1 border-t border-slate-800">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400 font-medium">กรองตามสถานะ:</span>
+            <span class="text-slate-500 text-[10px]">คลิกที่สถานะเพื่อสลับเปลี่ยนได้ทันที</span>
+          </div>
+          <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+            <button type="button" onclick="setHistoryFilter('all')" id="hist-filter-all"
+              class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white whitespace-nowrap shadow-xs">ทั้งหมด</button>
+            <button type="button" onclick="setHistoryFilter('draft')" id="hist-filter-draft"
+              class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap hover:text-white">🎨 รอคอนเฟิร์ม</button>
+            <button type="button" onclick="setHistoryFilter('production')" id="hist-filter-production"
+              class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap hover:text-white">🖨️ กำลังผลิต</button>
+            <button type="button" onclick="setHistoryFilter('shipped')" id="hist-filter-shipped"
+              class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap hover:text-white">🚚 จัดส่งแล้ว</button>
+            <button type="button" onclick="setHistoryFilter('unpaid')" id="hist-filter-unpaid"
+              class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-amber-300 border border-slate-700 whitespace-nowrap hover:text-white">⏳ ค้างชำระ</button>
+          </div>
+        </div>
+
+        <!-- รายการออเดอร์ทั้งหมด -->
+        <div id="order-history-list" class="space-y-2.5 max-h-[72vh] overflow-y-auto pr-0.5"></div>
+
+      </div>
+    </div>
       </div>
 
     </div>
@@ -707,6 +761,66 @@
         </div>
       </div>
 
+      <!-- กล่องแก้ไขข้อมูลบิลด่วน (Quick Inline Bill Editor) -->
+      <div class="bg-white p-3 rounded-2xl shadow-xs border border-emerald-200 space-y-2.5 no-print">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+            <span>✏️</span> แก้ไขข้อมูลบิล & ข้อมูลลูกค้า
+          </span>
+          <button type="button" onclick="toggleBillEditor()" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1">
+            <span id="bill-editor-toggle-text">ซ่อน / แสดงช่องแก้ไข</span> ▾
+          </button>
+        </div>
+        <div id="bill-quick-editor" class="space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block">ชื่อลูกค้า / คู่บ่าวสาว:</label>
+              <input type="text" id="bill-edit-cust" placeholder="คุณแพรว & คุณนนท์" oninput="syncBillInput('customer', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block">เลขที่บิล:</label>
+              <input type="text" id="bill-edit-order-no" placeholder="ORD-0001" oninput="syncBillInput('order-no', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:bg-white outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block">วันที่ออกบิล:</label>
+              <input type="text" id="bill-edit-order-date" placeholder="วว/ดด/ปปปป" oninput="syncBillInput('order-date', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-rose-700 block">📅 วันนัดส่ง / วันงาน:</label>
+              <input type="text" id="bill-edit-due-date" placeholder="เช่น 25 พ.ย. 69" oninput="syncBillInput('due-date', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-rose-50 border border-rose-200 rounded-lg text-xs font-bold text-rose-800 focus:bg-white outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block">ขนส่ง:</label>
+              <input type="text" id="bill-edit-courier" placeholder="Flash Express" oninput="syncBillInput('courier', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-sky-700 block">📦 เลขพัสดุ (Tracking No):</label>
+              <input type="text" id="bill-edit-tracking-no" placeholder="TH12345678" oninput="syncBillInput('tracking-no', this.value)"
+                class="w-full mt-0.5 px-2.5 py-1.5 bg-sky-50 border border-sky-200 rounded-lg text-xs font-mono font-bold text-sky-800 focus:bg-white outline-none">
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-1 border-t border-emerald-100">
+            <button type="button" onclick="saveCurrentOrderToHistory()"
+              class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition flex items-center justify-center gap-1 active:scale-98">
+              <span>💾</span> บันทึกการแก้ไขลงบิลหลักทันที
+            </button>
+            <button type="button" onclick="resetNewBillForm()"
+              class="py-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+              ➕ เริ่มบิลใหม่
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- 1. ใบเสร็จรับเงินทางการตามระบบมาตรฐานทั่วไปของ LINE OA & ธุรกิจไทย (A4/Print Ready) -->
       <div id="view-official-receipt" class="bg-white rounded-2xl shadow-md border border-slate-300 p-5 space-y-4 text-slate-800">
         <!-- หัวเอกสาร -->
@@ -718,8 +832,8 @@
             </div>
             <div class="text-xs font-medium text-slate-600">การ์ดแต่งงาน ของชำร่วย และของที่ระลึกวันสำคัญ</div>
             <div class="text-[11px] text-slate-500 leading-tight">
-              📱 LINE OA: @onestudio | 📞 ติดต่อแอดมิน: 089-xxx-xxxx<br>
-              🌐 Facebook: TheOneStudioDesign
+              📱 LINE OA: @795ncmnv | 📞 ติดต่อแอดมิน: 089-xxx-xxxx<br>
+              🌐 Facebook: Onestudio ของชำร่วย การ์ดแต่งงาน
             </div>
           </div>
           <div class="text-right shrink-0 space-y-1">
@@ -1118,29 +1232,34 @@
 
   </main>
 
-  <!-- Bottom Navigation Bar (4 ปุ่ม รองรับ iPhone Safe Area) -->
+  <!-- Bottom Navigation Bar (5 ปุ่ม: แชท, คำนวณ, ออเดอร์, บิล, ตั้งค่า) -->
   <nav
-    class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 px-3 z-30 safe-bottom">
-    <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+    class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 px-2 z-30 safe-bottom">
+    <div class="max-w-md mx-auto grid grid-cols-5 gap-1">
       <button onclick="switchTab('linechat')" id="nav-btn-linechat"
         class="flex flex-col items-center py-1 text-[#06C755] font-semibold transition">
         <span class="text-lg">💬</span>
-        <span class="text-xs mt-0.5">แชท #order</span>
+        <span class="text-[11px] mt-0.5">แชท</span>
       </button>
       <button onclick="switchTab('calculator')" id="nav-btn-calculator"
         class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
         <span class="text-lg">🧮</span>
-        <span class="text-xs mt-0.5">คำนวณ</span>
+        <span class="text-[11px] mt-0.5">คำนวณ</span>
+      </button>
+      <button onclick="switchTab('orders')" id="nav-btn-orders"
+        class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
+        <span class="text-lg">📋</span>
+        <span class="text-[11px] mt-0.5">ออเดอร์</span>
       </button>
       <button onclick="switchTab('bill')" id="nav-btn-bill"
         class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
         <span class="text-lg">🧾</span>
-        <span class="text-xs mt-0.5">บิล LINE</span>
+        <span class="text-[11px] mt-0.5">บิล</span>
       </button>
       <button onclick="switchTab('products')" id="nav-btn-products"
         class="flex flex-col items-center py-1 text-slate-400 font-medium transition">
         <span class="text-lg">⚙️</span>
-        <span class="text-xs mt-0.5">ตั้งค่าทุนของ</span>
+        <span class="text-[11px] mt-0.5">ตั้งค่า</span>
       </button>
     </div>
   </nav>
@@ -1191,6 +1310,7 @@
     const HISTORY_KEY = "onestudio_order_history_v2";
     const TARGETS_KEY = "onestudio_monthly_targets_v1";
     const SETTINGS_KEY = "onestudio_shop_settings_v1";
+    const ACTIVE_DRAFT_KEY = "onestudio_active_draft_v2";
     let catalog = JSON.parse(JSON.stringify(defaultCatalog));
     let orderHistory = [];
     let monthlyTargets = { wage: 15000, house: 15000, vehicle: 10000 };
@@ -1252,6 +1372,65 @@
     let orderItems = [
       { id: Date.now(), prodId: 101, qty: 0 }
     ];
+
+    function saveActiveDraft() {
+      try {
+        const draft = {
+          customerName: document.getElementById("input-customer")?.value || "",
+          ordNo: document.getElementById("input-order-no")?.value || "",
+          orderDate: document.getElementById("input-order-date")?.value || "",
+          dueDate: document.getElementById("input-due-date")?.value || "",
+          courier: document.getElementById("input-courier")?.value || "Flash Express",
+          trackingNo: document.getElementById("input-tracking-no")?.value || "",
+          discount: parseFloat(document.getElementById("input-discount")?.value) || 0,
+          shipCharge: parseFloat(document.getElementById("input-ship-charge")?.value) || 0,
+          shipCost: parseFloat(document.getElementById("input-ship-cost")?.value) || 0,
+          autoPrice: document.getElementById("auto-price-toggle")?.checked ?? true,
+          manualRevenue: parseFloat(document.getElementById("input-revenue")?.value) || 0,
+          activePaymentStatus,
+          activeProdStatus,
+          orderItems: JSON.parse(JSON.stringify(orderItems)),
+          updatedAt: Date.now()
+        };
+        localStorage.setItem(ACTIVE_DRAFT_KEY, JSON.stringify(draft));
+      } catch (e) { }
+    }
+
+    function loadActiveDraft() {
+      try {
+        const saved = localStorage.getItem(ACTIVE_DRAFT_KEY);
+        if (!saved) return false;
+        const draft = JSON.parse(saved);
+        if (!draft) return false;
+
+        if (draft.customerName !== undefined && document.getElementById("input-customer")) document.getElementById("input-customer").value = draft.customerName;
+        if (draft.ordNo && document.getElementById("input-order-no")) document.getElementById("input-order-no").value = draft.ordNo;
+        if (draft.orderDate && document.getElementById("input-order-date")) document.getElementById("input-order-date").value = draft.orderDate;
+        if (draft.dueDate !== undefined && document.getElementById("input-due-date")) document.getElementById("input-due-date").value = draft.dueDate;
+        if (draft.courier && document.getElementById("input-courier")) document.getElementById("input-courier").value = draft.courier;
+        if (draft.trackingNo !== undefined && document.getElementById("input-tracking-no")) document.getElementById("input-tracking-no").value = draft.trackingNo;
+        if (draft.discount !== undefined && document.getElementById("input-discount")) document.getElementById("input-discount").value = draft.discount;
+        if (draft.shipCharge !== undefined && document.getElementById("input-ship-charge")) document.getElementById("input-ship-charge").value = draft.shipCharge;
+        if (draft.shipCost !== undefined && document.getElementById("input-ship-cost")) document.getElementById("input-ship-cost").value = draft.shipCost;
+        if (draft.autoPrice !== undefined && document.getElementById("auto-price-toggle")) document.getElementById("auto-price-toggle").checked = draft.autoPrice;
+        if (!draft.autoPrice && draft.manualRevenue !== undefined && document.getElementById("input-revenue")) document.getElementById("input-revenue").value = draft.manualRevenue;
+
+        if (draft.activePaymentStatus) {
+          activePaymentStatus = draft.activePaymentStatus;
+          updatePaymentStatusSelectorUI(activePaymentStatus);
+        }
+        if (draft.activeProdStatus) {
+          activeProdStatus = draft.activeProdStatus;
+          updateProdStatusSelectorUI(activeProdStatus);
+        }
+        if (Array.isArray(draft.orderItems) && draft.orderItems.length > 0) {
+          orderItems = draft.orderItems;
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
 
     function getTodayDateStr() {
       return new Date().toLocaleDateString('th-TH');
@@ -1417,18 +1596,33 @@
     }
 
     function resetNewBillForm() {
+      // 1. ถ้าบิลปัจจุบันมีสินค้า หรือมียอดเงิน ให้บันทึกลง orderHistory อัตโนมัติก่อนล้างฟอร์ม เพื่อไม่ให้บิลก่อนหน้าสูญหาย
+      const currentOrd = (document.getElementById("input-order-no")?.value || "").trim();
+      const hasItems = orderItems.some(it => it.qty > 0);
+      if (hasItems && currentOrd) {
+        saveCurrentOrderToHistory(true);
+      }
+
+      // 2. สร้างเลขที่บิลใหม่ ORD-XXXXXX
       const ordNo = "ORD-" + Math.floor(100000 + Math.random() * 900000);
       document.getElementById("input-order-no").value = ordNo;
+      document.getElementById("input-customer").value = "";
       document.getElementById("input-order-date").value = getTodayDateStr();
+      document.getElementById("input-due-date").value = "";
+      document.getElementById("input-courier").value = "Flash Express";
+      document.getElementById("input-tracking-no").value = "";
       document.getElementById("input-discount").value = 0;
       document.getElementById("input-ship-charge").value = 0;
       document.getElementById("input-ship-cost").value = 0;
       document.getElementById("auto-price-toggle").checked = true;
       orderItems = [{ id: Date.now(), prodId: catalog[0]?.id || 101, qty: 100 }];
       setReceiptDocType('quote');
+      setActivePaymentStatus('deposit_50', true);
+      setActiveProdStatus('draft', true);
       renderOrderItems();
       calculate();
-      showToast("🔄 เริ่มบิลใหม่เรียบร้อยแล้ว");
+      saveActiveDraft();
+      showToast(`✨ เริ่มต้นบิลใหม่ ${ordNo} แล้ว (บิลเดิมถูกบันทึกลงประวัติออเดอร์อัตโนมัติ)`);
     }
 
     function showToast(msg = "✅ บันทึกข้อมูลเรียบร้อยแล้ว") {
@@ -1939,24 +2133,25 @@
       showToast("🔄 คืนค่าต้นทุนและราคาขายเริ่มต้นทั้ง 30 รายการแล้ว");
     }
 
-    // 2. Tab Navigation
+    // 2. Tab Navigation (5 แท็บ: แชท, คำนวณ, ออเดอร์, บิล, ตั้งค่า)
     function switchTab(tab) {
-      const tabs = ['linechat', 'calculator', 'bill', 'products'];
+      const tabs = ['linechat', 'calculator', 'orders', 'bill', 'products'];
       tabs.forEach(t => {
         const contentEl = document.getElementById(`tab-${t}`);
         const navBtn = document.getElementById(`nav-btn-${t}`);
         const topBtn = document.getElementById(`top-tab-${t}`);
         if (t === tab) {
-          contentEl.classList.remove("hidden");
-          navBtn.className = "flex flex-col items-center py-1 text-[#06C755] font-semibold transition";
-          topBtn.className = "py-2 px-1.5 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1";
+          if (contentEl) contentEl.classList.remove("hidden");
+          if (navBtn) navBtn.className = "flex flex-col items-center py-1 text-[#06C755] font-semibold transition";
+          if (topBtn) topBtn.className = "py-2 px-1 rounded-lg text-xs font-semibold bg-white text-[#06C755] shadow-sm transition flex items-center justify-center gap-1";
         } else {
-          contentEl.classList.add("hidden");
-          navBtn.className = "flex flex-col items-center py-1 text-slate-400 font-medium transition";
-          topBtn.className = "py-2 px-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1";
+          if (contentEl) contentEl.classList.add("hidden");
+          if (navBtn) navBtn.className = "flex flex-col items-center py-1 text-slate-400 font-medium transition";
+          if (topBtn) topBtn.className = "py-2 px-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1";
         }
       });
       if (tab === 'bill' || tab === 'calculator') calculate();
+      if (tab === 'orders') renderAccumulatedDashboard();
     }
 
     // 3. ระบบห้องแชท LINE พิมพ์ #oder / #order (รองรับทั้งแบบหลายบรรทัด 1. ยางมัดผม 100*10฿=฿1,000.00 และสินค้าพิเศษนอกแคตตาล็อก)
@@ -2520,6 +2715,10 @@
         else if (st === "deposit_50") accUnpaid += Math.round(net / 2);
       });
       document.getElementById("history-count").innerText = orderHistory.length;
+      const ordersTabBadge = document.getElementById("orders-tab-count-badge");
+      if (ordersTabBadge) ordersTabBadge.innerText = `${orderHistory.length} รายการ`;
+      const chatOrderCount = document.getElementById("chat-tab-order-count");
+      if (chatOrderCount) chatOrderCount.innerText = orderHistory.length;
       const unpaidEl = document.getElementById("acc-unpaid");
       if (unpaidEl) unpaidEl.innerText = `฿${accUnpaid.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
       document.getElementById("acc-mat").innerText = `฿${accMat.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -2631,8 +2830,8 @@
                 </div>
 
                 <div class="flex justify-end pt-0.5">
-                  <button onclick="openOrderFromHistory(${origIdx})" class="w-full py-1.5 px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium text-xs transition text-center">
-                    🧾 เปิดบิล / จัดการเลขพัสดุ / ออกใบเสร็จรับเงิน
+                  <button onclick="openOrderFromHistory(${origIdx})" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs transition text-center shadow-md flex items-center justify-center gap-1.5 active:scale-98">
+                    <span>📂</span> ดึงบิลนี้กลับมาดู / แก้ไข / ออกใบเสร็จ A4 ➔
                   </button>
                 </div>
               </div>
@@ -2697,6 +2896,7 @@
       setActiveProdStatus(h.prodStatus || "draft", true);
       renderOrderItems();
       calculate();
+      saveActiveDraft();
       switchTab('bill');
       showToast(`🧾 เปิดบิล ${h.ordNo} (${h.customerName}) พร้อมปริ้น/แก้ไขแล้ว!`);
     }
@@ -2732,13 +2932,16 @@
     }
 
     function deleteOrderHistoryItem(index) {
+      const item = orderHistory[index];
+      if (item && !confirm(`คุณต้องการลบออเดอร์ ${item.ordNo} (${item.customerName || 'ไม่ระบุชื่อ'}) ออกจากประวัติใช่หรือไม่?`)) return;
       orderHistory.splice(index, 1);
       try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
       syncStateToCloud();
       renderAccumulatedDashboard();
+      showToast("🗑️ ลบออเดอร์ออกจากประวัติเรียบร้อยแล้ว");
     }
 
-    function saveCurrentOrderToHistory() {
+    function saveCurrentOrderToHistory(silent = false) {
       const summary = calculate();
       const ordNo = document.getElementById("input-order-no").value || ("ORD-" + Math.floor(100000 + Math.random() * 900000));
       const orderDate = document.getElementById("input-order-date")?.value || getTodayDateStr();
@@ -2786,10 +2989,10 @@
 
       if (existingIdx >= 0) {
         orderHistory[existingIdx] = record;
-        showToast(`✅ อัปเดตข้อมูลบิล ${ordNo} ในยอดสะสมเรียบร้อยแล้ว!`);
+        if (!silent) showToast(`✅ อัปเดตข้อมูลบิล ${ordNo} ในยอดสะสมเรียบร้อยแล้ว!`);
       } else {
         orderHistory.unshift(record);
-        showToast(`💾 บันทึกบิล ${ordNo} เข้าสู่ยอดสะสมเรียบร้อยแล้ว!`);
+        if (!silent) showToast(`💾 บันทึกบิล ${ordNo} เข้าสู่ยอดสะสมเรียบร้อยแล้ว!`);
       }
       try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
       syncStateToCloud();
@@ -3413,7 +3616,52 @@
       document.getElementById("bill-admin-house").innerText = `฿${house.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
       document.getElementById("bill-admin-vehicle").innerText = `฿${vehicle.toLocaleString(undefined, { maximumFractionDigits: 1 })}`;
 
+      syncBillEditorFromCalc();
+      saveActiveDraft();
+
       return { revenue, discount, shipCharge, shipCost, netRevenue, totalMaterial, totalCost, grossProfit, margin, supplies, wage, house, vehicle, billLines };
+    }
+
+    // ฟังก์ชันเปิด/ปิดกล่องแก้ไขข้อมูลบิลด่วน และเชื่อมข้อมูลกับหน้าคำนวณ
+    function toggleBillEditor() {
+      const editor = document.getElementById("bill-quick-editor");
+      if (editor) editor.classList.toggle("hidden");
+    }
+
+    function syncBillInput(key, val) {
+      const targetInput = document.getElementById(`input-${key}`);
+      if (targetInput) {
+        targetInput.value = val;
+        calculate();
+      }
+    }
+
+    function syncBillEditorFromCalc() {
+      const cust = document.getElementById("input-customer")?.value || "";
+      const ordNo = document.getElementById("input-order-no")?.value || "";
+      const ordDate = document.getElementById("input-order-date")?.value || "";
+      const dueDate = document.getElementById("input-due-date")?.value || "";
+      const courier = document.getElementById("input-courier")?.value || "";
+      const tracking = document.getElementById("input-tracking-no")?.value || "";
+
+      if (document.getElementById("bill-edit-cust") && document.activeElement !== document.getElementById("bill-edit-cust")) {
+        document.getElementById("bill-edit-cust").value = cust;
+      }
+      if (document.getElementById("bill-edit-order-no") && document.activeElement !== document.getElementById("bill-edit-order-no")) {
+        document.getElementById("bill-edit-order-no").value = ordNo;
+      }
+      if (document.getElementById("bill-edit-order-date") && document.activeElement !== document.getElementById("bill-edit-order-date")) {
+        document.getElementById("bill-edit-order-date").value = ordDate;
+      }
+      if (document.getElementById("bill-edit-due-date") && document.activeElement !== document.getElementById("bill-edit-due-date")) {
+        document.getElementById("bill-edit-due-date").value = dueDate;
+      }
+      if (document.getElementById("bill-edit-courier") && document.activeElement !== document.getElementById("bill-edit-courier")) {
+        document.getElementById("bill-edit-courier").value = courier;
+      }
+      if (document.getElementById("bill-edit-tracking-no") && document.activeElement !== document.getElementById("bill-edit-tracking-no")) {
+        document.getElementById("bill-edit-tracking-no").value = tracking;
+      }
     }
 
     // แปลงตัวเลขเป็นคำอ่านภาษาไทย (บาทถ้วน) ตามมาตรฐานระบบบัญชีและใบเสร็จทางการ
@@ -3603,6 +3851,7 @@
     }
 
     function printOfficialReceipt() {
+      saveCurrentOrderToHistory(true);
       switchTab('bill');
       setReceiptViewMode('official');
       setTimeout(() => {
@@ -3611,6 +3860,7 @@
     }
 
     function copyBillTextForLine() {
+      saveCurrentOrderToHistory(true);
       const cust = document.getElementById("input-customer").value || "คุณลูกค้า";
       const ordNo = document.getElementById("input-order-no").value || "ORD-001";
       const orderDate = document.getElementById("input-order-date")?.value || getTodayDateStr();
@@ -3845,12 +4095,238 @@ ${leadText}
     applyShopSettingsToUI();
     renderRecentLineCustomers();
     renderCatalog();
+    loadActiveDraft();
     renderOrderItems();
     calculate();
     renderAccumulatedDashboard();
     loadStateFromCloud();
     setInterval(() => loadStateFromCloud(false), 4000);
+
+    // ==========================================
+    // TikTok to Facebook Reels Auto-Sync UI Logic
+    // ==========================================
+    let syncMode = 'auto'; // 'auto' | 'url'
+
+    function openTikTokSyncModal() {
+      const modal = document.getElementById("tiktok-sync-modal");
+      if (modal) {
+        modal.classList.remove("hidden");
+        checkTikTokReelsStatus();
+      }
+    }
+
+    function closeTikTokSyncModal() {
+      const modal = document.getElementById("tiktok-sync-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function setSyncMode(mode) {
+      syncMode = mode;
+      const btnAuto = document.getElementById("btn-sync-mode-auto");
+      const btnUrl = document.getElementById("btn-sync-mode-url");
+      const boxAuto = document.getElementById("sync-mode-auto-box");
+      const boxUrl = document.getElementById("sync-mode-url-box");
+
+      if (mode === 'auto') {
+        btnAuto.className = "py-1.5 px-2 rounded-md font-semibold bg-white text-slate-800 shadow-xs text-center transition";
+        btnUrl.className = "py-1.5 px-2 rounded-md font-medium text-slate-600 text-center transition";
+        boxAuto.classList.remove("hidden");
+        boxUrl.classList.add("hidden");
+      } else {
+        btnUrl.className = "py-1.5 px-2 rounded-md font-semibold bg-white text-slate-800 shadow-xs text-center transition";
+        btnAuto.className = "py-1.5 px-2 rounded-md font-medium text-slate-600 text-center transition";
+        boxUrl.classList.remove("hidden");
+        boxAuto.classList.add("hidden");
+      }
+    }
+
+    async function checkTikTokReelsStatus() {
+      const badge = document.getElementById("tiktok-sync-status-badge");
+      const countEl = document.getElementById("tiktok-sync-count");
+      const userEl = document.getElementById("tiktok-sync-user-display");
+      try {
+        const res = await fetch("/api/tiktok-reels/status");
+        if (!res.ok) throw new Error("HTTP error " + res.status);
+        const data = await res.json();
+        if (data.configured) {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800";
+          badge.innerHTML = "🟢 Facebook เชื่อมต่อแล้ว";
+        } else {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800";
+          badge.innerHTML = "🟡 รอใส่ FB Token ใน .env";
+        }
+        if (countEl) countEl.innerText = data.synced_count || 0;
+        if (userEl && data.tiktok_user) userEl.innerText = "@" + data.tiktok_user;
+        if (data.tiktok_user && document.getElementById("sync-input-username")) {
+          document.getElementById("sync-input-username").value = data.tiktok_user;
+        }
+        if (data.fb_page_id && document.getElementById("tiktok-sync-page-id")) {
+          document.getElementById("tiktok-sync-page-id").innerText = data.fb_page_id;
+        }
+      } catch (err) {
+        if (badge) {
+          badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700";
+          badge.innerHTML = "⚪ โหมด Standalone / Script พร้อมใช้";
+        }
+      }
+    }
+
+    async function startTikTokSync() {
+      const btn = document.getElementById("btn-run-tiktok-sync");
+      const resultBox = document.getElementById("sync-result-box");
+      const username = (document.getElementById("sync-input-username")?.value || "_one_19").trim();
+      const videoUrl = (document.getElementById("sync-input-url")?.value || "").trim();
+
+      if (syncMode === 'url' && !videoUrl) {
+        alert("กรุณาวางลิงก์คลิป TikTok ที่ต้องการโพสต์");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span> กำลังดึงคลิปแบบไร้ลายน้ำ & โพสต์ขึ้น Reels...`;
+      resultBox.classList.remove("hidden");
+      resultBox.className = "p-2.5 rounded-xl text-xs space-y-1 bg-blue-50 border border-blue-200 text-blue-900";
+      resultBox.innerHTML = `<div>🔄 กำลังติดต่อ TikWM เพื่อดาวน์โหลดคลิปไร้ลายน้ำ...</div>`;
+
+      try {
+        const payload = {
+          username: username,
+          video_url: syncMode === 'url' ? videoUrl : null,
+          max_videos: 1
+        };
+
+        const res = await fetch("/api/tiktok-reels/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success && data.synced_count > 0) {
+          resultBox.className = "p-2.5 rounded-xl text-xs space-y-1 bg-emerald-50 border border-emerald-200 text-emerald-900";
+          resultBox.innerHTML = `
+            <div class="font-bold">🎉 ซิงค์ขึ้น Facebook Reels สำเร็จแล้ว!</div>
+            <div>• คลิป: ${data.details[0]?.title || 'คลิปจาก TikTok'}</div>
+            <div>• โพสต์ไปยัง Facebook Page TheOneStudioDesign เรียบร้อยแล้ว</div>
+          `;
+          showToast("🎉 โพสต์ขึ้น Facebook Reels เรียบร้อยแล้ว!");
+          checkTikTokReelsStatus();
+        } else if (data.message) {
+          resultBox.className = "p-2.5 rounded-xl text-xs space-y-1 bg-amber-50 border border-amber-200 text-amber-900";
+          resultBox.innerHTML = `<div class="font-bold">ℹ️ ${data.message}</div>`;
+        } else {
+          resultBox.className = "p-2.5 rounded-xl text-xs space-y-1 bg-rose-50 border border-rose-200 text-rose-900";
+          const errList = (data.errors || []).join("<br>") || "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+          resultBox.innerHTML = `<div class="font-bold">⚠️ ยังไม่สามารถโพสต์ได้:</div><div>${errList}</div>`;
+        }
+      } catch (err) {
+        resultBox.className = "p-2.5 rounded-xl text-xs space-y-1 bg-rose-50 border border-rose-200 text-rose-900";
+        resultBox.innerHTML = `<div class="font-bold">⚠️ ติดต่อเซิร์ฟเวอร์ไม่ได้:</div><div>${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀</span> ดึงคลิปลบลายน้ำ & โพสต์ Facebook Reels ทันที`;
+      }
+    }
   </script>
+
+  <!-- ========================================== -->
+  <!-- MODAL: TikTok to Facebook Reels Auto-Sync  -->
+  <!-- ========================================== -->
+  <div id="tiktok-sync-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-pink-900 text-white p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🎬</span>
+          <div>
+            <h3 class="font-bold text-sm leading-tight flex items-center gap-1.5">
+              TikTok ➔ Facebook Reels
+              <span class="bg-pink-500 text-[10px] px-1.5 py-0.5 rounded font-normal">Auto 0฿</span>
+            </h3>
+            <p class="text-[11px] text-slate-300">ดึงคลิปแบบลบลายน้ำ โพสต์ขึ้นเพจเพิ่มยอดขายฟรี</p>
+          </div>
+        </div>
+        <button onclick="closeTikTokSyncModal()" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 space-y-3.5 overflow-y-auto text-xs">
+        
+        <!-- Status Box -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700">สถานะระบบเชื่อมต่อ:</span>
+            <span id="tiktok-sync-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+              ⏳ กำลังตรวจสอบ...
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-500 space-y-0.5">
+            <div>• TikTok ช่อง: <span id="tiktok-sync-user-display" class="font-mono text-slate-800 font-semibold">@_one_19</span></div>
+            <div>• Facebook เพจ: <span class="font-semibold text-slate-800">Onestudio ของชำร่วย การ์ดแต่งงาน (<span id="tiktok-sync-page-id" class="font-mono text-slate-600">101452995525914</span>)</span></div>
+            <div>• คลิปที่เคยซิงค์แล้ว: <span id="tiktok-sync-count" class="font-bold text-emerald-600">0</span> คลิป</div>
+          </div>
+        </div>
+
+        <!-- Sync Option Tabs -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">เลือกวิธีการซิงค์คลิป:</label>
+          <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-lg">
+            <button type="button" id="btn-sync-mode-auto" onclick="setSyncMode('auto')"
+              class="py-1.5 px-2 rounded-md font-semibold bg-white text-slate-800 shadow-xs text-center transition">
+              ✨ คลิปใหม่ล่าสุด
+            </button>
+            <button type="button" id="btn-sync-mode-url" onclick="setSyncMode('url')"
+              class="py-1.5 px-2 rounded-md font-medium text-slate-600 text-center transition">
+              🔗 วางลิงก์คลิป
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode 1: Auto / Username -->
+        <div id="sync-mode-auto-box" class="space-y-1.5">
+          <label class="block text-[11px] font-semibold text-slate-600">TikTok Username (ไม่ต้องใส่ @):</label>
+          <input type="text" id="sync-input-username" value="_one_19" placeholder="_one_19"
+            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500 outline-none">
+          <p class="text-[10px] text-slate-400">ระบบจะดึงคลิปใหม่ล่าสุดที่ยังไม่เคยโพสต์ให้อัตโนมัติ</p>
+        </div>
+
+        <!-- Mode 2: Specific URL -->
+        <div id="sync-mode-url-box" class="space-y-1.5 hidden">
+          <label class="block text-[11px] font-semibold text-slate-600">ลิงก์คลิป TikTok ที่ต้องการโพสต์:</label>
+          <input type="text" id="sync-input-url" placeholder="https://www.tiktok.com/@_one_19/video/..."
+            class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-pink-500 outline-none">
+          <p class="text-[10px] text-slate-400">วางลิงก์คลิปจากแอป TikTok ได้เลย ระบบจะลบลายน้ำให้อัตโนมัติ</p>
+        </div>
+
+        <!-- CTA Preview Box -->
+        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5">
+          <span class="font-bold text-emerald-800 text-[11px] flex items-center gap-1">
+            <span>📢</span> ข้อความปิดการขาย (CTA) ที่จะแปะท้ายคลิปอัตโนมัติ:
+          </span>
+          <p class="text-[10px] text-emerald-700 mt-1 leading-relaxed">
+            💍 ONESTUDIO การ์ดแต่งงาน & ของชำร่วย ดีไซน์สวย พรีเมียม<br>
+            💌 ปรึกษาแบบ / เช็คคิวงาน 👉 LINE OA: @795ncmnv (มี @ ด้วยนะคะ)
+          </p>
+        </div>
+
+        <!-- Progress / Result Log -->
+        <div id="sync-result-box" class="hidden p-2.5 rounded-xl text-xs space-y-1"></div>
+
+        <!-- Action Button -->
+        <button id="btn-run-tiktok-sync" onclick="startTikTokSync()"
+          class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-bold text-xs shadow-md active:scale-98 transition flex items-center justify-center gap-2">
+          <span>🚀</span> ดึงคลิปลบลายน้ำ & โพสต์ Facebook Reels ทันที
+        </button>
+
+        <!-- Guide Note -->
+        <div class="text-[10px] text-slate-400 text-center leading-normal pt-1 border-t border-slate-100">
+          💡 คลิปจะถูกตัดลายน้ำ TikTok ออก 100% ทำให้ระบบ Facebook Reels เปิดค่าการมองเห็นสูงสุด
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
 
 </html>

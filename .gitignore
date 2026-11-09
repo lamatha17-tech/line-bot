@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .vercel
 .pytest_cache/
+temp_reels/
+*.mp4
+make_blueprint*.json
+*.blueprint.json
