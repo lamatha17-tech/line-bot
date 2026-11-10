@@ -1479,11 +1479,41 @@ def read_root():
 @app.get("/calculator", response_class=HTMLResponse)
 @app.get("/app", response_class=HTMLResponse)
 def serve_calculator_app():
-    """เปิดหน้าเว็บแอปคำนวณต้นทุน-กำไร 4 กองทุนสำหรับ iPhone / มือถือ"""
+    """เปิดหน้าเว็บแอปคำนวณต้นทุน-กำไร 4 กองทุนสำหรับ iPhone / มือถือ พร้อมฝังข้อมูลลูกค้าล่าสุดจาก Firestore ทันที"""
     html_path = Path(__file__).parent / "calculator.html"
-    if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
-    return HTMLResponse(content="<h1>ไม่พบไฟล์ calculator.html</h1>", status_code=404)
+    if not html_path.exists():
+        return HTMLResponse(content="<h1>ไม่พบไฟล์ calculator.html</h1>", status_code=404)
+
+    html_content = html_path.read_text(encoding="utf-8")
+
+    initial_state_json = "{}"
+    if db:
+        try:
+            doc_ref = db.collection("onestudio_admin").document("calculator_state")
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict() or {}
+                clean_data = {
+                    "ok": True,
+                    "stateVersion": 2,
+                    "catalogVersion": data.get("catalogVersion", 4),
+                    "catalog": data.get("catalog", []),
+                    "shopSettings": data.get("shopSettings", {}),
+                    "latestOrder": data.get("latestOrder"),
+                    "orderHistory": data.get("orderHistory", []),
+                    "monthlyTargets": data.get("monthlyTargets", {"wage": 15000, "house": 15000, "vehicle": 10000}),
+                    "latestLineCustomer": data.get("latestLineCustomer", ""),
+                    "recentCustomers": data.get("recentCustomers", [])
+                }
+                initial_state_json = json.dumps(clean_data, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"Error preparing initial calculator state: {e}")
+
+    injection = f"<script>window.INITIAL_CALCULATOR_STATE = {initial_state_json};</script>\n</head>"
+    if "</head>" in html_content:
+        html_content = html_content.replace("</head>", injection, 1)
+
+    return HTMLResponse(content=html_content)
 
 
 def discover_real_line_customers_from_firestore(existing_recent: list = None) -> list:

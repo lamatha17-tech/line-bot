@@ -2115,86 +2115,94 @@
       }
     }
 
+    function applyStateData(data, forceRefresh = false) {
+      if (!data || !data.ok) return;
+      if (Array.isArray(data.catalog) && data.catalog.length > 0 && data.catalogVersion === 4) {
+        data.catalog.forEach(savedItem => {
+          const match = catalog.find(c => c.id === savedItem.id);
+          if (match) {
+            match.mat = parseFloat(savedItem.mat) || match.mat;
+            match.name = savedItem.name || match.name;
+            if (match.id === 103 || match.id === 104) {
+              match.name = match.name.replace(/\s*\+\s*ซองฟรี/g, "").replace(/\s*\(ไม่รวมซอง\)/g, "") + " (ไม่รวมซอง)";
+            }
+            if (savedItem.priceInfo) match.priceInfo = savedItem.priceInfo;
+            if (savedItem.tiers) match.tiers = { ...match.tiers, ...savedItem.tiers };
+            if (Array.isArray(savedItem.keywords)) match.keywords = savedItem.keywords;
+          } else {
+            catalog.push(savedItem);
+          }
+        });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog)); } catch (e) { }
+      }
+      if (data.shopSettings && typeof data.shopSettings === 'object' && Object.keys(data.shopSettings).length > 0) {
+        shopSettings = { ...shopSettings, ...data.shopSettings };
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(shopSettings)); } catch (e) { }
+        applyShopSettingsToUI();
+      }
+      if (Array.isArray(data.orderHistory)) {
+        orderHistory = data.orderHistory;
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
+      }
+      if (data.monthlyTargets) {
+        monthlyTargets = { ...monthlyTargets, ...data.monthlyTargets };
+        try { localStorage.setItem(TARGETS_KEY, JSON.stringify(monthlyTargets)); } catch (e) { }
+        if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
+        if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
+        if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
+      }
+      if (Array.isArray(data.recentCustomers)) {
+        recentLineCustomers = data.recentCustomers;
+      }
+      if (data.latestLineCustomer) {
+        const rawName = data.latestLineCustomer;
+        activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
+        const custInput = document.getElementById("input-customer");
+        if (custInput && !custInput.value) custInput.value = activeLineCustomerName;
+        const billCustInput = document.getElementById("bill-edit-cust");
+        if (billCustInput && !billCustInput.value) billCustInput.value = activeLineCustomerName;
+      }
+      if (recentLineCustomers.length > 0 && !activeLineUserId) {
+        activeLineUserId = recentLineCustomers[0].userId || "";
+        if (!activeLineCustomerName && recentLineCustomers[0].displayName) {
+          const rn = recentLineCustomers[0].displayName;
+          activeLineCustomerName = rn.startsWith("คุณ") ? rn : `คุณ${rn}`;
+        }
+        if (activeLineUserId) {
+          loadLineCustomerChat(activeLineUserId, activeLineCustomerName);
+        }
+      }
+      renderRecentLineCustomers();
+      if (editingCatalogId === null) renderCatalog();
+      if (data.latestOrder && data.latestOrder.ordNo && data.latestOrder.ordNo !== lastSyncedOrdNo) {
+        applyLatestOrderFromLine(data.latestOrder);
+      } else {
+        renderOrderItems();
+        calculate();
+      }
+      renderAccumulatedDashboard();
+      fetchAdminAlerts();
+      if (forceRefresh) {
+        showToast(activeLineCustomerName ? `🟢 อัปเดตรายชื่อลูกค้าจริงแล้ว (${recentLineCustomers.length} ท่าน)` : "✅ ซิงค์ข้อมูลจริงจาก LINE Bot เรียบร้อยแล้ว");
+      }
+    }
+
     async function loadStateFromCloud(forceRefresh = false) {
       try {
         const url = `${API_BASE}/api/calculator-state?_t=${Date.now()}`;
         const res = await fetch(url);
         if (!res.ok) {
           console.warn("Could not load calculator state:", res.status);
+          if (forceRefresh) showToast("⚠️ ไม่สามารถดึงข้อมูลได้ (HTTP " + res.status + ")");
           return;
         }
         const data = await res.json();
         if (data && data.ok) {
-          if (Array.isArray(data.catalog) && data.catalog.length > 0 && data.catalogVersion === 4) {
-            data.catalog.forEach(savedItem => {
-              const match = catalog.find(c => c.id === savedItem.id);
-              if (match) {
-                match.mat = parseFloat(savedItem.mat) || match.mat;
-                match.name = savedItem.name || match.name;
-                if (match.id === 103 || match.id === 104) {
-                  match.name = match.name.replace(/\s*\+\s*ซองฟรี/g, "").replace(/\s*\(ไม่รวมซอง\)/g, "") + " (ไม่รวมซอง)";
-                }
-                if (savedItem.priceInfo) match.priceInfo = savedItem.priceInfo;
-                if (savedItem.tiers) match.tiers = { ...match.tiers, ...savedItem.tiers };
-                if (Array.isArray(savedItem.keywords)) match.keywords = savedItem.keywords;
-              } else {
-                catalog.push(savedItem);
-              }
-            });
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog)); } catch (e) { }
-          } else {
-            syncStateToCloud();
-          }
-          if (data.shopSettings && typeof data.shopSettings === 'object' && Object.keys(data.shopSettings).length > 0) {
-            shopSettings = { ...shopSettings, ...data.shopSettings };
-            try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(shopSettings)); } catch (e) { }
-            applyShopSettingsToUI();
-          }
-          if (Array.isArray(data.orderHistory)) {
-            orderHistory = data.orderHistory;
-            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(orderHistory)); } catch (e) { }
-          }
-          if (data.monthlyTargets) {
-            monthlyTargets = { ...monthlyTargets, ...data.monthlyTargets };
-            try { localStorage.setItem(TARGETS_KEY, JSON.stringify(monthlyTargets)); } catch (e) { }
-            if (document.getElementById("target-wage-input")) document.getElementById("target-wage-input").value = monthlyTargets.wage || 15000;
-            if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
-            if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
-          }
-          if (Array.isArray(data.recentCustomers)) {
-            recentLineCustomers = data.recentCustomers;
-          }
-          if (data.latestLineCustomer) {
-            const rawName = data.latestLineCustomer;
-            activeLineCustomerName = rawName.startsWith("คุณ") ? rawName : `คุณ${rawName}`;
-            const custInput = document.getElementById("input-customer");
-            if (custInput && !custInput.value) custInput.value = activeLineCustomerName;
-          }
-          if (recentLineCustomers.length > 0 && !activeLineUserId) {
-            activeLineUserId = recentLineCustomers[0].userId || "";
-            if (!activeLineCustomerName && recentLineCustomers[0].displayName) {
-              const rn = recentLineCustomers[0].displayName;
-              activeLineCustomerName = rn.startsWith("คุณ") ? rn : `คุณ${rn}`;
-            }
-            if (activeLineUserId) {
-              loadLineCustomerChat(activeLineUserId, activeLineCustomerName);
-            }
-          }
-          renderRecentLineCustomers();
-          if (editingCatalogId === null) renderCatalog();
-          if (data.latestOrder && data.latestOrder.ordNo && data.latestOrder.ordNo !== lastSyncedOrdNo) {
-            applyLatestOrderFromLine(data.latestOrder);
-          } else {
-            renderOrderItems();
-            calculate();
-          }
-          renderAccumulatedDashboard();
-          fetchAdminAlerts();
-          if (forceRefresh) {
-            showToast(activeLineCustomerName ? `🟢 ซิงค์ข้อมูลจริงจาก LINE ล่าสุด: ${activeLineCustomerName}` : "✅ ซิงค์ข้อมูลจริงจาก LINE Bot เรียบร้อยแล้ว");
-          }
+          applyStateData(data, forceRefresh);
         }
-      } catch (e) { }
+      } catch (e) {
+        if (forceRefresh) showToast("⚠️ ไม่สามารถเชื่อมต่อได้: " + e.message);
+      }
     }
 
     function saveCatalogToStorage(silent = false) {
@@ -4195,6 +4203,11 @@ ${leadText}
     renderOrderItems();
     calculate();
     renderAccumulatedDashboard();
+    
+    // โหลดข้อมูลเริ่มต้นที่ Server ฝังมาให้ทันที (SSR Data - เห็นลูกค้าจริงทันทีโดยไม่ต้องรอ Fetch)
+    if (window.INITIAL_CALCULATOR_STATE && window.INITIAL_CALCULATOR_STATE.ok) {
+      applyStateData(window.INITIAL_CALCULATOR_STATE, false);
+    }
     loadStateFromCloud();
     setInterval(() => loadStateFromCloud(false), 4000);
 
