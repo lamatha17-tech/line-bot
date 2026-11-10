@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage, ImageMessage
@@ -2199,5 +2199,186 @@ async def trigger_tiktok_reels_sync(request: Request):
     except Exception as e:
         logger.error(f"Error in tiktok reels sync API: {e}")
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+# ==========================================
+# Facebook Page Messenger AI Auto-Reply Bot
+# ==========================================
+
+def get_facebook_user_profile(user_id: str) -> Dict[str, str]:
+    """ดึงชื่อและรูปโปรไฟล์ของลูกค้าจาก Facebook Graph API"""
+    page_token = os.getenv("FB_PAGE_ACCESS_TOKEN", "")
+    if not page_token or not user_id:
+        return {"name": "คุณลูกค้า (Facebook)", "profile_pic": ""}
+    url = f"https://graph.facebook.com/v19.0/{user_id}?fields=first_name,last_name,name,profile_pic&access_token={page_token}"
+    try:
+        import requests
+        res = requests.get(url, timeout=10)
+        if res.status_code == 200:
+            d = res.json()
+            full_name = d.get("name") or f"{d.get('first_name', '')} {d.get('last_name', '')}".strip() or "คุณลูกค้า"
+            return {"name": full_name, "profile_pic": d.get("profile_pic", "")}
+    except Exception as e:
+        logger.warning(f"Failed to fetch FB profile for {user_id}: {e}")
+    return {"name": "คุณลูกค้า (Facebook)", "profile_pic": ""}
+
+
+def send_facebook_message(recipient_id: str, text: str) -> bool:
+    """ส่งข้อความและรูปภาพตอบกลับไปยังลูกค้าทาง Facebook Page Messenger"""
+    page_token = os.getenv("FB_PAGE_ACCESS_TOKEN", "")
+    if not page_token:
+        logger.error("Cannot send FB message: FB_PAGE_ACCESS_TOKEN is missing")
+        return False
+
+    url = f"https://graph.facebook.com/v19.0/me/messages?access_token={page_token}"
+    import requests
+    import re
+
+    # ตรวจหาแท็กรูปภาพ [IMAGE: https://...] เพื่อแยกส่งเป็นการ์ดรูปภาพบน Messenger
+    img_matches = re.findall(r'\[IMAGE:\s*(https?://[^\s\]]+)\]', text)
+    clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', text).strip()
+
+    success = True
+    # 1. ส่งข้อความตัวอักษร
+    if clean_text:
+        payload = {
+            "recipient": {"id": recipient_id},
+            "message": {"text": clean_text},
+            "messaging_type": "RESPONSE"
+        }
+        try:
+            res = requests.post(url, json=payload, timeout=15)
+            if res.status_code != 200:
+                logger.error(f"Error sending FB text message: {res.text}")
+                success = False
+        except Exception as e:
+            logger.error(f"Exception sending FB text: {e}")
+            success = False
+
+    # 2. ส่งรูปภาพประกอบ (ถ้ามี เช่น ภาพตัวอย่างของชำร่วย/การ์ด)
+    for img_url in img_matches[:3]:
+        img_payload = {
+            "recipient": {"id": recipient_id},
+            "message": {
+                "attachment": {
+                    "type": "image",
+                    "payload": {
+                        "url": img_url,
+                        "is_reusable": True
+                    }
+                }
+            },
+            "messaging_type": "RESPONSE"
+        }
+        try:
+            requests.post(url, json=img_payload, timeout=15)
+        except Exception:
+            pass
+
+    return success
+
+
+@app.get("/webhook/facebook")
+@app.get("/facebook/webhook")
+async def verify_facebook_webhook(request: Request):
+    """
+    Meta Webhook Verification: ยืนยันตัวตน Webhook สำหรับเชื่อม Facebook Page Messenger
+    """
+    params = request.query_params
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    expected_token = os.getenv("FB_VERIFY_TOKEN", "onestudio_wedding_bot_2026")
+    if mode == "subscribe" and token == expected_token:
+        logger.info("Facebook Page Webhook verified successfully!")
+        return PlainTextResponse(challenge)
+
+    logger.warning(f"Facebook Webhook verification failed. Token received: {token}")
+    return Response(content="Verification failed", status_code=403)
+
+
+@app.post("/webhook/facebook")
+@app.post("/facebook/webhook")
+async def handle_facebook_webhook(request: Request):
+    """
+    รับข้อความแชทจากลูกค้าทาง Facebook Page Messenger และตอบกลับอัตโนมัติด้วย AI ตัวเดิมของร้าน
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        return Response(content="Bad Request", status_code=400)
+
+    if data.get("object") != "page":
+        return Response(content="Not Found", status_code=404)
+
+    page_id = os.getenv("FB_PAGE_ID", "101452995525914")
+
+    for entry in data.get("entry", []):
+        for event in entry.get("messaging", []):
+            sender_id = event.get("sender", {}).get("id")
+
+            # ข้ามถ้าเป็นข้อความที่เพจส่งเอง
+            if not sender_id or sender_id == page_id:
+                continue
+
+            message = event.get("message", {})
+            if message.get("is_echo"):
+                continue
+
+            mid = message.get("mid")
+            user_text = (message.get("text") or "").strip()
+            if not user_text:
+                continue
+
+            # ป้องกันข้อความซ้ำซ้อน (Deduplication)
+            if mid and mid in processed_message_ids:
+                logger.info(f"Duplicate FB message {mid} skipped.")
+                continue
+            if mid:
+                processed_message_ids.add(mid)
+                if len(processed_message_ids) > 1000:
+                    processed_message_ids.pop()
+
+            logger.info(f"Received FB message from user {sender_id}: {user_text}")
+            fb_user_key = f"fb_{sender_id}"
+
+            # ดึงโปรไฟล์ลูกค้าเพื่อบันทึกใน Dashboard
+            profile = get_facebook_user_profile(sender_id)
+            cust_name = profile.get("name") or "ลูกค้าทาง Facebook"
+
+            # 0. ตรวจสอบคำสั่งพักบอท / เปิดบอท สำหรับแอดมินคนจริง (#พักบอท, #ปิดบอท, #เปิดบอท)
+            clean_cmd = user_text.lower()
+            if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
+                set_user_bot_muted(fb_user_key, True, reason="admin_command_mute")
+                send_facebook_message(sender_id, "🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้แล้วค่ะ\n(เมื่อคุยจบ สามารถพิมพ์ #เปิดบอท หรือ #unpause เพื่อให้บอทกลับมาตอบตามปกติได้นะคะ)")
+                continue
+
+            if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
+                set_user_bot_muted(fb_user_key, False, reason="admin_command_unmute")
+                send_facebook_message(sender_id, "🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
+                continue
+
+            # ตรวจสอบสถานะว่าบอทถูกปิด/เงียบอยู่หรือไม่
+            if is_user_bot_muted(fb_user_key):
+                logger.info(f"Bot is MUTED for FB user {sender_id}. Silence.")
+                continue
+
+            # 1. ประมวลผลคำตอบด้วย AI ตัวเดิม (พร้อมฐานข้อมูลสินค้า โปรโมชั่น และราคาการ์ดแต่งงาน)
+            reply_txt, _, model_used = generate_bot_reply_with_fallback(fb_user_key, user_text)
+
+            if reply_txt and reply_txt != "[SILENCE]":
+                send_facebook_message(sender_id, reply_txt)
+                logger.info(f"Replied to FB user {cust_name} ({sender_id}) via {model_used}")
+
+                # บันทึกประวัติการแชทลงระบบ Dashboard ให้แอดมินดูได้เหมือน LINE
+                try:
+                    save_chat_message(fb_user_key, "user", user_text)
+                    save_chat_message(fb_user_key, "model", reply_txt)
+                    record_recent_customer(fb_user_key, f"{cust_name} (Facebook)")
+                except Exception as save_err:
+                    logger.warning(f"Error saving FB chat history: {save_err}")
+
+    return PlainTextResponse("EVENT_RECEIVED")
 
 

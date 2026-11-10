@@ -11,6 +11,10 @@ import os
 import json
 import logging
 import requests
+import subprocess
+import shutil
+import base64
+import time
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
@@ -165,38 +169,249 @@ def download_video(video_url: str, output_path: Path) -> bool:
         return False
 
 
-def format_reels_caption(original_title: str, line_oa_url: str = "https://lin.ee/NeVVWUU") -> str:
+def audit_and_enhance_video(input_path: Path, output_path: Optional[Path] = None) -> Tuple[Path, Dict]:
     """
-    Format title for Facebook Reels with Gemini AI copywriting & LINE OA CTA.
+    ตรวจสอบคุณภาพคลิปและปรับแต่งให้ได้มาตรฐานสูงสุดสำหรับ Facebook Reels:
+    1. ตรวจสอบความยาว (Reels สูงสุด 90 วินาที)
+    2. ตรวจสอบสัดส่วน (สัดส่วนแนวตั้ง 9:16 ขนาด 1080x1920) หากไม่ใช่แนวตั้ง ปรับเบลอพื้นหลังให้อัตโนมัติ
+    3. ปรับสมดุลเสียง (Audio Normalization) ให้เสียงพูด/ดนตรีชัดเจนบนลำโพงมือถือ
+    4. ใส่ Faststart flag (-movflags +faststart) เพื่อให้ Reels โหลดเล่นทันทีบนหน้าฟีด Facebook
+    """
+    ffmpeg_bin = shutil.which("ffmpeg") or "/usr/local/bin/ffmpeg"
+    ffprobe_bin = shutil.which("ffprobe") or "/usr/local/bin/ffprobe"
+
+    audit_report = {
+        "original_file": str(input_path),
+        "duration": 0,
+        "width": 0,
+        "height": 0,
+        "aspect_ratio": "unknown",
+        "audio_detected": False,
+        "enhanced": False,
+        "actions_taken": []
+    }
+
+    if not Path(ffmpeg_bin).exists() or not Path(ffprobe_bin).exists():
+        logger.warning("FFmpeg/FFprobe not found. Skipping video enhancement.")
+        return input_path, audit_report
+
+    try:
+        # Step 1: Probe video info
+        probe_cmd = [
+            ffprobe_bin, "-v", "error",
+            "-show_entries", "stream=width,height,duration,codec_type",
+            "-show_entries", "format=duration",
+            "-of", "json", str(input_path)
+        ]
+        res = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=15)
+        if res.returncode == 0:
+            meta = json.loads(res.stdout)
+            streams = meta.get("streams", [])
+            v_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+            a_stream = next((s for s in streams if s.get("codec_type") == "audio"), None)
+
+            if v_stream:
+                w = int(v_stream.get("width", 0))
+                h = int(v_stream.get("height", 0))
+                audit_report["width"] = w
+                audit_report["height"] = h
+                if w > 0 and h > 0:
+                    ratio = w / h
+                    if 0.5 <= ratio <= 0.65:
+                        audit_report["aspect_ratio"] = "9:16 (Vertical Optimal)"
+                    elif 0.9 <= ratio <= 1.1:
+                        audit_report["aspect_ratio"] = "1:1 (Square)"
+                    else:
+                        audit_report["aspect_ratio"] = f"{w}:{h} (Horizontal/Other)"
+
+            dur = 0
+            if meta.get("format", {}).get("duration"):
+                dur = float(meta["format"]["duration"])
+            elif v_stream and v_stream.get("duration"):
+                dur = float(v_stream["duration"])
+            audit_report["duration"] = round(dur, 2)
+            audit_report["audio_detected"] = a_stream is not None
+
+        # Step 2: Determine if enhancement is needed
+        out_file = output_path or (input_path.parent / f"enhanced_{input_path.name}")
+        w = audit_report.get("width", 0)
+        h = audit_report.get("height", 0)
+        dur = audit_report.get("duration", 0)
+
+        vf_filters = []
+        af_filters = []
+
+        # Reels vertical format check: If not 9:16 vertical, format it
+        if w > 0 and h > 0:
+            ratio = w / h
+            if ratio > 0.65:
+                # Create blurred background 1080x1920 with centered foreground video
+                vf_filters.append(
+                    "split[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:20[bg];[b]scale=1080:1920:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2"
+                )
+                audit_report["actions_taken"].append("ปรับสัดส่วนเป็น 9:16 แนวตั้ง (ใส่พื้นหลังเบลอสวยงาม)")
+            elif w != 1080 or h != 1920:
+                vf_filters.append("scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2")
+                audit_report["actions_taken"].append("ปรับความละเอียดคมชัด 1080x1920 Full HD")
+
+        # Audio normalization: Boost quiet audio
+        if audit_report["audio_detected"]:
+            af_filters.append("loudnorm=I=-16:TP=-1.5:LRA=11")
+            audit_report["actions_taken"].append("ปรับสมดุลเสียงให้ดังชัดเจน ไร้เสียงแตก (Audio Normalization)")
+
+        # Faststart + H264 encode
+        cmd = [ffmpeg_bin, "-y", "-i", str(input_path)]
+
+        if dur > 90:
+            cmd.extend(["-t", "90"])
+            audit_report["actions_taken"].append("ตัดคลิปให้ไม่เกิน 90 วินาทีตามเกณฑ์ Reels")
+
+        if vf_filters:
+            cmd.extend(["-filter:v", ",".join(vf_filters)])
+
+        if af_filters:
+            cmd.extend(["-filter:a", ",".join(af_filters)])
+
+        cmd.extend([
+            "-c:v", "libx264",
+            "-preset", "fast",
+            "-crf", "22",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            str(out_file)
+        ])
+
+        logger.info(f"Running video enhancement: {' '.join(cmd[:6])}...")
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+        if p.returncode == 0 and out_file.exists() and out_file.stat().st_size > 0:
+            audit_report["enhanced"] = True
+            audit_report["final_size_kb"] = round(out_file.stat().st_size / 1024, 1)
+            logger.info(f"Video enhancement successful: {audit_report['actions_taken']}")
+            return out_file, audit_report
+        else:
+            logger.warning(f"FFmpeg failed with code {p.returncode}: {p.stderr[-200:] if p.stderr else ''}")
+            return input_path, audit_report
+    except Exception as e:
+        logger.error(f"Error enhancing video: {e}")
+        return input_path, audit_report
+
+
+def extract_video_keyframes(video_path: Path, num_frames: int = 3) -> List[dict]:
+    """
+    สกัดภาพ Keyframes คมชัดจากคลิปวิดีโอ (เช่น ที่ช่วง 25%, 50%, 75% ของคลิป)
+    เพื่อให้ Gemini AI 'ดูภาพสินค้าจริงในคลิป' ก่อนคิดแคปชั่นและแฮชแท็ก
+    """
+    ffmpeg_bin = shutil.which("ffmpeg") or "/usr/local/bin/ffmpeg"
+    ffprobe_bin = shutil.which("ffprobe") or "/usr/local/bin/ffprobe"
+    if not Path(ffmpeg_bin).exists() or not Path(ffprobe_bin).exists() or not video_path.exists():
+        return []
+
+    keyframes = []
+    try:
+        probe_cmd = [
+            ffprobe_bin, "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "json", str(video_path)
+        ]
+        res = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=10)
+        dur = 5.0
+        if res.returncode == 0:
+            dur = float(json.loads(res.stdout).get("format", {}).get("duration", 5.0))
+
+        timestamps = [dur * 0.25, dur * 0.50, dur * 0.75]
+        for i, ts in enumerate(timestamps[:num_frames]):
+            frame_path = TEMP_DIR / f"frame_{int(time.time())}_{i}.jpg"
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-ss", str(round(ts, 2)),
+                "-i", str(video_path),
+                "-vframes", "1",
+                "-q:v", "2",
+                str(frame_path)
+            ]
+            subprocess.run(cmd, capture_output=True, timeout=10)
+            if frame_path.exists() and frame_path.stat().st_size > 0:
+                with open(frame_path, "rb") as f:
+                    b64_data = base64.b64encode(f.read()).decode("utf-8")
+                keyframes.append({
+                    "mime_type": "image/jpeg",
+                    "data": b64_data
+                })
+                try:
+                    frame_path.unlink()
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.warning(f"Keyframe extraction failed: {e}")
+    return keyframes
+
+
+def format_reels_caption(
+    original_title: str,
+    video_path: Optional[Path] = None,
+    line_oa_url: str = "https://lin.ee/NeVVWUU"
+) -> str:
+    """
+    วิเคราะห์คลิปจริง และคิดแคปชั่น+แฮชแท็กใหม่แบบไวรัลทุกครั้งด้วย Gemini AI:
+    1. ดึง Keyframes ภาพจริงจากคลิป ให้ AI วิเคราะห์สินค้า, โทนสี, ดีเทล และลวดลาย
+    2. พาดหัวหยุดนิ้ว (Hook 3 วินาทีแรก) ที่ตรงกับภาพที่เห็นในคลิปเป๊ะๆ
+    3. บรรยายจุดเด่นและความประณีตของสินค้าที่โชว์ในคลิป
+    4. คำถามชวนคอมเมนต์สร้างปฏิสัมพันธ์ (Engagement Boost)
+    5. ปิดการขายพร้อมช่องทางติดต่อ LINE OA: @795ncmnv
+    6. ชุดแฮชแท็ก 7-10 อัน ที่เจาะจงสินค้าในคลิปและติดเทรนด์งานแต่ง
     """
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key:
         try:
             import google.generativeai as genai
             genai.configure(api_key=gemini_key)
+
+            # สกัดภาพ Keyframes จากคลิปจริง (ถ้ามีไฟล์)
+            keyframes = []
+            if video_path and video_path.exists():
+                keyframes = extract_video_keyframes(video_path, num_frames=3)
+                if keyframes:
+                    logger.info(f"Extracted {len(keyframes)} keyframes from video for Gemini Vision analysis!")
+
             prompt = (
-                "คุณคือนักเขียนคอนเทนต์และก๊อปปี้ไรท์เตอร์มืออาชีพของร้าน 'ONESTUDIO การ์ดแต่งงานและของชำร่วย'\n"
-                f"จงนำหัวข้อคลิปจาก TikTok นี้: '{original_title}' มาแต่งเป็นแคปชั่น Facebook Reels ที่น่าสนใจเพื่อเพิ่มยอดการเข้าถึงและยอดสั่งซื้อ\n\n"
-                "โครงสร้างที่ต้องมี:\n"
-                "1. พาดหัวเปิดตัวดึงดูดสายตาคนกำลังจะแต่งงาน (พร้อมใส่อิโมจิสวยงาม)\n"
-                "2. เล่าจุดเด่นของผลงาน ความประณีต โทนสี หรือความคุ้มค่า (อ่านง่าย สบายตา เว้นบรรทัดสวยงาม)\n"
-                "3. ประโยคชวนคอมเมนต์สร้างปฏิสัมพันธ์ (Engagement Hook เช่น 'เจ้าสาวชอบโทนสีนี้ไหมคะ?')\n"
-                "4. ข้อความปิดการขาย:\n"
+                "คุณคือนักเขียนคอนเทนต์และก๊อปปี้ไรท์เตอร์มือทองอันดับหนึ่งของร้าน 'ONESTUDIO การ์ดแต่งงานและของชำร่วย'\n"
+            )
+            if keyframes:
+                prompt += (
+                    "**คำสั่งพิเศษ: จงดูและวิเคราะห์ภาพจริงจากคลิปวิดีโอ (Keyframes) ที่แนบมานี้อย่างละเอียด**\n"
+                    "- วิเคราะห์สินค้าที่ปรากฏในคลิปจริงว่าเป็นอะไร (เช่น การ์ดแต่งงาน, ซองจดหมายยุโรป, ของชำร่วย, กล่องของขวัญ, เทียนหอม, แท็กห้อย ฯลฯ)\n"
+                    "- วิเคราะห์โทนสีและสไตล์ที่เห็นในคลิป (เช่น เขียวโอลีฟ, ชมพูพีช, โทนเอิร์ธโทน, ฟอยล์ทองหรูหรา, มินิมอลเรียบหรู ฯลฯ)\n"
+                    "- ดึงจุดเด่น ความประณีต และเทกเจอร์ที่เห็นในภาพมาเป็นจุดขาย\n\n"
+                )
+
+            prompt += (
+                f"หัวข้อเดิมของคลิป: '{original_title}'\n\n"
+                "จงแต่งแคปชั่น Facebook Reels ที่น่าสนใจเพื่อดึงดูดกลุ่มว่าที่บ่าวสาว ยอดวิว ยอดแชร์ และยอดสั่งซื้อสูงสุด\n\n"
+                "โครงสร้างแคปชั่นที่ต้องมีให้ครบถ้วน:\n"
+                "1. บรรทัดแรก: พาดหัวสะดุดตาหยุดนิ้วคนดู (Hook) ด้วยอิโมจิสวยงาม อิงจากสินค้าและโทนสีที่เห็นจริงในคลิป\n"
+                "2. เนื้อหา: บรรยายความประณีต โทนสี หรือจุดเด่นของงานให้อ่านง่าย สบายตา เว้นวรรคสวยงาม\n"
+                "3. ประโยคชวนคุย/สร้างปฏิสัมพันธ์ (Engagement Boost เช่น 'เจ้าสาวชอบโทนสีนี้ไหมคะ? คอมเมนต์บอกกันหน่อยน้า 💕')\n"
+                "4. ข้อความปิดการขาย (Call to Action):\n"
                 "───────────────────\n"
                 "💍 ONESTUDIO - การ์ดแต่งงาน & ของชำร่วย ดีไซน์สวย พรีเมียม\n"
                 "💌 ปรึกษาแบบ / เช็คคิวงาน / สอบถามราคา:\n"
                 "👉 LINE OA: @795ncmnv (มี @ ด้วยนะคะ)\n"
                 f"👉 คลิกลิงก์ทักแชท: {line_oa_url}\n"
-                "5. แฮชแท็ก 5-7 อัน เช่น #การ์ดแต่งงาน #ของชำร่วยงานแต่ง #ของชำร่วยมินิมอล #เตรียมงานแต่ง #การ์ดมงคลสมรส #ONESTUDIO\n\n"
-                "หมายเหตุ: ตอบกลับมาเฉพาะข้อความแคปชั่นภาษาไทย ไม่ต้องมีคำอธิบายอื่น"
+                "5. แฮชแท็กติดเทรนด์ 7-10 อัน ที่เจาะจงสินค้าและโทนสีในคลิป (เช่น #การ์ดแต่งงาน #ของชำร่วยงานแต่ง #เตรียมงานแต่ง #การ์ดมงคลสมรส #ไอเดียงานแต่ง #ONESTUDIO)\n\n"
+                "หมายเหตุ: ตอบกลับมาเฉพาะข้อความแคปชั่นภาษาไทยพร้อมแฮชแท็กเท่านั้น ไม่ต้องมีคำอธิบายอื่น"
             )
-            for model_name in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"]:
+
+            contents = [*keyframes, prompt] if keyframes else [prompt]
+
+            for model_name in ["gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-flash-latest", "gemini-3.1-pro-preview"]:
                 try:
                     m = genai.GenerativeModel(model_name)
-                    res = m.generate_content(prompt)
+                    res = m.generate_content(contents)
                     ai_text = (res.text or "").strip()
                     if ai_text and len(ai_text) > 30:
-                        logger.info(f"Generated viral AI caption with {model_name} successfully!")
+                        logger.info(f"Generated visual-aware viral AI caption with {model_name} successfully!")
                         return ai_text
                 except Exception as me:
                     logger.warning(f"Model {model_name} error: {me}")
@@ -204,10 +419,11 @@ def format_reels_caption(original_title: str, line_oa_url: str = "https://lin.ee
         except Exception as e:
             logger.warning(f"AI caption generation fallback: {e}")
 
-    # Fallback to standard formatted caption
+    # Fallback to standard formatted caption with full hashtags
     caption = original_title.strip()
     cta = DEFAULT_LINE_CTA.format(line_url=line_oa_url)
-    return f"{caption}{cta}"
+    hashtags = "\n\n#การ์ดแต่งงาน #ของชำร่วยงานแต่ง #ของชำร่วยมินิมอล #เตรียมงานแต่ง #ไอเดียงานแต่ง #การ์ดมงคลสมรส #ONESTUDIO"
+    return f"{caption}{cta}{hashtags}"
 
 
 def publish_facebook_reel(
@@ -389,17 +605,24 @@ def sync_latest_tiktok_to_facebook(
             result["errors"].append(f"ดาวน์โหลดคลิป {v_id} ล้มเหลว")
             continue
 
-        caption = format_reels_caption(v_title, line_oa_url=line_oa_url)
+        # Step 2.5: ตรวจสอบคุณภาพคลิป & ปรับแต่งให้เหมาะกับ Facebook Reels ที่สุด (FFmpeg)
+        logger.info(f"Auditing and enhancing video {v_id} for optimal Facebook Reels reach...")
+        final_video_path, audit_report = audit_and_enhance_video(temp_video_path)
+
+        # Step 2.6: วิเคราะห์คลิปจริง และคิดแคปชั่น+แฮชแท็กใหม่แบบไวรัลทุกครั้งด้วย Gemini AI (Vision + NLP)
+        logger.info(f"Analyzing actual video frames and generating viral AI caption with Gemini...")
+        caption = format_reels_caption(v_title, video_path=final_video_path, line_oa_url=line_oa_url)
 
         logger.info(f"Publishing to Facebook Page Reels ({page_id})...")
-        pub_ok, pub_info = publish_facebook_reel(page_id, page_token, temp_video_path, caption)
+        pub_ok, pub_info = publish_facebook_reel(page_id, page_token, final_video_path, caption)
 
-        # Cleanup local file immediately
-        try:
-            if temp_video_path.exists():
-                temp_video_path.unlink()
-        except Exception:
-            pass
+        # Cleanup local files immediately
+        for f_path in [temp_video_path, final_video_path]:
+            try:
+                if f_path.exists():
+                    f_path.unlink()
+            except Exception:
+                pass
 
         if pub_ok:
             save_synced_id(v_id, title=v_title, fb_post_id=pub_info)
@@ -408,6 +631,8 @@ def sync_latest_tiktok_to_facebook(
                 "tiktok_id": v_id,
                 "title": v_title,
                 "fb_post_id": pub_info,
+                "caption": caption,
+                "audit": audit_report,
                 "status": "published"
             })
         else:
