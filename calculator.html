@@ -2117,9 +2117,12 @@
 
     async function loadStateFromCloud(forceRefresh = false) {
       try {
-        const url = `${API_BASE}/api/calculator-state${forceRefresh ? '?refresh=1' : ''}`;
+        const url = `${API_BASE}/api/calculator-state?_t=${Date.now()}`;
         const res = await fetch(url);
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.warn("Could not load calculator state:", res.status);
+          return;
+        }
         const data = await res.json();
         if (data && data.ok) {
           if (Array.isArray(data.catalog) && data.catalog.length > 0 && data.catalogVersion === 4) {

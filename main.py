@@ -1501,9 +1501,11 @@ def discover_real_line_customers_from_firestore(existing_recent: list = None) ->
                 cleaned.append(c)
                 seen_uids.add(uid)
     try:
-        doc_refs = list(db.collection("chat_history").list_documents(page_size=20))
+        doc_refs = list(db.collection("chat_history").list_documents(page_size=8))
         discovered = []
-        for uref in doc_refs:
+        for uref in doc_refs[:6]:
+            if len(discovered) >= 5:
+                break
             uid = uref.id
             if not uid or uid in seen_uids:
                 continue
@@ -1579,13 +1581,13 @@ def get_calculator_state(refresh: int = 0):
             state_version = 2
             needs_save = True
 
-        if not recent_customers or refresh == 1:
+        if not recent_customers:
             recent_customers = discover_real_line_customers_from_firestore(recent_customers)
             if recent_customers and not latest_customer:
                 latest_customer = recent_customers[0].get("displayName", "")
-            elif recent_customers and refresh == 1:
-                latest_customer = recent_customers[0].get("displayName", "")
             needs_save = True
+        elif recent_customers and not latest_customer:
+            latest_customer = recent_customers[0].get("displayName", "")
 
         if needs_save:
             doc_ref.set({
