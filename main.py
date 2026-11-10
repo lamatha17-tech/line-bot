@@ -2281,9 +2281,11 @@ def send_facebook_message(recipient_id: str, text: str) -> bool:
 
 @app.get("/webhook/facebook")
 @app.get("/facebook/webhook")
+@app.get("/webhook/instagram")
+@app.get("/instagram/webhook")
 async def verify_facebook_webhook(request: Request):
     """
-    Meta Webhook Verification: ยืนยันตัวตน Webhook สำหรับเชื่อม Facebook Page Messenger
+    Meta Webhook Verification: ยืนยันตัวตน Webhook สำหรับ Facebook Page Messenger และ Instagram Direct Messages
     """
     params = request.query_params
     mode = params.get("hub.mode")
@@ -2292,27 +2294,34 @@ async def verify_facebook_webhook(request: Request):
 
     expected_token = os.getenv("FB_VERIFY_TOKEN", "onestudio_wedding_bot_2026")
     if mode == "subscribe" and token == expected_token:
-        logger.info("Facebook Page Webhook verified successfully!")
+        logger.info("Facebook/Instagram Webhook verified successfully!")
         return PlainTextResponse(challenge)
 
-    logger.warning(f"Facebook Webhook verification failed. Token received: {token}")
+    logger.warning(f"Facebook/Instagram Webhook verification failed. Token received: {token}")
     return Response(content="Verification failed", status_code=403)
 
 
 @app.post("/webhook/facebook")
 @app.post("/facebook/webhook")
+@app.post("/webhook/instagram")
+@app.post("/instagram/webhook")
 async def handle_facebook_webhook(request: Request):
     """
-    รับข้อความแชทจากลูกค้าทาง Facebook Page Messenger และตอบกลับอัตโนมัติด้วย AI ตัวเดิมของร้าน
+    รับข้อความแชทจากลูกค้าทาง Facebook Page Messenger และ Instagram Direct Message
+    และตอบกลับอัตโนมัติด้วย AI ตัวเดิมของร้าน
     """
     try:
         data = await request.json()
     except Exception:
         return Response(content="Bad Request", status_code=400)
 
-    if data.get("object") != "page":
+    obj = data.get("object")
+    if obj not in ("page", "instagram"):
         return Response(content="Not Found", status_code=404)
 
+    is_instagram = (obj == "instagram")
+    platform_name = "Instagram" if is_instagram else "Facebook"
+    prefix = "ig" if is_instagram else "fb"
     page_id = os.getenv("FB_PAGE_ID", "101452995525914")
 
     for entry in data.get("entry", []):
@@ -2334,51 +2343,54 @@ async def handle_facebook_webhook(request: Request):
 
             # ป้องกันข้อความซ้ำซ้อน (Deduplication)
             if mid and mid in processed_message_ids:
-                logger.info(f"Duplicate FB message {mid} skipped.")
+                logger.info(f"Duplicate {platform_name} message {mid} skipped.")
                 continue
             if mid:
                 processed_message_ids.add(mid)
                 if len(processed_message_ids) > 1000:
                     processed_message_ids.pop()
 
-            logger.info(f"Received FB message from user {sender_id}: {user_text}")
-            fb_user_key = f"fb_{sender_id}"
+            logger.info(f"Received {platform_name} message from user {sender_id}: {user_text}")
+            user_key = f"{prefix}_{sender_id}"
 
             # ดึงโปรไฟล์ลูกค้าเพื่อบันทึกใน Dashboard
-            profile = get_facebook_user_profile(sender_id)
-            cust_name = profile.get("name") or "ลูกค้าทาง Facebook"
+            if not is_instagram:
+                profile = get_facebook_user_profile(sender_id)
+                cust_name = profile.get("name") or "ลูกค้าทาง Facebook"
+            else:
+                cust_name = "ลูกค้าทาง Instagram"
 
             # 0. ตรวจสอบคำสั่งพักบอท / เปิดบอท สำหรับแอดมินคนจริง (#พักบอท, #ปิดบอท, #เปิดบอท)
             clean_cmd = user_text.lower()
             if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
-                set_user_bot_muted(fb_user_key, True, reason="admin_command_mute")
+                set_user_bot_muted(user_key, True, reason="admin_command_mute")
                 send_facebook_message(sender_id, "🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้แล้วค่ะ\n(เมื่อคุยจบ สามารถพิมพ์ #เปิดบอท หรือ #unpause เพื่อให้บอทกลับมาตอบตามปกติได้นะคะ)")
                 continue
 
             if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
-                set_user_bot_muted(fb_user_key, False, reason="admin_command_unmute")
+                set_user_bot_muted(user_key, False, reason="admin_command_unmute")
                 send_facebook_message(sender_id, "🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
                 continue
 
             # ตรวจสอบสถานะว่าบอทถูกปิด/เงียบอยู่หรือไม่
-            if is_user_bot_muted(fb_user_key):
-                logger.info(f"Bot is MUTED for FB user {sender_id}. Silence.")
+            if is_user_bot_muted(user_key):
+                logger.info(f"Bot is MUTED for {platform_name} user {sender_id}. Silence.")
                 continue
 
             # 1. ประมวลผลคำตอบด้วย AI ตัวเดิม (พร้อมฐานข้อมูลสินค้า โปรโมชั่น และราคาการ์ดแต่งงาน)
-            reply_txt, _, model_used = generate_bot_reply_with_fallback(fb_user_key, user_text)
+            reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text)
 
             if reply_txt and reply_txt != "[SILENCE]":
                 send_facebook_message(sender_id, reply_txt)
-                logger.info(f"Replied to FB user {cust_name} ({sender_id}) via {model_used}")
+                logger.info(f"Replied to {platform_name} user {cust_name} ({sender_id}) via {model_used}")
 
                 # บันทึกประวัติการแชทลงระบบ Dashboard ให้แอดมินดูได้เหมือน LINE
                 try:
-                    save_chat_message(fb_user_key, "user", user_text)
-                    save_chat_message(fb_user_key, "model", reply_txt)
-                    record_recent_customer(fb_user_key, f"{cust_name} (Facebook)")
+                    save_chat_message(user_key, "user", user_text)
+                    save_chat_message(user_key, "model", reply_txt)
+                    record_recent_customer(user_key, f"{cust_name} ({platform_name})")
                 except Exception as save_err:
-                    logger.warning(f"Error saving FB chat history: {save_err}")
+                    logger.warning(f"Error saving {platform_name} chat history: {save_err}")
 
     return PlainTextResponse("EVENT_RECEIVED")
 
