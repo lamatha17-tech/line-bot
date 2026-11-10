@@ -29,9 +29,12 @@ if not logger.handlers:
     ch.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
     logger.addHandler(ch)
 
-STATE_FILE = Path(__file__).parent / "synced_reels.json"
-TEMP_DIR = Path(__file__).parent / "temp_reels"
-TEMP_DIR.mkdir(exist_ok=True)
+STATE_FILE = Path("/tmp/synced_reels.json") if os.getenv("VERCEL") else Path(__file__).parent / "synced_reels.json"
+TEMP_DIR = Path("/tmp/temp_reels") if os.getenv("VERCEL") else Path(__file__).parent / "temp_reels"
+try:
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
 # Default shop promotion CTA
 DEFAULT_LINE_CTA = (
