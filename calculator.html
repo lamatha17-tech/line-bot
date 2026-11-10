@@ -4163,6 +4163,44 @@ ${leadText}
         if (data.fb_page_id && document.getElementById("tiktok-sync-page-id")) {
           document.getElementById("tiktok-sync-page-id").innerText = data.fb_page_id;
         }
+
+        // แสดงรายการพรีวิวคลิปที่ดึงและโพสต์ไปแล้วด้านล่าง
+        const historyList = document.getElementById("tiktok-history-list");
+        const historyCount = document.getElementById("tiktok-history-count");
+        if (historyCount) historyCount.innerText = (data.history || []).length;
+        if (historyList) {
+          if (!data.history || data.history.length === 0) {
+            historyList.innerHTML = `
+              <div class="text-center py-5 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                ยังไม่มีประวัติการดึงคลิป หรือยังไม่ได้เริ่มซิงค์คลิปแรก
+              </div>`;
+          } else {
+            historyList.innerHTML = data.history.map((item, idx) => {
+              const coverImg = item.cover 
+                ? `<img src="${item.cover}" class="w-16 h-20 object-cover rounded-lg shrink-0 bg-slate-900 border border-slate-200 shadow-2xs" onerror="this.src='https://placehold.co/100x140/1e293b/ffffff?text=Video'">`
+                : `<div class="w-16 h-20 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg shrink-0 flex items-center justify-center text-white text-xl shadow-2xs font-bold">🎬</div>`;
+              const titleText = item.title || `TikTok Video ${item.tiktok_id || ''}`;
+              const dateText = item.synced_at || "-";
+              const ttLink = item.tiktok_url || (item.tiktok_id ? `https://www.tiktok.com/@_one_19/video/${item.tiktok_id}` : '#');
+              return `
+                <div class="p-2.5 bg-slate-50 hover:bg-white border border-slate-200 hover:border-pink-300 rounded-xl flex items-center gap-3 transition shadow-2xs">
+                  ${coverImg}
+                  <div class="min-w-0 flex-1 space-y-1">
+                    <div class="font-bold text-slate-800 text-xs line-clamp-2 leading-tight">${titleText}</div>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-500">
+                      <span>🕒 ${dateText}</span>
+                      <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[9px]">✅ โพสต์ขึ้น Reels แล้ว</span>
+                    </div>
+                    <div class="pt-0.5 flex items-center gap-3 text-[10px]">
+                      ${item.tiktok_id ? `<a href="${ttLink}" target="_blank" class="inline-flex items-center gap-1 text-pink-600 hover:text-pink-700 font-semibold underline">🔗 ดูคลิปต้นฉบับ TikTok ↗</a>` : ''}
+                      <span class="text-slate-400 font-mono text-[9px]">ID: ${item.tiktok_id || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("");
+          }
+        }
       } catch (err) {
         if (badge) {
           badge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700";
@@ -4233,7 +4271,7 @@ ${leadText}
   <!-- MODAL: TikTok to Facebook Reels Auto-Sync  -->
   <!-- ========================================== -->
   <div id="tiktok-sync-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
       
       <!-- Modal Header -->
       <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-pink-900 text-white p-4 flex items-center justify-between">
@@ -4322,6 +4360,24 @@ ${leadText}
         <!-- Guide Note -->
         <div class="text-[10px] text-slate-400 text-center leading-normal pt-1 border-t border-slate-100">
           💡 คลิปจะถูกตัดลายน้ำ TikTok ออก 100% ทำให้ระบบ Facebook Reels เปิดค่าการมองเห็นสูงสุด
+        </div>
+
+        <!-- History & Preview of Synced Videos -->
+        <div class="pt-3 border-t border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+              <span>🎞️</span> ประวัติคลิปที่เคยดึง/โพสต์ไปแล้ว (<span id="tiktok-history-count" class="text-pink-600">0</span>)
+            </span>
+            <button type="button" onclick="checkTikTokReelsStatus()" class="text-[10px] text-pink-600 hover:text-pink-700 font-semibold flex items-center gap-0.5">
+              🔄 รีเฟรช
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400">เช็คดูว่าคลิปไหนถูกดึงขึ้น Facebook Reels แล้วบ้าง พร้อมกดเปิดดูคลิปต้นฉบับได้ทันที</p>
+          <div id="tiktok-history-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div class="text-center py-4 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              ⏳ กำลังโหลดประวัติคลิป...
+            </div>
+          </div>
         </div>
       </div>
 

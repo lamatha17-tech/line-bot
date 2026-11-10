@@ -59,9 +59,10 @@ def load_synced_ids() -> List[str]:
         return []
 
 
-def save_synced_id(video_id: str, title: str = "", fb_post_id: str = ""):
+def save_synced_id(video_id: str, title: str = "", fb_post_id: str = "", cover: str = "", duration: int = 0):
     """Save newly posted video ID to history."""
     try:
+        from datetime import datetime
         history = []
         synced_ids = []
         if STATE_FILE.exists():
@@ -74,9 +75,12 @@ def save_synced_id(video_id: str, title: str = "", fb_post_id: str = ""):
             synced_ids.append(video_id)
             history.insert(0, {
                 "tiktok_id": video_id,
-                "title": title,
+                "title": title or f"TikTok Video {video_id}",
+                "cover": cover,
+                "duration": duration,
                 "fb_post_id": fb_post_id,
-                "synced_at": requests.utils.default_user_agent() # timestamp fallback
+                "tiktok_url": f"https://www.tiktok.com/@_one_19/video/{video_id}" if str(video_id).isdigit() else "",
+                "synced_at": datetime.now().strftime("%d/%m/%Y %H:%M")
             })
             # keep max 200 history items
             history = history[:200]
@@ -628,7 +632,7 @@ def sync_latest_tiktok_to_facebook(
                 pass
 
         if pub_ok:
-            save_synced_id(v_id, title=v_title, fb_post_id=pub_info)
+            save_synced_id(v_id, title=v_title, fb_post_id=pub_info, cover=v.get("cover", ""), duration=v.get("duration", 0))
             result["synced_count"] += 1
             result["details"].append({
                 "tiktok_id": v_id,
