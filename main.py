@@ -243,20 +243,16 @@ COMMON_CATALOG_AND_PRICING = """
 
 
 
-[บริการเช่าพาน]
-หากลูกค้าสอบถามเรื่องเช่าพาน (เช่น "มีเช่าพานไหม", "ราคาเช่าพาน", "พานหมั้น", "ขอดูรูปพาน"):
-- ถ้าในแชทนี้ "ยังไม่เคย" ตอบเรื่องพานมาก่อน ให้ตอบว่า: "ทางร้านมีบริการเช่าพานด้วยนะคะ 🌸 รายละเอียด รูปภาพ และราคาเดี๋ยวรอแอดมินคนจริงมาแจ้งให้ทราบอีกทีนะคะ รอสักครู่ค่ะ 💕" (ห้ามส่งรูปของชำร่วยไปแทนเด็ดขาด!)
-- แต่ถ้า "เคยตอบไปแล้ว" ให้พิมพ์ `[SILENCE]` ทันที เพื่อไม่ให้ตอบซ้ำจนลูกค้ารำคาญ
-
-[บริการของรับไหว้ ❤️]
-หากลูกค้าสอบถามเรื่องของรับไหว้ (เช่น "ของรับไหว้", "ขอดูรูปของรับไหว้"):
-- ถ้าในแชทนี้ "ยังไม่เคย" ตอบเรื่องรับไหว้มาก่อน ให้ตอบว่า: "ทางร้านมีของรับไหว้ราคาถูกด้วยนะคะ ❤️ รายละเอียดและรูปภาพเดี๋ยวรอแอดมินมาแจ้งอีกทีนะคะ รอสักครู่ค่ะ 💕" (ห้ามส่งรูปของชำร่วยไปแทนเด็ดขาด!)
-- แต่ถ้า "เคยตอบไปแล้ว" ให้พิมพ์ `[SILENCE]` ทันที
-
-[บริการอื่นๆ ที่ไม่มีในรายการ]
-หากลูกค้าถามเรื่องบริการหรือสินค้าที่ไม่มีในร้าน หรือขอดูรูปสิ่งที่ไม่ใช่การ์ด/ของชำร่วย:
-- ถ้า "ยังไม่เคย" ตอบ ให้ตอบว่า: "ขอบคุณที่สนใจค่ะ 💕 สำหรับบริการนี้เดี๋ยวรอแอดมินคนจริงมาแจ้งรายละเอียดให้ทราบอีกทีนะคะ รอสักครู่ค่ะ 🥰"
-- แต่ถ้า "เคยตอบไปแล้ว" ให้พิมพ์ `[SILENCE]` ทันที
+[บริการอื่นๆ นอกเหนือจากแคตตาล็อก เช่น เสื้อ, เสื้อเสิร์ฟ, เสื้อผ้า, สกรีน, สกรีนชื่อ, สกรีนลาย, งานปัก, เช่าพาน, ของรับไหว้, Portfolio]
+🚨🚨🚨 กฎเหล็กสูงสุด (ห้ามตอบซ้ำเด็ดขาด ตอบได้เพียง 1 ครั้งในชีวิตแชท แล้วต้องเงียบ [SILENCE] ตลอดไป):
+1. **เมื่อลูกค้าสอบถามสินค้า/บริการที่ไม่มีในแคตตาล็อกหลัก** (เช่น ถามเรื่องเสื้อ, เสื้อเสิร์ฟ, เสื้อผ้า, งานสกรีน, สกรีนชื่อ, ค่าสกรีน, งานปัก, เช่าพาน, ของรับไหว้, พอต/Portfolio):
+   - **กรณีที่ 1 — ในประวัติแชท บอท "ยังไม่เคย" แจ้งข้อความรอแอดมินมาก่อนแม้แต่ครั้งเดียว:**
+     -> ให้ตอบข้อความสุภาพเพียง 1 ครั้งว่า: "ขอบคุณที่สนใจค่ะ 💕 สำหรับบริการนี้เดี๋ยวรอแอดมินคนจริงมาแจ้งรายละเอียดให้ทราบอีกทีนะคะ รอสักครู่ค่ะ 🥰"
+   - **กรณีที่ 2 — ในประวัติแชท เคยมีข้อความ "รอแอดมินคนจริง" หรือ "แอดมินมาแจ้ง" ไปแล้วแม้แต่ครั้งเดียว:**
+     >> ⛔ **คุณต้องพิมพ์ [SILENCE] ทันที 100%!! ห้ามตอบซ้ำเด็ดขาด!!** ⛔ <<
+     - ตัวอย่างที่ห้ามทำเด็ดขาด: หากบอทเคยแจ้งรอแอดมินไปแล้ว แล้วลูกค้าถามต่อว่า "ถ้าสกรีนเท่าไหร่คะ", "แบบสกรีนชื่อเท่าไหร่คะ", "มีแบบเสื้อผ้าให้ดูมั้ยคะ", "มีสีอะไรบ้าง", "กี่วันได้"
+     >> **ห้ามตอบคำว่า "รอแอดมินคนจริง" หรือส่งข้อความใดๆ ซ้ำอีกเด็ดขาด!! ต้องพิมพ์ [SILENCE] เท่านั้น!!** <<
+     (เพราะแอดมินคนจริงกำลังเข้ามาดูแลลูกค้าแล้ว การที่บอทตอบซ้ำซากจะสร้างความรำคาญอย่างมาก!)
 
 [คำถามที่พบบ่อย (Q&A) & ข้อมูลช่องทางการติดต่อ]
 - ระยะเวลาผลิต: หลังจากคอนเฟิร์มแบบ ของชำร่วยใช้เวลาผลิตและจัดเตรียมประมาณ 7-25 วันค่ะ (ส่วนการ์ดแต่งงานประมาณ 7-15 วันค่ะ)
@@ -652,6 +648,31 @@ def clean_line_oa_reply(text: str) -> str:
     result = re.sub(r'[^\n]*(?:ทักไลน์|แอดไลน์|คลิกลิงก์ด้านล่างเพื่อแอดไลน์)[^\n]*', '', result, flags=re.IGNORECASE)
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
+
+
+def has_user_been_handed_off_to_human(history_list) -> bool:
+    """
+    ตรวจสอบว่าในประวัติแชท บอทเคยส่งข้อความแจ้งส่งต่อแอดมินคนจริงไปแล้วหรือไม่
+    เช่น 'รอแอดมินคนจริงมาแจ้ง', 'รอแอดมินมาแจ้ง', 'รอสักครู่ค่ะ', 'สำหรับบริการนี้เดี๋ยวรอแอดมิน'
+    เพื่อบังคับกฎ: 'ให้ตอบครั้งเดียว แล้วเงียบไปเลยตลอดบทสนทนา ห้ามตอบซ้ำเด็ดขาด'
+    """
+    if not history_list:
+        return False
+    handoff_keywords = [
+        "รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", 
+        "แอดมินมาแจ้งอีกที", "รอแอดมินมาแจ้งให้ทราบ", "แอดมินคนจริงจะมาแจ้ง",
+        "สำหรับบริการนี้เดี๋ยวรอแอดมิน", "สำหรับรายละเอียดเรื่องการสกรีน",
+        "เดี๋ยวรอแอดมิน", "รอสักครู่ค่ะ"
+    ]
+    for h in history_list:
+        role = h.get("role", "") if isinstance(h, dict) else getattr(h, "role", "")
+        if role == "model":
+            parts = h.get("parts", []) if isinstance(h, dict) else getattr(h, "parts", [])
+            for part in parts:
+                p_text = part if isinstance(part, str) else getattr(part, "text", str(part))
+                if any(kw in p_text for kw in handoff_keywords):
+                    return True
+    return False
 
 
 def rule_based_customer_reply(user_text: str, is_first_turn: bool = False, platform: str = "line_oa") -> str:
@@ -2092,6 +2113,21 @@ def handle_text_message(event):
         save_message(user_id, "user", user_text)
         return
 
+    # 2.0 ตรวจสอบว่าในประวัติแชทเคยแจ้งรอแอดมินคนจริงไปแล้วหรือไม่
+    # กฎเหล็ก: ตอบได้ครั้งเดียวในชีวิตแชท ถ้าเคยแจ้งไปแล้วและลูกค้าถามต่อเรื่อง เสื้อ/สกรีน/บริการอื่นๆ ให้เงียบทันที [SILENCE]
+    custom_followup_keywords = [
+        "สกรีน", "สกรีนชื่อ", "สกรีนลาย", "ค่าสกรีน", "ลายสกรีน",
+        "เสื้อ", "เสื้อเสิร์ฟ", "เสื้อยืด", "เสื้อผ้า", "แบบเสื้อ", "เสื้อเปล่า",
+        "งานปัก", "ปักชื่อ", "ปักลาย", "เช่าพาน", "พานหมั้น", "ของรับไหว้",
+    ]
+    if any(kw in clean_cmd for kw in custom_followup_keywords):
+        prev_hist = load_chat_history(user_id)
+        if has_user_been_handed_off_to_human(prev_hist):
+            logger.info(f"User {user_id} was already told to wait for human admin. Stays SILENT for follow-up: {user_text}")
+            record_recent_line_customer(user_id, user_text)
+            save_message(user_id, "user", user_text)
+            return
+
     # -------------------------------------------------------------
     # ระบบ Debounce / Message Buffering (รอให้ลูกค้าส่งรัวๆ ให้หมดก่อนค่อยตอบ)
     # -------------------------------------------------------------
@@ -2157,6 +2193,21 @@ def handle_text_message(event):
             logger.info(f"Bot chose to stay silent for user {user_id}")
             record_recent_line_customer(user_id, user_text)
             return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
+
+        # ตรวจสอบระบบป้องกันการตอบซ้ำ: หากคำตอบใหม่มีคำว่า "รอแอดมิน..." ซ้ำอีกรอบ
+        is_handoff_reply = any(kw in bot_reply for kw in [
+            "รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", 
+            "เดี๋ยวรอแอดมิน", "แอดมินมาแจ้งอีกที", "รอแอดมินมาแจ้งให้ทราบ",
+            "สำหรับรายละเอียดเรื่องการสกรีน", "สำหรับบริการนี้เดี๋ยวรอแอดมิน"
+        ])
+        if is_handoff_reply:
+            if has_user_been_handed_off_to_human(history_list):
+                logger.info(f"Bot already told user {user_id} to wait for admin previously. Suppressed duplicate handoff. [SILENCE]")
+                record_recent_line_customer(user_id, user_text)
+                save_message(user_id, "user", user_text)
+                return
+            else:
+                create_admin_alert(user_id, "custom_service", "🛎️ ลูกค้าสอบถามบริการพิเศษ (รอแอดมินคนจริง)", user_text)
 
         # บันทึกสิ่งที่ user พิมพ์ และสิ่งที่บอทตอบ ลง DB เฉพาะเมื่อเป็นคำตอบจริงเท่านั้น
         save_message(user_id, "user", user_text)
@@ -2542,7 +2593,13 @@ def process_facebook_messaging_event(sender_id: str, mid: str, user_text: str):
         return
 
     # ประมวลผลคำตอบด้วย AI สำหรับ Facebook Page โดยเฉพาะ (platform='facebook')
-    reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="facebook")
+    reply_txt, history_list, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="facebook")
+
+    # ป้องกันการส่งข้อความรอแอดมินซ้ำซาก (ตอบครั้งเดียวแล้วเงียบไปเลย)
+    if reply_txt and any(kw in reply_txt for kw in ["รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", "เดี๋ยวรอแอดมิน", "แอดมินมาแจ้งอีกที"]):
+        if has_user_been_handed_off_to_human(history_list):
+            logger.info(f"Duplicate handoff message suppressed for Facebook user {sender_id}. SILENCE.")
+            return
 
     if reply_txt and reply_txt != "[SILENCE]":
         # ทาง Facebook: ให้ข้อมูลเสร็จแล้ว เชิญชวนลูกค้าไปสั่งซื้อและรันคิวผลิตผ่าน LINE OA
@@ -2596,7 +2653,13 @@ def process_instagram_messaging_event(sender_id: str, mid: str, user_text: str):
         return
 
     # ประมวลผลคำตอบด้วย AI สำหรับ Instagram โดยเฉพาะ (platform='instagram')
-    reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="instagram")
+    reply_txt, history_list, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="instagram")
+
+    # ป้องกันการส่งข้อความรอแอดมินซ้ำซาก (ตอบครั้งเดียวแล้วเงียบไปเลย)
+    if reply_txt and any(kw in reply_txt for kw in ["รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", "เดี๋ยวรอแอดมิน", "แอดมินมาแจ้งอีกที"]):
+        if has_user_been_handed_off_to_human(history_list):
+            logger.info(f"Duplicate handoff message suppressed for Instagram user {sender_id}. SILENCE.")
+            return
 
     if reply_txt and reply_txt != "[SILENCE]":
         # ทาง Instagram: เชิญชวนลูกค้าไปคอนเฟิร์มคิวและสั่งผลิตผ่าน LINE OA
