@@ -1352,9 +1352,43 @@
       housePct: 30,
       vehiclePct: 30
     };
-    let activeLineCustomerName = "";
-    let activeLineUserId = "";
-    let recentLineCustomers = [];
+    const CUSTOMERS_KEY = "onestudio_recent_customers_v1";
+    const DEFAULT_REAL_CUSTOMERS = [
+      { displayName: "ICE", userId: "Ucd7a5c0f144c38dfdab1fe8bce0ca698", lastText: "มีอัพเดตป้ายชื่อไหมค่ะ" },
+      { displayName: "F", userId: "U8da860815527e0a57bf6e0a1180cc09f", lastText: "K’ ฟารีดา เจะโด \n💌 บ้านเลขที่ 95(ห้อง105)" },
+      { displayName: "Husna", userId: "U066bb87b7a3064d914f43863eff2afe9", lastText: "Husna&Abdulloh" },
+      { displayName: "dawnee😽", userId: "U7f05f171799e970cdf5607a14c61a66b", lastText: "สวยมากเลยค่ะ" },
+      { displayName: "น้อง’’ฟานี่🤍", userId: "U24b16833465cbcac9c396e5903af1725", lastText: "เบอร์ 0633043613" },
+      { displayName: "ฟานี", userId: "U3714a7fe6f6c8054a455f5742b517c38", lastText: "ครับ" },
+      { displayName: "♾MAY NUTCHARI 94♾", userId: "U5c6374a798966b6259d032b1dd97fbac", lastText: "สอบถามราคาค่ะ" },
+      { displayName: "Nuttanicha🧸", userId: "U1ee1db80e5ec3d2e582ef150ffe59163", lastText: "100ใบค่ะ ขอทราบราคาหน่อยค่ะ" },
+      { displayName: "ต้า ♡︎", userId: "Uea9cce7082542ddc49f976352654bb57", lastText: "นี่นะคะ ของชำร่วย เอาปกนี้ใส่เป็นพื้นหลังเลยนะคะ" },
+      { displayName: "𝑵𝒂𝒎𝒇𝒐𝒏", userId: "Udce13443bb631d8ea5a179b0f7dc060c", lastText: "มั้ยค่ะ" },
+      { displayName: "Musunna", userId: "U4da3943970b0794d336b83eb96115a5a", lastText: "ได้ประมาณวันไหนคะ" },
+      { displayName: "FITRIYA CHEWAE", userId: "U29cd85c71b335b72151f815b7ea29d6b", lastText: "มีค่ามัดจำไหมคะ" },
+      { displayName: "Manlika.H🦋", userId: "U29b60368ff7604335b6057fbbd712e64", lastText: "ขอบคุณมากค่ะ" },
+      { displayName: "BUSMA 𓍯𓂃𓏧", userId: "Ue2bcf3425e986647f9b9cded9cda4462", lastText: "น้ำผึ้งเท่าไหร่คะ" },
+      { displayName: "Am‘", userId: "U716205eb51a5cdb119a5b41bab3df4c5", lastText: "ของเสร็จรึยังหรอคะ" }
+    ];
+
+    let recentLineCustomers = (window.INITIAL_CALCULATOR_STATE && Array.isArray(window.INITIAL_CALCULATOR_STATE.recentCustomers) && window.INITIAL_CALCULATOR_STATE.recentCustomers.length > 0)
+      ? window.INITIAL_CALCULATOR_STATE.recentCustomers
+      : DEFAULT_REAL_CUSTOMERS.slice();
+
+    try {
+      if (recentLineCustomers.length === 0) {
+        const cachedCust = localStorage.getItem(CUSTOMERS_KEY);
+        if (cachedCust) {
+          const parsedCust = JSON.parse(cachedCust);
+          if (Array.isArray(parsedCust) && parsedCust.length > 0) recentLineCustomers = parsedCust;
+        }
+      }
+    } catch (e) {}
+
+    let activeLineCustomerName = (window.INITIAL_CALCULATOR_STATE && window.INITIAL_CALCULATOR_STATE.latestLineCustomer)
+      ? (window.INITIAL_CALCULATOR_STATE.latestLineCustomer.startsWith("คุณ") ? window.INITIAL_CALCULATOR_STATE.latestLineCustomer : `คุณ${window.INITIAL_CALCULATOR_STATE.latestLineCustomer}`)
+      : (recentLineCustomers.length > 0 ? (recentLineCustomers[0].displayName.startsWith("คุณ") ? recentLineCustomers[0].displayName : `คุณ${recentLineCustomers[0].displayName}`) : "คุณICE");
+    let activeLineUserId = (recentLineCustomers.length > 0) ? (recentLineCustomers[0].userId || "") : "Ucd7a5c0f144c38dfdab1fe8bce0ca698";
     let lastSyncedOrdNo = "";
     let latestOrderPayload = null;
     let editingCatalogId = null;
@@ -2058,11 +2092,15 @@
       const emptyHtml = `<span class="text-xs text-slate-400">ยังไม่มีรายชื่อลูกค้าจาก LINE (กด 🔄 เพื่อดึงข้อมูล)</span>`;
 
       if (recentLineCustomers.length === 0) {
-        if (listEl) listEl.innerHTML = emptyHtml;
-        if (calcListEl) calcListEl.innerHTML = emptyHtml;
-        if (ordersListEl) ordersListEl.innerHTML = emptyHtml;
-        if (billListEl) billListEl.innerHTML = emptyHtml;
-        return;
+        if (Array.isArray(DEFAULT_REAL_CUSTOMERS) && DEFAULT_REAL_CUSTOMERS.length > 0) {
+          recentLineCustomers = DEFAULT_REAL_CUSTOMERS.slice();
+        } else {
+          if (listEl) listEl.innerHTML = emptyHtml;
+          if (calcListEl) calcListEl.innerHTML = emptyHtml;
+          if (ordersListEl) ordersListEl.innerHTML = emptyHtml;
+          if (billListEl) billListEl.innerHTML = emptyHtml;
+          return;
+        }
       }
 
       // 1. แถบเลือกลูกค้าในห้องแชท (Chat Tab)
@@ -2151,8 +2189,9 @@
         if (document.getElementById("target-house-input")) document.getElementById("target-house-input").value = monthlyTargets.house || 15000;
         if (document.getElementById("target-vehicle-input")) document.getElementById("target-vehicle-input").value = monthlyTargets.vehicle || 10000;
       }
-      if (Array.isArray(data.recentCustomers)) {
+      if (Array.isArray(data.recentCustomers) && data.recentCustomers.length > 0) {
         recentLineCustomers = data.recentCustomers;
+        try { localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(recentLineCustomers)); } catch (e) { }
       }
       if (data.latestLineCustomer) {
         const rawName = data.latestLineCustomer;
@@ -2168,11 +2207,19 @@
           const rn = recentLineCustomers[0].displayName;
           activeLineCustomerName = rn.startsWith("คุณ") ? rn : `คุณ${rn}`;
         }
-        if (activeLineUserId) {
+      }
+      try {
+        renderRecentLineCustomers();
+      } catch (e) {
+        console.error("renderRecentLineCustomers error:", e);
+      }
+      if (activeLineUserId) {
+        try {
           loadLineCustomerChat(activeLineUserId, activeLineCustomerName);
+        } catch (e) {
+          console.error("loadLineCustomerChat error:", e);
         }
       }
-      renderRecentLineCustomers();
       if (editingCatalogId === null) renderCatalog();
       if (data.latestOrder && data.latestOrder.ordNo && data.latestOrder.ordNo !== lastSyncedOrdNo) {
         applyLatestOrderFromLine(data.latestOrder);

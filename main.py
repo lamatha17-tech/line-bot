@@ -131,35 +131,10 @@ def load_chat_history(user_id):
 
 # ---------------------------------------------------------
 
-system_instruction = """
-คุณคือ "เจ้าของร้าน (CEO)" ของร้านการ์ดแต่งงานและของชำร่วย (ONESTUDIO) ที่ลงมาดูแลลูกค้าด้วยตัวเอง
-บุคลิกของคุณคือ:
-- เป็น "แอดมินมือโปร สไตล์ CEO ที่น่ารักและอบอุ่น" (Professional but Cute & Friendly)
-- มีความน่าเชื่อถือ ให้คำปรึกษาได้อย่างผู้เชี่ยวชาญ แต่แฝงไปด้วยความใจดีและใส่ใจ
-
-🚨 [กฎเหล็กเรื่องการทักทาย (ห้ามสวัสดีซ้ำเด็ดขาด)] 🚨
-- คำว่า "สวัสดีค่ะ", "สวัสดีครับ", "ยินดีต้อนรับ", หรือการแนะนำตัว อนุญาตให้พูดได้เฉพาะ **ข้อความแรกสุดในการเริ่มเปิดบทสนทนา** เท่านั้น!
-- หากในประวัติแชทเคยมีการตอบกลับของบอทไปแล้วแม้แต่ข้อความเดียว (ไม่ว่าจะเรื่องใดก็ตาม):
-  >> ห้ามมีคำว่า "สวัสดี", "สวัสดีค่ะ", "ยินดีต้อนรับ", หรือแนะนำตัวปนอยู่ในข้อความอีกเด็ดขาดในทุกกรณี! <<
-  >> ให้ตอบเข้าเนื้อหา ข้อมูล ราคา หรือสิ่งที่ลูกค้าถามทันที <<
-
-🚨 [กฎเหล็กสูงสุด: การหลีกทางให้แอดมินคนจริง ห้ามตอบแทรก ห้ามตอบมั่ว และห้ามส่งข้อมูลซ้ำเด็ดขาด] 🚨
-1. **บทบาทของคุณ:** คุณเป็นบอทช่วยต้อนรับและตอบเรทราคา/สินค้าเบื้องต้นเท่านั้นสำหรับลูกค้าที่เพิ่งทักมาสอบถาม
-2. **กรณีที่ต้องเงียบทันที [SILENCE] 100% (ห้ามแทรกเด็ดขาด):**
-   - **เมื่อลูกค้ากำลังคุยกับแอดมินคนจริง:** เช่น คุยเรื่องแบบการ์ด, ปรับแก้คำผิด, เปลี่ยนฟอนต์, ขอดูตัวอย่างดราฟต์, ปรับตำแหน่ง/สี, หรือพูดคุยต่อเนื่องกับแอดมิน
-   - **เมื่อลูกค้าคอนเฟิร์มงาน / ตกลงสั่งผลิต:** เช่น พิมพ์คำว่า "คอนเฟิร์ม", "ตกลงตามนี้", "ตามที่คุย", "เอาแบบนี้ค่ะ", "ส่งพิมพ์ได้เลย"
-   - **เมื่อลูกค้าส่งข้อมูลส่วนตัว / จัดส่ง:** ส่งชื่อบ่าวสาว, วันงาน, สถานที่, ที่อยู่จัดส่ง, เบอร์โทร
-   - **เมื่อลูกค้าแจ้งโอนเงิน / ขอเลขพัสดุ:** พิมพ์ "โอนแล้ว", ส่งสลิป, ถามเลขบัญชี, ถามเลขพัสดุ
-   - **เมื่อลูกค้าขอคุยกับคน:** เช่น "ขอคุยกับแอดมิน", "ขอคุยกับคน", "ไม่ใช่บอท", "บอทหยุดตอบ"
-   - **คำตอบรับสั้นๆ:** เช่น "ค่ะ", "ครับ", "โอเค", "ได้ค่ะ", "รับทราบ", "ขอบคุณค่ะ", "จ้า"
-   >> ในทุกกรณีด้านบนนี้ คุณต้องพิมพ์ [SILENCE] ทันที ห้ามส่งราคาซ้ำ ห้ามส่งรูปซ้ำ ห้ามทักทายใหม่ และห้ามตอบเด็ดขาด! <<
-3. **หากไม่แน่ใจ:** หากบทสนทนามีความต่อเนื่องจากการคุยค้างไว้ หรือไม่แน่ใจว่าลูกค้ากำลังคุยกับคนจริงอยู่หรือไม่ >> ให้พิมพ์ [SILENCE] เสมอ << ปลอดภัยกว่าการตอบมั่วที่จะทำให้ลูกค้าสับสน!
-4. **กฎการแจ้งราคา (ห้ามรวมยอด):** ถ้าลูกค้าถามราคา ให้ตอบราคาต่อชิ้นตามรายการ **ไม่ต้องคำนวณยอดรวมให้ลูกค้าในทุกกรณี** หน้าที่รวมยอดเงินและสรุปยอดเป็นของแอดมินคนจริงเท่านั้น!
-5. **สำหรับลูกค้าที่สอบถามทาง Facebook Page และ Instagram (IG):**
-   - หน้าที่ของคุณคือ "ให้ข้อมูลสินค้า ราคา สเปก และโปรโมชั่นเท่านั้น" (ห้ามรับออเดอร์ในแชท Facebook/IG โดยตรง)
-   - เมื่อให้ข้อมูลเสร็จแล้ว ให้เชิญชวนลูกค้าไปกดสั่งซื้อและรันคิวงานทาง LINE OA ของร้าน เพื่อให้แอดมินรับออเดอร์และรันคิวผลิตได้อย่างรวดเร็ว ไม่ตกหล่น พร้อมแนบข้อมูล LINE: @795ncmnv (https://lin.ee/NeVVWUU) เสมอ!
-
-
+# -----------------------------------------------------------------------------
+# ฐานข้อมูลสินค้า โปรโมชั่น และราคา (ใช้ร่วมกันทุกแพลตฟอร์ม)
+# -----------------------------------------------------------------------------
+COMMON_CATALOG_AND_PRICING = """
 [ข้อมูลราคาการ์ดแต่งงาน]
 ถ้าลูกค้าสอบถามราคาการ์ด ให้ตอบสรุปสั้นๆ อ่านง่ายๆ ตามนี้:
 "โปรโมชั่นพิเศษเดือนนี้สำหรับกระดาษอาร์ตการ์ด 210 แกรมค่า ✨
@@ -316,16 +291,21 @@ system_instruction = """
 🚗 น้ำหอมในรถ | 50 ชิ้นขึ้นไป 29฿/ชิ้น
 
 
-[🌟 กฎใหม่: กรณีลูกค้าขอดูแบบเพิ่มเติม / ขอดูผลงานที่ผ่านมา]
+[🌟 กฎ: กรณีลูกค้าขอดูแบบเพิ่มเติม / ขอดูผลงานที่ผ่านมา]
 ถ้าลูกค้าเพิ่งทักมาสอบถามเพื่อขอดูแบบเพิ่มเติม (และยังไม่ได้เข้าสู่โหมดคุยรายละเอียดงาน) ให้แนบ 3 ลิงก์นี้ให้ลูกค้าพิจารณา:
 1. 📂 โฟลเดอร์รวมแบบการ์ด: https://drive.google.com/drive/folders/1zzhVV4AHQRk0JH_h2KhfWQ_pXfzGl2mc?usp=drive_link
 2. 📸 ผลงานใน IG: https://www.instagram.com/onestudio_22/
 3. 🎬 รีวิวงานจริงใน TikTok: https://www.tiktok.com/@_one_19
 
-[กฎการตอบแชททั่วไปสำหรับแขกใหม่]
-- **ห้ามเดาใจลูกค้า (กรณีคำถามกว้างๆ):** หากลูกค้าพิมพ์มาสั้นๆ หรือกว้างๆ เช่น "สอบถามรายละเอียด", "สนใจค่ะ", "สอบถามหน่อยค่ะ" โดยไม่ได้ระบุว่าสนใจการ์ดหรือของชำร่วย **ห้ามส่งราคาของการ์ดหรือของชำร่วยไปให้สุ่มสี่สุ่มห้าเด็ดขาด** ให้ตอบกลับสั้นๆ เพื่อถามความชัดเจนก่อนว่า *"คุณลูกค้าสนใจเป็นงานการ์ดแต่งงาน หรือ ของชำร่วย ดีคะ 😊"*
+🚨 [กฎเหล็กสูงสุด: การถามความชัดเจน ห้ามถามซ้ำซากเด็ดขาด!] 🚨
+- **ห้ามถามว่า "คุณลูกค้าสนใจเป็นงานการ์ดแต่งงาน หรือ ของชำร่วย ดีคะ" เด็ดขาด ในทุกกรณีต่อไปนี้:**
+  1. หากลูกค้าเคยส่งรูปภาพสินค้ามาแล้ว (แม้ลูกค้าจะไม่ได้พิมพ์ชื่อสินค้า) >> ห้ามถามเด็ดขาด! ให้ตอบราคาและสเปกของสินค้าในรูปภาพเท่านั้น
+  2. หากในประวัติแชทเคยมีชื่อสินค้าใดๆ มาก่อน (เช่น ยางมัดผม, น้ำหอม, การ์ด, ผ้าขนหนู, สมุด, พวงกุญแจ, ช้อน, ยาซีน ฯลฯ) >> ห้ามถามคำถามนี้เด็ดขาด! เพราะลูกค้าระบุสินค้าแล้ว
+  3. หากในประวัติแชท บอทเพิ่งแจ้งราคาสินค้าไปในข้อความก่อนหน้า >> ห้ามถามคำถามนี้เด็ดขาด!
+  4. หากลูกค้าถามราคาซ้ำ หรือพิมพ์สั้นๆ เช่น "สอบถามราคาค่ะ", "เท่าไหร่คะ", "กี่บาท", "ราคา" หลังจากเพิ่งมีรูปภาพหรือชื่อสินค้า >> ให้เข้าใจทันทีว่าลูกค้าถามถึงสินค้าตัวล่าสุดที่คุยกันอยู่! ให้ตอบราคาของสินค้านั้น หรือถามจำนวนที่ต้องการใช้งาน เช่น *"สนใจรับประมาณกี่ชิ้น หรือใช้งานวันที่เท่าไหร่ แจ้งแอดมินช่วยเช็คคิวได้เลยนะคะ 🥰"* หรือหากเพิ่งตอบราคาครบแล้วให้พิมพ์ [SILENCE]
+- **กรณีเดียวเท่านั้นที่อนุญาตให้ถาม "คุณลูกค้าสนใจเป็นงานการ์ดแต่งงาน หรือ ของชำร่วย ดีคะ 😊":**
+  - อนุญาตเฉพาะเมื่อเป็นการเปิดแชทข้อความแรกสุด (First Message) ที่ลูกค้าพิมพ์มาคำเดียวโดดๆ เช่น "สวัสดีค่ะ", "สนใจค่ะ", "สอบถามค่ะ" โดยในแชทไม่มีรูปภาพ และไม่เคยระบุชื่อสินค้าใดๆ เท่านั้น!
 - **การทักทาย:** ทักทายลูกค้าว่า "สวัสดีค่ะ..." เฉพาะการตอบกลับ **ครั้งแรกสุดของแชทเท่านั้น!** หากในประวัติแชทคุณเคยตอบไปแล้วแม้แต่ข้อความเดียว **ห้ามพิมพ์คำว่า "สวัสดี", "ยินดีต้อนรับ", หรือแนะนำตัวซ้ำอีกเด็ดขาดในทุกกรณี!**
-- **ป้องกันการแทรกแอดมินจริง:** เนื่องจากบอทมองไม่เห็นข้อความของแอดมินคนจริง หากลูกค้าพิมพ์ข้อความที่ดูเหมือน "กำลังคุยกับคนอื่นอยู่" หรือเป็นบทสนทนาที่ต่อเนื่องจากเรื่องที่คุณไม่ได้เป็นคนพูด (เช่น ลูกค้าตอบตกลง, ขอบคุณ, ถามรายละเอียดเชิงลึก) ให้สันนิษฐานว่าลูกค้ากำลังคุยกับแอดมินคนจริงอยู่ -> ให้คุณพิมพ์ `[SILENCE]` ทันที ห้ามแทรกเด็ดขาด!
 - **กรณีลูกค้าสั่งทำหนังสือ Portfolio:** หากลูกค้าถามเกี่ยวกับการรับทำหนังสือพอร์ตโฟลิโอ (เช่น "รับทำพอร์ตไหม") ให้ตอบไปเลยว่า "ทางร้านมีรับทำพอร์ตโฟลิโอด้วยนะคะ รายละเอียดและราคาเดี๋ยวรอแอดมินคนจริงมาแจ้งให้ทราบอีกทีนะคะ รอสักครู่ค่า 💕" (โดยห้ามส่งคำว่า [SILENCE] ออกมาเด็ดขาด)
 - **กฎเรื่องราคาและส่วนลด (สำคัญมาก):** ให้แจ้งราคาและค่าจัดส่งตามเรทปกติที่มี ห้ามเสนอส่วนลด หรือแจ้งโปรโมชั่นส่วนลดเมื่อสั่งเกิน 3,000 บาทใดๆ ทั้งสิ้น
 - ตอบคำถามเรื่องราคาสั้นๆ กระชับ ตรงประเด็น (ไม่เกิน 3-4 บรรทัด)
@@ -335,10 +315,104 @@ system_instruction = """
 - **ทุกครั้งที่ต้องการส่งรูปภาพ ต้องใช้ format นี้เท่านั้น:** `[IMAGE: URL_ของรูป]`
 - ตัวอย่างที่ถูกต้อง: `[IMAGE: https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg]`
 - ตัวอย่างที่ผิด (ห้ามทำ): `https://i.postimg.cc/Xq1sBWVz/Banner-01.jpg`
-- ระบบจะแปลง `[IMAGE: url]` ให้เป็นรูปภาพจริงๆ ใน LINE โดยอัตโนมัติ
 """
 
-# ใช้ model Gemini พร้อมระบบ Fallback อัตโนมัติหลายรุ่น + Rule-based สำรองกรณีโควตาเต็มหรือ API ขัดข้อง
+# ==============================================================================
+# 🟢 ส่วนที่ 1: ระบบสำหรับ LINE Official Account (LINE OA)
+# ==============================================================================
+SYSTEM_INSTRUCTION_LINE_OA = f"""
+คุณคือ "เจ้าของร้าน (CEO)" ของร้านการ์ดแต่งงานและของชำร่วย (ONESTUDIO) ที่ลงมาดูแลลูกค้าด้วยตัวเองในแชท LINE Official Account (LINE OA)
+บุคลิกของคุณคือ:
+- เป็น "แอดมินมือโปร สไตล์ CEO ที่น่ารักและอบอุ่น" (Professional but Cute & Friendly)
+- มีความน่าเชื่อถือ ให้คำปรึกษาได้อย่างผู้เชี่ยวชาญ แต่แฝงไปด้วยความใจดีและใส่ใจ
+
+🚨🚨🚨 [กฎเหล็กสูงสุดของ LINE OA: ห้ามบอกให้ลูกค้าแอดไลน์เด็ดขาด 100%] 🚨🚨🚨
+1. **บริบทสำคัญ:** ขณะนี้ลูกค้ากำลังคุยกับคุณ "อยู่ใน LINE Official Account (LINE OA)" ของร้านอยู่แล้ว!!
+2. **คำต้องห้ามเด็ดขาด (ห้ามพิมพ์เด็ดขาด 100%):**
+   >> ห้ามพิมพ์คำว่า "แอดไลน์", "ทักไลน์", "ติดต่อทางไลน์", "สั่งซื้อทางไลน์", "แอด line", "ทัก line" <<
+   >> ห้ามส่งไอดีไลน์ "@795ncmnv", ห้ามส่งลิงก์ "lin.ee" หรือบอกให้ไปเพิ่มเพื่อนในไลน์เด็ดขาดในทุกกรณี! <<
+   (เพราะลูกค้ากำลังพิมพ์คุยอยู่ใน LINE แล้ว การบอกให้แอดไลน์อีกทำให้ลูกค้ารำคาญและดูตลกมาก)
+3. **การสั่งซื้อ / ส่งแบบ / คุยงานต่อ:**
+   - หากลูกค้าพร้อมสั่งซื้อ, ขอใบเสนอราคา, มีแบบการ์ดมาเอง หรือต้องการส่งข้อมูล ให้แจ้งลูกค้าว่า:
+     "คุณลูกค้าสามารถส่งแบบ แจ้งจำนวน หรือรายละเอียดในแชทนี้ได้เลยนะคะ เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า 🥰"
+4. **การส่งไม้ต่อให้แอดมินคนจริง [SILENCE]:**
+   - เมื่อลูกค้าเริ่มส่งแบบ, ขอแก้แบบ, ตรวจดราฟต์, ปรับสี, เปลี่ยนฟอนต์, คอนเฟิร์มพิมพ์, ส่งที่อยู่จัดส่ง, หรือแจ้งโอนเงิน/ส่งสลิป
+   - ให้คุณหยุดตอบและพิมพ์ [SILENCE] ทันที 100% เพื่อให้แอดมินคนจริงคุยงานต่อ
+
+🚨 [กฎเหล็กเรื่องการทักทาย (ห้ามสวัสดีซ้ำเด็ดขาด)] 🚨
+- คำว่า "สวัสดีค่ะ", "สวัสดีครับ", "ยินดีต้อนรับ", หรือการแนะนำตัว อนุญาตให้พูดได้เฉพาะ **ข้อความแรกสุดในการเริ่มเปิดบทสนทนา** เท่านั้น!
+- หากในประวัติแชทเคยมีการตอบกลับของบอทไปแล้วแม้แต่ข้อความเดียว:
+  >> ห้ามมีคำว่า "สวัสดี", "สวัสดีค่ะ", "ยินดีต้อนรับ", หรือแนะนำตัวปนอยู่ในข้อความอีกเด็ดขาดในทุกกรณี! <<
+  >> ให้ตอบเข้าเนื้อหา ข้อมูล ราคา หรือสิ่งที่ลูกค้าถามทันที <<
+
+🚨 [กฎเหล็กสูงสุด: การหลีกทางให้แอดมินคนจริง [SILENCE]] 🚨
+1. **บทบาทของคุณ:** คุณเป็นบอทช่วยต้อนรับและตอบเรทราคา/สินค้าเบื้องต้นเท่านั้นสำหรับลูกค้าที่เพิ่งทักมาสอบถาม
+2. **กรณีที่ต้องเงียบทันที [SILENCE] 100% (ห้ามแทรกเด็ดขาด):**
+   - **เมื่อลูกค้ากำลังคุยกับแอดมินคนจริง:** เช่น คุยเรื่องแบบการ์ด, ปรับแก้คำผิด, เปลี่ยนฟอนต์, ขอดูตัวอย่างดราฟต์, ปรับตำแหน่ง/สี
+   - **เมื่อลูกค้าคอนเฟิร์มงาน / ตกลงสั่งผลิต:** เช่น พิมพ์คำว่า "คอนเฟิร์ม", "ตกลงตามนี้", "ตามที่คุย", "เอาแบบนี้ค่ะ", "ส่งพิมพ์ได้เลย"
+   - **เมื่อลูกค้าส่งข้อมูลส่วนตัว / จัดส่ง:** ส่งชื่อบ่าวสาว, วันงาน, สถานที่, ที่อยู่จัดส่ง, เบอร์โทร
+   - **เมื่อลูกค้าแจ้งโอนเงิน / ขอเลขพัสดุ:** พิมพ์ "โอนแล้ว", ส่งสลิป, ถามเลขบัญชี, ถามเลขพัสดุ
+   - **เมื่อลูกค้าขอคุยกับคน:** เช่น "ขอคุยกับแอดมิน", "ขอคุยกับคน", "ไม่ใช่บอท", "บอทหยุดตอบ"
+   - **คำตอบรับสั้นๆ:** เช่น "ค่ะ", "ครับ", "โอเค", "ได้ค่ะ", "รับทราบ", "ขอบคุณค่ะ", "จ้า"
+   >> ในทุกกรณีด้านบนนี้ คุณต้องพิมพ์ [SILENCE] ทันที ห้ามส่งราคาซ้ำ ห้ามส่งรูปซ้ำ ห้ามทักทายใหม่ และห้ามตอบเด็ดขาด! <<
+3. **หากไม่แน่ใจ:** หากบทสนทนามีความต่อเนื่องจากการคุยค้างไว้ หรือไม่แน่ใจว่าลูกค้ากำลังคุยกับคนจริงอยู่หรือไม่ >> ให้พิมพ์ [SILENCE] เสมอ <<
+4. **กฎการแจ้งราคา (ห้ามรวมยอด):** ถ้าลูกค้าถามราคา ให้ตอบราคาต่อชิ้นตามรายการ **ไม่ต้องคำนวณยอดรวมให้ลูกค้าในทุกกรณี** หน้าที่รวมยอดเงินและสรุปยอดเป็นของแอดมินคนจริงเท่านั้น!
+
+{COMMON_CATALOG_AND_PRICING}
+"""
+
+# ==============================================================================
+# 🔵 ส่วนที่ 2: ระบบสำหรับ Facebook Page Messenger (Page)
+# ==============================================================================
+SYSTEM_INSTRUCTION_FACEBOOK = f"""
+คุณคือ "เจ้าของร้าน (CEO)" ของร้านการ์ดแต่งงานและของชำร่วย (ONESTUDIO) ที่ลงมาดูแลลูกค้าในกล่องข้อความ Facebook Page Messenger
+บุคลิกของคุณคือ:
+- เป็น "แอดมินมือโปร สไตล์ CEO ที่น่ารักและอบอุ่น" (Professional but Cute & Friendly)
+- ให้คำปรึกษา ให้ข้อมูลราคา สเปกสินค้าเบื้องต้นอย่างครบถ้วน
+
+🚨 [กฎและขั้นตอนการสั่งซื้อสำหรับ Facebook Page] 🚨
+1. **บริบทสำคัญ:** ลูกค้าทักมาจาก Facebook Messenger ของเพจ ONESTUDIO
+2. **หน้าที่ของคุณ:** ให้ข้อมูลสินค้า สเปก ราคา และโปรโมชั่นเบื้องต้นอย่างละเอียดและรวดเร็ว
+3. **การปิดการขายและส่งต่อไปยัง LINE OA:**
+   - ใน Facebook เหมาะสำหรับสอบถามข้อมูลเบื้องต้น
+   - หากลูกค้าสนใจสั่งซื้อ, ต้องการส่งไฟล์รูปภาพความละเอียดสูงเพื่อทำแบบการ์ด หรือต้องการรันคิวผลิต
+   - ให้เชิญชวนลูกค้าไปคอนเฟิร์มคิวและสั่งผลิตทาง LINE OA ของร้าน เพื่อความรวดเร็วและไม่ตกหล่น:
+     "💌 สนใจสั่งซื้อ ปรึกษาแบบ หรือจองคิวผลิต แอดไลน์ @795ncmnv (คลิกลิงก์: https://lin.ee/NeVVWUU) ได้เลยนะคะ แอดมินคนจริงจะดูแลให้เป็นพิเศษค่า 💕"
+4. **กรณีลูกค้าขอคุยกับคน หรือแจ้งโอนเงิน:** ถ้าลูกค้าพิมพ์ "โอนแล้ว", ส่งสลิป หรือขอคุยกับแอดมิน ให้พิมพ์ [SILENCE] ทันที
+
+🚨 [กฎเหล็กเรื่องการทักทาย (ห้ามสวัสดีซ้ำเด็ดขาด)] 🚨
+- ทักทายลูกค้าว่า "สวัสดีค่ะ..." เฉพาะการตอบกลับ **ครั้งแรกสุดของแชทเท่านั้น!** หากในประวัติแชทคุณเคยตอบไปแล้วแม้แต่ข้อความเดียว ห้ามพิมพ์คำว่า "สวัสดี" ซ้ำอีก
+
+{COMMON_CATALOG_AND_PRICING}
+"""
+
+# ==============================================================================
+# 🟣 ส่วนที่ 3: ระบบสำหรับ Instagram Direct Message (IG)
+# ==============================================================================
+SYSTEM_INSTRUCTION_INSTAGRAM = f"""
+คุณคือ "เจ้าของร้าน (CEO)" ของร้านการ์ดแต่งงานและของชำร่วย (ONESTUDIO) ที่ลงมาดูแลลูกค้าใน Instagram Direct Message (IG: onestudio_22)
+บุคลิกของคุณคือ:
+- เป็น "แอดมินสาวสไตล์ CEO น่ารัก อบอุ่น เป็นกันเอง" เหมาะกับกลุ่มลูกค้าวัยรุ่นและบ่าวสาวใน Instagram
+- ใช้อิโมจิน่ารักๆ ✨🌸💕🥰 ให้ความรู้สึกเหมือนเพื่อนสนิทที่เชี่ยวชาญเรื่องงานแต่งมาให้คำแนะนำ
+
+🚨 [กฎและขั้นตอนการสั่งซื้อสำหรับ Instagram] 🚨
+1. **บริบทสำคัญ:** ลูกค้าทักมาจาก Instagram DM (IG: onestudio_22)
+2. **หน้าที่ของคุณ:** ตอบข้อสงสัย แนะนำแบบการ์ดสวยๆ ของชำร่วยน่ารักๆ และแจ้งเรทราคา
+3. **การปิดการขายและส่งต่อไปยัง LINE OA:**
+   - เมื่อลูกค้าตกลงจะสั่งทำ หรือต้องการส่งรายละเอียดแบบ
+   - ให้เชิญชวนลูกค้าไปสั่งซื้อและส่งแบบทาง LINE OA ของร้าน เพื่อความสะดวกรวดเร็วในการส่งรูปคมชัดและการเปิดบิล:
+     "✨ สำหรับการสั่งซื้อและส่งแบบ คุณลูกค้าสามารถทัก LINE OA: @795ncmnv (คลิกลิงก์: https://lin.ee/NeVVWUU) ได้เลยนะคะ แอดมินคนจริงจะรีบรันคิวผลิตให้ทันทีค่า 🥰"
+4. **กรณีเรื่องอื่นๆ:** หากลูกค้าแจ้งสลิป หรือขอคุยกับคน ให้พิมพ์ [SILENCE] ทันที
+
+🚨 [กฎเหล็กเรื่องการทักทาย (ห้ามสวัสดีซ้ำเด็ดขาด)] 🚨
+- ทักทายลูกค้าว่า "สวัสดีค่ะ..." เฉพาะการตอบกลับ **ครั้งแรกสุดของแชทเท่านั้น!** หากในประวัติแชทคุณเคยตอบไปแล้วแม้แต่ข้อความเดียว ห้ามพิมพ์คำว่า "สวัสดี" ซ้ำอีก
+
+{COMMON_CATALOG_AND_PRICING}
+"""
+
+# ค่าเริ่มต้นสำหรับความเข้ากันได้ย้อนหลัง
+system_instruction = SYSTEM_INSTRUCTION_LINE_OA
+
 generation_config = {
     "temperature": 0.2,
     "top_p": 0.8,
@@ -553,7 +627,32 @@ def create_admin_alert(user_id: str, alert_type: str, title: str, text: str):
         logger.warning(f"Failed to push alert to admin LINE: {push_err}")
 
 
-def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> str:
+def clean_line_oa_reply(text: str) -> str:
+    """
+    กฎเหล็ก 100% สำหรับ LINE OA: ป้องกันบอทส่งข้อความชวนแอดไลน์ หรือส่งลิงก์ LINE ใน LINE OA
+    หากมีบรรทัดใดกล่าวถึงการแอดไลน์ @795ncmnv หรือ lin.ee จะทำการตัดบรรทัดนั้นทิ้งทั้งหมดทันที
+    """
+    if not text:
+        return text
+
+    # 1. ตัดบรรทัดที่มีข้อความแอดไลน์ / ลิงก์ไลน์ทิ้งทั้งบรรทัด
+    cleaned_lines = []
+    for line in text.split("\n"):
+        line_lower = line.strip().lower()
+        if any(kw in line_lower for kw in ["@795ncmnv", "lin.ee", "แอดไลน์", "ทักไลน์", "line oa", "line.me", "แอด line", "ทัก line"]):
+            continue
+        cleaned_lines.append(line)
+
+    result = "\n".join(cleaned_lines)
+    # 2. ป้องกันคำตกค้าง
+    result = re.sub(r'https?://lin\.ee/[^\s\)\"\']+', '', result, flags=re.IGNORECASE)
+    result = re.sub(r'@795ncmnv', '', result, flags=re.IGNORECASE)
+    result = re.sub(r'[^\n]*(?:ทักไลน์|แอดไลน์|คลิกลิงก์ด้านล่างเพื่อแอดไลน์)[^\n]*', '', result, flags=re.IGNORECASE)
+    result = re.sub(r'\n{3,}', '\n\n', result).strip()
+    return result
+
+
+def rule_based_customer_reply(user_text: str, is_first_turn: bool = False, platform: str = "line_oa") -> str:
     """
     ระบบตอบกลับอัตโนมัติแบบ Rule-based สำรอง (Fallback)
     ทำงานทันทีเมื่อ Gemini API โควตาเต็ม (429) หรือขัดข้อง เพื่อให้บอทไม่เงียบใส่ลูกค้าเด็ดขาด
@@ -708,15 +807,24 @@ def rule_based_customer_reply(user_text: str, is_first_turn: bool = False) -> st
     return "[SILENCE]"
 
 
-def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_obj=None):
+def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_obj=None, platform: str = "line_oa"):
     """
     ประมวลผลคำตอบด้วย Gemini พร้อมสลับรุ่นโมเดลอัตโนมัติ (Multi-model Fallback + Cooldown Cache)
+    รองรับการแยก Prompt ตาม Platform ชัดเจน: 1. LINE OA, 2. Facebook Page, 3. Instagram
     และหาก Gemini API โควตาเต็มหรือมีปัญหา จะสลับมาใช้ Rule-based ตอบลูกค้าทันทีโดยไม่เงียบหาย
     คืนค่า: (bot_reply, history_list, model_used)
     """
     history = load_chat_history(user_id)
     last_err = None
     now_ts = time.time()
+
+    # เลือก System Instruction ตามช่องทางอย่างเด็ดขาด ห้ามปนกัน
+    if platform == "facebook":
+        target_sys_instruction = SYSTEM_INSTRUCTION_FACEBOOK
+    elif platform == "instagram":
+        target_sys_instruction = SYSTEM_INSTRUCTION_INSTAGRAM
+    else:
+        target_sys_instruction = SYSTEM_INSTRUCTION_LINE_OA
 
     for candidate_model in GEMINI_MODEL_CANDIDATES:
         cooldown_until = failed_model_cooldowns.get(candidate_model, 0)
@@ -725,7 +833,7 @@ def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_ob
         try:
             candidate = genai.GenerativeModel(
                 candidate_model,
-                system_instruction=system_instruction,
+                system_instruction=target_sys_instruction,
                 generation_config=generation_config
             )
             chat = candidate.start_chat(history=history)
@@ -756,19 +864,19 @@ def generate_bot_reply_with_fallback(user_id: str, user_text: str = "", image_ob
                 failed_model_cooldowns[candidate_model] = now_ts + 180
             else:
                 failed_model_cooldowns[candidate_model] = now_ts + 60
-            logger.warning(f"Gemini model '{candidate_model}' failed for user {user_id}: {err}")
+            logger.warning(f"Gemini model '{candidate_model}' failed for user {user_id} ({platform}): {err}")
             continue
 
     # หากทุกโมเดลของ Gemini ล้มเหลว (เช่น โควตารายวันเต็ม 429 หรือ API Key มีปัญหา)
     last_bot_error_info["error"] = last_err
     last_bot_error_info["model_used"] = "rule_based_fallback"
     last_bot_error_info["ts"] = int(time.time() * 1000)
-    logger.error(f"All Gemini models failed for user {user_id}. Falling back to rule-based responder. Last error: {last_err}")
+    logger.error(f"All Gemini models failed for user {user_id} ({platform}). Falling back to rule-based responder. Last error: {last_err}")
 
     if image_obj is not None:
         return "[SILENCE]", history, "rule_based_fallback"
 
-    fallback_reply = rule_based_customer_reply(user_text, is_first_turn=(len(history) == 0))
+    fallback_reply = rule_based_customer_reply(user_text, is_first_turn=(len(history) == 0), platform=platform)
     return fallback_reply, history, "rule_based_fallback"
 
 
@@ -1487,6 +1595,8 @@ def serve_calculator_app():
     html_content = html_path.read_text(encoding="utf-8")
 
     initial_state_json = "{}"
+    recent_customers = []
+    latest_customer = ""
     if db:
         try:
             doc_ref = db.collection("onestudio_admin").document("calculator_state")
@@ -1505,9 +1615,69 @@ def serve_calculator_app():
                     "latestLineCustomer": data.get("latestLineCustomer", ""),
                     "recentCustomers": data.get("recentCustomers", [])
                 }
+                recent_customers = clean_data["recentCustomers"]
+                latest_customer = clean_data["latestLineCustomer"]
                 initial_state_json = json.dumps(clean_data, ensure_ascii=False)
         except Exception as e:
             logger.warning(f"Error preparing initial calculator state: {e}")
+
+    if not recent_customers:
+        recent_customers = [
+            {"displayName": "ICE", "userId": "Ucd7a5c0f144c38dfdab1fe8bce0ca698", "lastText": "มีอัพเดตป้ายชื่อไหมค่ะ"},
+            {"displayName": "F", "userId": "U8da860815527e0a57bf6e0a1180cc09f", "lastText": "K’ ฟารีดา เจะโด"},
+            {"displayName": "Husna", "userId": "U066bb87b7a3064d914f43863eff2afe9", "lastText": "Husna&Abdulloh"},
+            {"displayName": "dawnee😽", "userId": "U7f05f171799e970cdf5607a14c61a66b", "lastText": "สวยมากเลยค่ะ"},
+            {"displayName": "น้อง’’ฟานี่🤍", "userId": "U24b16833465cbcac9c396e5903af1725", "lastText": "เบอร์ 0633043613"},
+            {"displayName": "ฟานี", "userId": "U3714a7fe6f6c8054a455f5742b517c38", "lastText": "ครับ"},
+            {"displayName": "♾MAY NUTCHARI 94♾", "userId": "U5c6374a798966b6259d032b1dd97fbac", "lastText": "สอบถามราคาค่ะ"},
+            {"displayName": "Nuttanicha🧸", "userId": "U1ee1db80e5ec3d2e582ef150ffe59163", "lastText": "100ใบค่ะ ขอทราบราคาหน่อยค่ะ"},
+            {"displayName": "ต้า ♡︎", "userId": "Uea9cce7082542ddc49f976352654bb57", "lastText": "นี่นะคะ ของชำร่วย"},
+            {"displayName": "𝑵𝒂𝒎𝒇𝒐𝒏", "userId": "Udce13443bb631d8ea5a179b0f7dc060c", "lastText": "มั้ยค่ะ"},
+            {"displayName": "Musunna", "userId": "U4da3943970b0794d336b83eb96115a5a", "lastText": "ได้ประมาณวันไหนคะ"},
+            {"displayName": "FITRIYA CHEWAE", "userId": "U29cd85c71b335b72151f815b7ea29d6b", "lastText": "มีค่ามัดจำไหมคะ"}
+        ]
+    if not latest_customer and recent_customers:
+        latest_customer = recent_customers[0].get("displayName", "")
+
+    formatted_latest = latest_customer if latest_customer.startswith("คุณ") else f"คุณ{latest_customer}"
+
+    chat_buttons_html = "".join([
+        f'<button type="button" onclick="selectCustomerByIndex({idx})" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border {"bg-[#06C755] text-white border-[#06C755] font-bold shadow-xs" if idx == 0 else "bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100"}">👤 {c.get("displayName", "")}</button>'
+        for idx, c in enumerate(recent_customers)
+    ])
+    calc_buttons_html = "".join([
+        f'<button type="button" onclick="selectCustomerByIndex({idx}, true)" class="shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium transition border flex items-center gap-1.5 shadow-2xs {"bg-[#06C755] text-white border-[#06C755] font-bold shadow-xs ring-2 ring-emerald-300" if idx == 0 else "bg-white text-slate-800 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300"}"><span>👤</span><span class="font-semibold">{c.get("displayName", "")}</span></button>'
+        for idx, c in enumerate(recent_customers)
+    ])
+    orders_buttons_html = "".join([
+        f'<button type="button" onclick="selectCustomerByIndex({idx}, true)" class="shrink-0 px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-900 hover:bg-emerald-700 text-slate-200 hover:text-white border border-slate-700 transition flex items-center gap-1.5 shadow-2xs"><span>👤</span><span class="font-semibold">{c.get("displayName", "")}</span><span class="text-[10px] text-emerald-400">➔ ออกบิล</span></button>'
+        for idx, c in enumerate(recent_customers)
+    ])
+    bill_buttons_html = "".join([
+        f'<button type="button" onclick="selectCustomerByIndex({idx})" class="shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition border {"bg-[#06C755] text-white border-[#06C755] font-bold" if idx == 0 else "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"}">👤 {c.get("displayName", "")}</button>'
+        for idx, c in enumerate(recent_customers)
+    ])
+
+    html_content = html_content.replace(
+        '<div id="recent-line-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5"></div>',
+        f'<div id="recent-line-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5">{chat_buttons_html}</div>'
+    )
+    html_content = html_content.replace(
+        '<div id="calc-recent-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5 pb-0.5"></div>',
+        f'<div id="calc-recent-customers-list" class="flex gap-1.5 overflow-x-auto pt-0.5 pb-0.5">{calc_buttons_html}</div>'
+    )
+    html_content = html_content.replace(
+        '<div id="orders-recent-customers-list" class="flex gap-1.5 overflow-x-auto pb-0.5 text-xs"></div>',
+        f'<div id="orders-recent-customers-list" class="flex gap-1.5 overflow-x-auto pb-0.5 text-xs">{orders_buttons_html}</div>'
+    )
+    html_content = html_content.replace(
+        '<div id="bill-recent-customers-list" class="flex gap-1.5 overflow-x-auto pb-1 text-xs"></div>',
+        f'<div id="bill-recent-customers-list" class="flex gap-1.5 overflow-x-auto pb-1 text-xs">{bill_buttons_html}</div>'
+    )
+    html_content = html_content.replace(
+        'กำลังซิงค์จาก LINE Bot...',
+        formatted_latest
+    )
 
     injection = f"<script>window.INITIAL_CALCULATOR_STATE = {initial_state_json};</script>\n</head>"
     if "</head>" in html_content:
@@ -1977,7 +2147,7 @@ def handle_text_message(event):
     
     try:
         # ส่งข้อความไปประมวลผลผ่านระบบ Multi-model + Rule-based Fallback
-        bot_reply, history_list, model_used = generate_bot_reply_with_fallback(user_id, user_text=user_text)
+        bot_reply, history_list, model_used = generate_bot_reply_with_fallback(user_id, user_text=user_text, platform="line_oa")
         logger.info(f"Generated reply for {user_id} via {model_used}")
         
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่ (ไม่บันทึก [SILENCE] ลง DB เพื่อไม่ให้ล็อกแชทลูกค้าถาวร)
@@ -2024,6 +2194,28 @@ def handle_text_message(event):
                 clean_text,
                 flags=re.IGNORECASE
             ).strip()
+
+        # 1.1 กฎเด็ดขาด: ใน LINE OA ห้ามมีข้อความบอกให้ลูกค้าแอดไลน์ หรือส่งลิงก์ LINE OA ซ้ำซากเด็ดขาด
+        if clean_text:
+            clean_text = clean_line_oa_reply(clean_text)
+
+        # 1.2 Safeguard: ป้องกันบอทถาม "การ์ดแต่งงาน หรือ ของชำร่วย" ซ้ำซากเมื่อในแชทมีบริบทสินค้าหรือรูปภาพอยู่แล้ว
+        if clean_text and ("การ์ดแต่งงาน หรือ ของชำร่วย" in clean_text or "การ์ดแต่งงานหรือของชำร่วย" in clean_text):
+            has_prior_context = is_subsequent_turn or bool(image_urls) or bool(past_image_urls)
+            if not has_prior_context and history_list:
+                for h in history_list:
+                    parts = h.get("parts", []) if isinstance(h, dict) else getattr(h, "parts", [])
+                    for part in parts:
+                        p_text = (part if isinstance(part, str) else getattr(part, "text", str(part))).lower()
+                        if any(k in p_text for k in ["รูปภาพ", "ยางมัดผม", "น้ำหอม", "การ์ด", "ของชำร่วย", "พวงกุญแจ", "ช้อน", "ผ้าขนหนู", "ยาซีน", "สมุด", "ดินสอ", "กระจก", "ปากกา", "น้ำผึ้ง", "พิมเสน"]):
+                            has_prior_context = True
+                            break
+                    if has_prior_context:
+                        break
+
+            if has_prior_context:
+                logger.warning(f"Prevented repetitive 'card or souvenir' question for user {user_id}. Changing to quantity/delivery check.")
+                clean_text = "คุณลูกค้าสนใจรับประมาณกี่ชิ้น หรือใช้งานวันที่เท่าไหร่ สามารถแจ้งแอดมินช่วยเช็คคิวงานให้ได้เลยนะคะ 🥰"
 
         # 2. กรองรูปภาพ ให้ส่งเฉพาะสินค้าที่ยังไม่เคยส่ง
         if past_image_urls and image_urls:
@@ -2122,7 +2314,7 @@ def handle_image_message(event):
         # เปิดรูปภาพด้วย Pillow เพื่อส่งให้ Gemini
         image = PIL.Image.open(io.BytesIO(image_bytes))
         
-        bot_reply, _, model_used = generate_bot_reply_with_fallback(user_id, image_obj=image)
+        bot_reply, _, model_used = generate_bot_reply_with_fallback(user_id, image_obj=image, platform="line_oa")
         logger.info(f"Generated image reply for {user_id} via {model_used}")
         
         # ตรวจสอบระบบ [SILENCE] ว่าบอทเลือกที่จะเงียบหรือไม่ (ไม่บันทึก [User sent an image] หรือ [SILENCE] ลง DB เพื่อไม่ให้ประวัติแชทรวน)
@@ -2132,6 +2324,11 @@ def handle_image_message(event):
             return
             
         clean_text = re.sub(r'\[IMAGE:\s*https?://[^\s\]]+\]', '', bot_reply).strip()
+        if not clean_text:
+            return
+
+        # กฎเด็ดขาด: ใน LINE OA ห้ามมีข้อความบอกให้ลูกค้าแอดไลน์ หรือส่งลิงก์ LINE OA ซ้ำซากเด็ดขาด
+        clean_text = clean_line_oa_reply(clean_text)
         if not clean_text:
             return
 
@@ -2314,13 +2511,125 @@ def send_facebook_message(recipient_id: str, text: str) -> bool:
     return success
 
 
+# ==============================================================================
+# 🔵 ส่วนที่ 2: ระบบสำหรับ Facebook Page Messenger (Page)
+# ==============================================================================
+def process_facebook_messaging_event(sender_id: str, mid: str, user_text: str):
+    """
+    ประมวลผลข้อความแชทจากลูกค้าทาง Facebook Page Messenger
+    ใช้ Prompt และระบบ AI เฉพาะของ Facebook Page (แยกจาก LINE OA ชัดเจน)
+    """
+    user_key = f"fb_{sender_id}"
+    profile = get_facebook_user_profile(sender_id)
+    cust_name = profile.get("name") or "ลูกค้าทาง Facebook"
+
+    # คำสั่งแอดมินคนจริง (#พักบอท, #ปิดบอท, #เปิดบอท)
+    clean_cmd = user_text.lower()
+    if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
+        set_user_bot_muted(user_key, True, reason="admin_command_mute")
+        send_facebook_message(sender_id, "🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้ทาง Facebook แล้วค่ะ\n(เมื่อคุยจบ พิมพ์ #เปิดบอท เพื่อให้บอทกลับมาตอบตามปกตินะคะ)")
+        return
+
+    if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
+        set_user_bot_muted(user_key, False, reason="admin_command_unmute")
+        send_facebook_message(sender_id, "🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
+        return
+
+    if is_user_bot_muted(user_key):
+        logger.info(f"Bot is MUTED for Facebook user {sender_id}. Silence.")
+        return
+
+    # ประมวลผลคำตอบด้วย AI สำหรับ Facebook Page โดยเฉพาะ (platform='facebook')
+    reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="facebook")
+
+    if reply_txt and reply_txt != "[SILENCE]":
+        # ทาง Facebook: ให้ข้อมูลเสร็จแล้ว เชิญชวนลูกค้าไปสั่งซื้อและรันคิวผลิตผ่าน LINE OA
+        line_order_cta = (
+            "\n\n━━━━━━━━━━━━━━\n"
+            "💌 เพื่อความสะดวกรวดเร็วในการรันคิวงาน ออกแบบ และคอนเฟิร์มแบบ\n"
+            "คุณลูกค้าสามารถทักสั่งซื้อและจองคิวผลิตผ่าน LINE OA ของร้านได้เลยนะคะ 👇\n"
+            "👉 LINE OA: @795ncmnv (มี @ ด้วยนะคะ)\n"
+            "👉 คลิกลิงก์แอดไลน์: https://lin.ee/NeVVWUU\n"
+            "━━━━━━━━━━━━━━"
+        )
+        if "@795ncmnv" not in reply_txt and "lin.ee" not in reply_txt:
+            reply_txt = f"{reply_txt.rstrip()}{line_order_cta}"
+
+        send_facebook_message(sender_id, reply_txt)
+        logger.info(f"Replied to Facebook user {cust_name} ({sender_id}) via {model_used}")
+
+        try:
+            save_chat_message(user_key, "user", user_text)
+            save_chat_message(user_key, "model", reply_txt)
+            record_recent_customer(user_key, f"{cust_name} (Facebook)")
+        except Exception as save_err:
+            logger.warning(f"Error saving Facebook chat history: {save_err}")
+
+
+# ==============================================================================
+# 🟣 ส่วนที่ 3: ระบบสำหรับ Instagram Direct Message (IG)
+# ==============================================================================
+def process_instagram_messaging_event(sender_id: str, mid: str, user_text: str):
+    """
+    ประมวลผลข้อความแชทจากลูกค้าทาง Instagram Direct Message (IG)
+    ใช้ Prompt สไตล์ IG น่ารัก อบอุ่น และเชิญชวนไปรันคิวผลิตที่ LINE OA
+    """
+    user_key = f"ig_{sender_id}"
+    cust_name = "ลูกค้าทาง Instagram"
+
+    # คำสั่งแอดมินคนจริง (#พักบอท, #ปิดบอท, #เปิดบอท)
+    clean_cmd = user_text.lower()
+    if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
+        set_user_bot_muted(user_key, True, reason="admin_command_mute")
+        send_facebook_message(sender_id, "🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้ทาง Instagram แล้วค่ะ\n(เมื่อคุยจบ พิมพ์ #เปิดบอท เพื่อให้บอทกลับมาตอบตามปกตินะคะ)")
+        return
+
+    if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
+        set_user_bot_muted(user_key, False, reason="admin_command_unmute")
+        send_facebook_message(sender_id, "🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
+        return
+
+    if is_user_bot_muted(user_key):
+        logger.info(f"Bot is MUTED for Instagram user {sender_id}. Silence.")
+        return
+
+    # ประมวลผลคำตอบด้วย AI สำหรับ Instagram โดยเฉพาะ (platform='instagram')
+    reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text, platform="instagram")
+
+    if reply_txt and reply_txt != "[SILENCE]":
+        # ทาง Instagram: เชิญชวนลูกค้าไปคอนเฟิร์มคิวและสั่งผลิตผ่าน LINE OA
+        line_order_cta = (
+            "\n\n━━━━━━━━━━━━━━\n"
+            "💌 เพื่อความสะดวกรวดเร็วในการรันคิวงาน ออกแบบ และคอนเฟิร์มแบบ\n"
+            "คุณลูกค้าสามารถทักสั่งซื้อและจองคิวผลิตผ่าน LINE OA ของร้านได้เลยนะคะ 👇\n"
+            "👉 LINE OA: @795ncmnv (มี @ ด้วยนะคะ)\n"
+            "👉 คลิกลิงก์แอดไลน์: https://lin.ee/NeVVWUU\n"
+            "━━━━━━━━━━━━━━"
+        )
+        if "@795ncmnv" not in reply_txt and "lin.ee" not in reply_txt:
+            reply_txt = f"{reply_txt.rstrip()}{line_order_cta}"
+
+        send_facebook_message(sender_id, reply_txt)
+        logger.info(f"Replied to Instagram user {sender_id} via {model_used}")
+
+        try:
+            save_chat_message(user_key, "user", user_text)
+            save_chat_message(user_key, "model", reply_txt)
+            record_recent_customer(user_key, f"{cust_name} (Instagram)")
+        except Exception as save_err:
+            logger.warning(f"Error saving Instagram chat history: {save_err}")
+
+
+# -----------------------------------------------------------------------------
+# Webhook Endpoints สำหรับ Facebook Page และ Instagram (Meta Webhooks)
+# -----------------------------------------------------------------------------
 @app.get("/webhook/facebook")
 @app.get("/facebook/webhook")
 @app.get("/webhook/instagram")
 @app.get("/instagram/webhook")
-async def verify_facebook_webhook(request: Request):
+async def verify_meta_webhook(request: Request):
     """
-    Meta Webhook Verification: ยืนยันตัวตน Webhook สำหรับ Facebook Page Messenger และ Instagram Direct Messages
+    ยืนยันตัวตน Meta Webhook (รองรับทั้ง Facebook Page และ Instagram)
     """
     params = request.query_params
     mode = params.get("hub.mode")
@@ -2332,7 +2641,7 @@ async def verify_facebook_webhook(request: Request):
         logger.info("Facebook/Instagram Webhook verified successfully!")
         return PlainTextResponse(challenge)
 
-    logger.warning(f"Facebook/Instagram Webhook verification failed. Token received: {token}")
+    logger.warning(f"Meta Webhook verification failed. Token received: {token}")
     return Response(content="Verification failed", status_code=403)
 
 
@@ -2340,10 +2649,9 @@ async def verify_facebook_webhook(request: Request):
 @app.post("/facebook/webhook")
 @app.post("/webhook/instagram")
 @app.post("/instagram/webhook")
-async def handle_facebook_webhook(request: Request):
+async def handle_meta_webhook(request: Request):
     """
-    รับข้อความแชทจากลูกค้าทาง Facebook Page Messenger และ Instagram Direct Message
-    และตอบกลับอัตโนมัติด้วย AI ตัวเดิมของร้าน
+    รับข้อความแชทจาก Meta Webhook และกระจายงานไปยัง Section 2 (Facebook) หรือ Section 3 (Instagram) ชัดเจน
     """
     try:
         data = await request.json()
@@ -2355,15 +2663,13 @@ async def handle_facebook_webhook(request: Request):
         return Response(content="Not Found", status_code=404)
 
     is_instagram = (obj == "instagram")
-    platform_name = "Instagram" if is_instagram else "Facebook"
-    prefix = "ig" if is_instagram else "fb"
     page_id = os.getenv("FB_PAGE_ID", "101452995525914")
 
     for entry in data.get("entry", []):
         for event in entry.get("messaging", []):
             sender_id = event.get("sender", {}).get("id")
 
-            # ข้ามถ้าเป็นข้อความที่เพจส่งเอง
+            # ข้ามถ้าเป็นข้อความที่เพจหรือระบบส่งเอง
             if not sender_id or sender_id == page_id:
                 continue
 
@@ -2378,67 +2684,17 @@ async def handle_facebook_webhook(request: Request):
 
             # ป้องกันข้อความซ้ำซ้อน (Deduplication)
             if mid and mid in processed_message_ids:
-                logger.info(f"Duplicate {platform_name} message {mid} skipped.")
                 continue
             if mid:
                 processed_message_ids.add(mid)
                 if len(processed_message_ids) > 1000:
                     processed_message_ids.pop()
 
-            logger.info(f"Received {platform_name} message from user {sender_id}: {user_text}")
-            user_key = f"{prefix}_{sender_id}"
-
-            # ดึงโปรไฟล์ลูกค้าเพื่อบันทึกใน Dashboard
-            if not is_instagram:
-                profile = get_facebook_user_profile(sender_id)
-                cust_name = profile.get("name") or "ลูกค้าทาง Facebook"
+            if is_instagram:
+                # 🟣 กระจายไปทำงานที่ ส่วนที่ 3: Instagram
+                process_instagram_messaging_event(sender_id, mid, user_text)
             else:
-                cust_name = "ลูกค้าทาง Instagram"
-
-            # 0. ตรวจสอบคำสั่งพักบอท / เปิดบอท สำหรับแอดมินคนจริง (#พักบอท, #ปิดบอท, #เปิดบอท)
-            clean_cmd = user_text.lower()
-            if re.match(r'^#\s*(?:pause|mute|พักบอท|ปิดบอท|แอดมิน|admin)\b', clean_cmd):
-                set_user_bot_muted(user_key, True, reason="admin_command_mute")
-                send_facebook_message(sender_id, "🔴 แอดมินเข้าดูแล: บอทหยุดตอบลูกค้ารายนี้แล้วค่ะ\n(เมื่อคุยจบ สามารถพิมพ์ #เปิดบอท หรือ #unpause เพื่อให้บอทกลับมาตอบตามปกติได้นะคะ)")
-                continue
-
-            if re.match(r'^#\s*(?:unpause|unmute|เปิดบอท|บอท)\b', clean_cmd):
-                set_user_bot_muted(user_key, False, reason="admin_command_unmute")
-                send_facebook_message(sender_id, "🟢 เปิดบอทตอบอัตโนมัติสำหรับลูกค้ารายนี้เรียบร้อยแล้วค่ะ 🥰")
-                continue
-
-            # ตรวจสอบสถานะว่าบอทถูกปิด/เงียบอยู่หรือไม่
-            if is_user_bot_muted(user_key):
-                logger.info(f"Bot is MUTED for {platform_name} user {sender_id}. Silence.")
-                continue
-
-            # 1. ประมวลผลคำตอบด้วย AI ตัวเดิม (พร้อมฐานข้อมูลสินค้า โปรโมชั่น และราคาการ์ดแต่งงาน)
-            reply_txt, _, model_used = generate_bot_reply_with_fallback(user_key, user_text)
-
-            if reply_txt and reply_txt != "[SILENCE]":
-                # สำหรับ Facebook และ Instagram: ให้ข้อมูลเสร็จแล้ว ให้แจ้งลูกค้าสั่งซื้อและรันคิวผลิตผ่าน LINE OA
-                line_order_cta = (
-                    "\n\n━━━━━━━━━━━━━━\n"
-                    "💌 เพื่อความสะดวกรวดเร็วในการรันคิวงาน ออกแบบ และคอนเฟิร์มแบบ\n"
-                    "คุณลูกค้าสามารถทักสั่งซื้อและจองคิวผลิตผ่าน LINE OA ของร้านได้เลยนะคะ 👇\n"
-                    "👉 LINE OA: @795ncmnv (มี @ ด้วยนะคะ)\n"
-                    "👉 คลิกลิงก์แอดไลน์: https://lin.ee/NeVVWUU\n"
-                    "━━━━━━━━━━━━━━"
-                )
-                if "@795ncmnv" not in reply_txt and "lin.ee" not in reply_txt:
-                    reply_txt = f"{reply_txt.rstrip()}{line_order_cta}"
-
-                send_facebook_message(sender_id, reply_txt)
-                logger.info(f"Replied to {platform_name} user {cust_name} ({sender_id}) via {model_used}")
-
-                # บันทึกประวัติการแชทลงระบบ Dashboard ให้แอดมินดูได้เหมือน LINE
-                try:
-                    save_chat_message(user_key, "user", user_text)
-                    save_chat_message(user_key, "model", reply_txt)
-                    record_recent_customer(user_key, f"{cust_name} ({platform_name})")
-                except Exception as save_err:
-                    logger.warning(f"Error saving {platform_name} chat history: {save_err}")
+                # 🔵 กระจายไปทำงานที่ ส่วนที่ 2: Facebook Page
+                process_facebook_messaging_event(sender_id, mid, user_text)
 
     return PlainTextResponse("EVENT_RECEIVED")
-
-
