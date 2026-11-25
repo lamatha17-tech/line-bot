@@ -328,9 +328,11 @@ SYSTEM_INSTRUCTION_LINE_OA = f"""
    >> ห้ามพิมพ์คำว่า "แอดไลน์", "ทักไลน์", "ติดต่อทางไลน์", "สั่งซื้อทางไลน์", "แอด line", "ทัก line" <<
    >> ห้ามส่งไอดีไลน์ "@795ncmnv", ห้ามส่งลิงก์ "lin.ee" หรือบอกให้ไปเพิ่มเพื่อนในไลน์เด็ดขาดในทุกกรณี! <<
    (เพราะลูกค้ากำลังพิมพ์คุยอยู่ใน LINE แล้ว การบอกให้แอดไลน์อีกทำให้ลูกค้ารำคาญและดูตลกมาก)
-3. **การสั่งซื้อ / ส่งแบบ / คุยงานต่อ:**
-   - หากลูกค้าพร้อมสั่งซื้อ, ขอใบเสนอราคา, มีแบบการ์ดมาเอง หรือต้องการส่งข้อมูล ให้แจ้งลูกค้าว่า:
-     "คุณลูกค้าสามารถส่งแบบ แจ้งจำนวน หรือรายละเอียดในแชทนี้ได้เลยนะคะ เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า 🥰"
+3. **การสั่งซื้อ / ส่งแบบ / คุยงานต่อ (🚨 ห้ามส่งประโยคนี้ซ้ำเด็ดขาด ตอบครั้งเดียวพอ!):**
+   - ประโยค "เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า" หรือเชิญชวนส่งแบบ อนุญาตให้ส่งได้ **"เพียงครั้งเดียวเท่านั้นในชีวิตแชท"** เพื่อแจ้งลูกค้าตอนต้น
+   - ⛔ **หากในประวัติแชทเคยมีคำว่า "แอดมินคนจริงจะรีบเข้ามาดูแลต่อ" หรือข้อความทำนองนี้ไปแล้วแม้แต่ครั้งเดียว:**
+     >> **ห้ามพิมพ์ประโยค "เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า" ซ้ำอีกเด็ดขาด 100%! ห้ามพิมพ์ต่อท้ายข้อความอีกเด็ดขาด!** <<
+     >> ให้ตอบเฉพาะคำตอบ เนื้อหา หรือราคาที่ลูกค้าถาม แล้วจบประโยคได้เลย ห้ามมีคำลงท้ายเรียกแอดมินซ้ำซาก! <<
 4. **การส่งไม้ต่อให้แอดมินคนจริง [SILENCE]:**
    - เมื่อลูกค้าเริ่มส่งแบบ, ขอแก้แบบ, ตรวจดราฟต์, ปรับสี, เปลี่ยนฟอนต์, คอนเฟิร์มพิมพ์, ส่งที่อยู่จัดส่ง, หรือแจ้งโอนเงิน/ส่งสลิป
    - ให้คุณหยุดตอบและพิมพ์ [SILENCE] ทันที 100% เพื่อให้แอดมินคนจริงคุยงานต่อ
@@ -625,10 +627,14 @@ def create_admin_alert(user_id: str, alert_type: str, title: str, text: str):
         logger.warning(f"Failed to push alert to admin LINE: {push_err}")
 
 
-def clean_line_oa_reply(text: str) -> str:
+def clean_line_oa_reply(text: str, is_already_handed_off: bool = False) -> str:
     """
-    กฎเหล็ก 100% สำหรับ LINE OA: ป้องกันบอทส่งข้อความชวนแอดไลน์ หรือส่งลิงก์ LINE ใน LINE OA
-    หากมีบรรทัดใดกล่าวถึงการแอดไลน์ @795ncmnv หรือ lin.ee จะทำการตัดบรรทัดนั้นทิ้งทั้งหมดทันที
+    กฎเหล็ก 100% สำหรับ LINE OA:
+    1. ป้องกันบอทส่งข้อความชวนแอดไลน์ หรือส่งลิงก์ LINE ใน LINE OA
+       หากมีบรรทัดใดกล่าวถึงการแอดไลน์ @795ncmnv หรือ lin.ee จะทำการตัดบรรทัดนั้นทิ้งทั้งหมดทันที
+    2. กฎเรื่องการส่งต่อแอดมินคนจริง (ครั้งเดียวพอ!):
+       หาก is_already_handed_off เป็น True จะตัดประโยคส่งต่อแอดมินคนจริงออกทันที
+       เช่น 'เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า' เพื่อไม่ให้ส่งซ้ำสร้างความรำคาญให้ลูกค้า
     """
     if not text:
         return text
@@ -639,6 +645,26 @@ def clean_line_oa_reply(text: str) -> str:
         line_lower = line.strip().lower()
         if any(kw in line_lower for kw in ["@795ncmnv", "lin.ee", "แอดไลน์", "ทักไลน์", "line oa", "line.me", "แอด line", "ทัก line"]):
             continue
+
+        # ถ้าเคยแจ้งส่งต่อแอดมินคนจริงไปแล้ว ให้ตัดประโยคเรียกแอดมินซ้ำซ้อนออก
+        if is_already_handed_off:
+            if any(kw in line_lower for kw in [
+                "แอดมินคนจริงจะรีบเข้ามาดูแล", "แอดมินคนจริงจะเข้ามาดูแล", 
+                "เดี๋ยวแอดมินคนจริงจะรีบ", "รีบเข้ามาดูแลต่อให้ค่า", 
+                "เข้ามาดูแลต่อให้ค่า", "เดี๋ยวแอดมินคนจริง", "แอดมินคนจริงจะดูแล",
+                "แอดมินคนจริงมาแจ้ง", "รอแอดมินคนจริง", "รอแอดมิน"
+            ]):
+                continue
+            # ตัดประโยคชวนส่งแบบที่มาคู่กันออกด้วยถ้าเหลือเดี่ยวๆ
+            if any(kw in line_lower for kw in [
+                "คุณลูกค้าสามารถส่งแบบหรือแจ้งรายละเอียด",
+                "คุณลูกค้าสามารถส่งแบบพร้อมแจ้งรายละเอียด",
+                "คุณลูกค้าสามารถแจ้งรายละเอียดเพิ่มเติมในแชทนี้ได้เลยนะคะ",
+                "คุณลูกค้าสามารถส่งแบบ แจ้งจำนวน หรือรายละเอียดในแชทนี้ได้เลยนะคะ",
+                "คุณลูกค้าสามารถแจ้งจำนวนที่ต้องการ หรือรายละเอียดเพิ่มเติมในแชทนี้ได้เลยนะคะ"
+            ]):
+                continue
+
         cleaned_lines.append(line)
 
     result = "\n".join(cleaned_lines)
@@ -646,6 +672,8 @@ def clean_line_oa_reply(text: str) -> str:
     result = re.sub(r'https?://lin\.ee/[^\s\)\"\']+', '', result, flags=re.IGNORECASE)
     result = re.sub(r'@795ncmnv', '', result, flags=re.IGNORECASE)
     result = re.sub(r'[^\n]*(?:ทักไลน์|แอดไลน์|คลิกลิงก์ด้านล่างเพื่อแอดไลน์)[^\n]*', '', result, flags=re.IGNORECASE)
+    if is_already_handed_off:
+        result = re.sub(r'[^\n]*(?:แอดมินคนจริงจะรีบเข้ามาดูแล|รีบเข้ามาดูแลต่อให้ค่า|เดี๋ยวแอดมินคนจริง)[^\n]*', '', result, flags=re.IGNORECASE)
     result = re.sub(r'\n{3,}', '\n\n', result).strip()
     return result
 
@@ -653,8 +681,9 @@ def clean_line_oa_reply(text: str) -> str:
 def has_user_been_handed_off_to_human(history_list) -> bool:
     """
     ตรวจสอบว่าในประวัติแชท บอทเคยส่งข้อความแจ้งส่งต่อแอดมินคนจริงไปแล้วหรือไม่
-    เช่น 'รอแอดมินคนจริงมาแจ้ง', 'รอแอดมินมาแจ้ง', 'รอสักครู่ค่ะ', 'สำหรับบริการนี้เดี๋ยวรอแอดมิน'
-    เพื่อบังคับกฎ: 'ให้ตอบครั้งเดียว แล้วเงียบไปเลยตลอดบทสนทนา ห้ามตอบซ้ำเด็ดขาด'
+    เช่น 'รอแอดมินคนจริงมาแจ้ง', 'รอแอดมินมาแจ้ง', 'รอสักครู่ค่ะ', 'สำหรับบริการนี้เดี๋ยวรอแอดมิน',
+    'เดี๋ยวแอดมินคนจริงจะรีบเข้ามาดูแลต่อให้ค่า', 'แอดมินคนจริงจะรีบเข้ามาดูแล'
+    เพื่อบังคับกฎ: 'ให้ตอบครั้งเดียว แล้วเงียบหรือห้ามส่งซ้ำอีกเด็ดขาด ครั้งเดียวพอ'
     """
     if not history_list:
         return False
@@ -662,7 +691,9 @@ def has_user_been_handed_off_to_human(history_list) -> bool:
         "รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", 
         "แอดมินมาแจ้งอีกที", "รอแอดมินมาแจ้งให้ทราบ", "แอดมินคนจริงจะมาแจ้ง",
         "สำหรับบริการนี้เดี๋ยวรอแอดมิน", "สำหรับรายละเอียดเรื่องการสกรีน",
-        "เดี๋ยวรอแอดมิน", "รอสักครู่ค่ะ"
+        "เดี๋ยวรอแอดมิน", "รอสักครู่ค่ะ",
+        "แอดมินคนจริงจะรีบเข้ามาดูแล", "รีบเข้ามาดูแลต่อให้ค่า", 
+        "เข้ามาดูแลต่อให้ค่า", "เดี๋ยวแอดมินคนจริง", "แอดมินคนจริงจะดูแล"
     ]
     for h in history_list:
         role = h.get("role", "") if isinstance(h, dict) else getattr(h, "role", "")
@@ -2194,18 +2225,24 @@ def handle_text_message(event):
             record_recent_line_customer(user_id, user_text)
             return # หยุดการทำงานทันที ไม่ส่งอะไรกลับไป
 
-        # ตรวจสอบระบบป้องกันการตอบซ้ำ: หากคำตอบใหม่มีคำว่า "รอแอดมิน..." ซ้ำอีกรอบ
+        already_handed_off = has_user_been_handed_off_to_human(history_list)
+
+        # ตรวจสอบระบบป้องกันการตอบซ้ำ: หากคำตอบใหม่มีคำว่า "รอแอดมิน..." หรือ "แอดมินคนจริงจะรีบเข้ามาดูแล..."
         is_handoff_reply = any(kw in bot_reply for kw in [
             "รอแอดมินคนจริง", "แอดมินคนจริงมาแจ้ง", "รอแอดมินมาแจ้ง", 
             "เดี๋ยวรอแอดมิน", "แอดมินมาแจ้งอีกที", "รอแอดมินมาแจ้งให้ทราบ",
-            "สำหรับรายละเอียดเรื่องการสกรีน", "สำหรับบริการนี้เดี๋ยวรอแอดมิน"
+            "สำหรับรายละเอียดเรื่องการสกรีน", "สำหรับบริการนี้เดี๋ยวรอแอดมิน",
+            "แอดมินคนจริงจะรีบเข้ามาดูแล", "รีบเข้ามาดูแลต่อให้ค่า", "เข้ามาดูแลต่อให้ค่า", "เดี๋ยวแอดมินคนจริง"
         ])
         if is_handoff_reply:
-            if has_user_been_handed_off_to_human(history_list):
-                logger.info(f"Bot already told user {user_id} to wait for admin previously. Suppressed duplicate handoff. [SILENCE]")
-                record_recent_line_customer(user_id, user_text)
-                save_message(user_id, "user", user_text)
-                return
+            if already_handed_off:
+                # ลองตรวจสอบว่าถ้าตัดท่อนส่งต่อแอดมินออกแล้ว ยังมีเนื้อหาอื่น (เช่น ราคา/คำตอบ) หรือไม่
+                test_clean = clean_line_oa_reply(bot_reply, is_already_handed_off=True)
+                if not test_clean or test_clean.strip() == "":
+                    logger.info(f"Bot already told user {user_id} to wait for admin previously. Suppressed duplicate handoff. [SILENCE]")
+                    record_recent_line_customer(user_id, user_text)
+                    save_message(user_id, "user", user_text)
+                    return
             else:
                 create_admin_alert(user_id, "custom_service", "🛎️ ลูกค้าสอบถามบริการพิเศษ (รอแอดมินคนจริง)", user_text)
 
@@ -2249,8 +2286,12 @@ def handle_text_message(event):
             ).strip()
 
         # 1.1 กฎเด็ดขาด: ใน LINE OA ห้ามมีข้อความบอกให้ลูกค้าแอดไลน์ หรือส่งลิงก์ LINE OA ซ้ำซากเด็ดขาด
+        # และหากเคยส่งต่อแอดมินคนจริงไปแล้ว ให้ตัดประโยคแอดมินออก ไม่ส่งซ้ำอีก (ครั้งเดียวพอ!)
         if clean_text:
-            clean_text = clean_line_oa_reply(clean_text)
+            clean_text = clean_line_oa_reply(clean_text, is_already_handed_off=already_handed_off)
+        if not clean_text:
+            logger.info(f"Bot reply became empty after cleaning for user {user_id} [SILENCE]")
+            return
 
         # 1.2 Safeguard: ป้องกันบอทถาม "การ์ดแต่งงาน หรือ ของชำร่วย" ซ้ำซากเมื่อในแชทมีบริบทสินค้าหรือรูปภาพอยู่แล้ว
         if clean_text and ("การ์ดแต่งงาน หรือ ของชำร่วย" in clean_text or "การ์ดแต่งงานหรือของชำร่วย" in clean_text):
@@ -2380,8 +2421,13 @@ def handle_image_message(event):
         if not clean_text:
             return
 
+        # ตรวจสอบประวัติว่าเคยส่งต่อแอดมินคนจริงไปแล้วหรือไม่
+        history_list = load_chat_history(user_id)
+        already_handed_off = has_user_been_handed_off_to_human(history_list)
+
         # กฎเด็ดขาด: ใน LINE OA ห้ามมีข้อความบอกให้ลูกค้าแอดไลน์ หรือส่งลิงก์ LINE OA ซ้ำซากเด็ดขาด
-        clean_text = clean_line_oa_reply(clean_text)
+        # และหากเคยส่งต่อแอดมินคนจริงไปแล้ว ให้ตัดประโยคแอดมินออก ไม่ส่งซ้ำอีก
+        clean_text = clean_line_oa_reply(clean_text, is_already_handed_off=already_handed_off)
         if not clean_text:
             return
 
